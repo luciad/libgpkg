@@ -1,0 +1,61 @@
+#ifndef GPKG_BINSTREAM_H
+#define GPKG_BINSTREAM_H
+
+#include <stdint.h>
+#include <stddef.h>
+#include "constants.h"
+
+typedef enum { LITTLE, BIG } binstream_endianness;
+
+typedef struct {
+	uint8_t *data;
+	size_t limit;
+	size_t position;
+    size_t capacity;
+	binstream_endianness end;
+    int fixed_size;
+} binstream_t;
+
+int binstream_init(binstream_t *stream, uint8_t *data, size_t length);
+
+int binstream_init_growable(binstream_t *stream, size_t initial_cap);
+
+void binstream_destroy(binstream_t *stream);
+
+uint8_t* binstream_data(binstream_t *stream);
+
+size_t binstream_available(binstream_t *stream);
+
+size_t binstream_position(binstream_t *stream);
+
+int binstream_seek(binstream_t *stream, size_t position);
+
+int binstream_relseek(binstream_t *stream, size_t amount);
+
+void binstream_set_endianness(binstream_t *stream, binstream_endianness e);
+
+binstream_endianness binstream_get_endianness(binstream_t *stream);
+
+int binstream_read_u8(binstream_t *stream, uint8_t *out);
+
+int binstream_write_u8(binstream_t *stream, uint8_t val);
+
+int binstream_nread_u8(binstream_t *stream, uint8_t *out, size_t count);
+
+int binstream_write_nu8(binstream_t *stream, uint8_t *val, size_t count);
+
+int binstream_read_u32(binstream_t *stream, uint32_t *out);
+
+int binstream_write_u32(binstream_t *stream, uint32_t val);
+
+int binstream_read_u64(binstream_t *stream, uint64_t *out);
+
+int binstream_write_u64(binstream_t *stream, uint64_t val);
+
+int binstream_read_double(binstream_t *stream, double *out);
+
+int binstream_write_double(binstream_t *stream, double val);
+
+int binstream_write_ndouble(binstream_t *stream, double *val, size_t count);
+
+#endif
