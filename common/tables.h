@@ -122,6 +122,16 @@ table_info_t metadata_reference = {
         NULL, 0
 };
 
+column_info_t manifest_columns[] = {
+        {"id", "text", T("OWC"), SQL_PRIMARY_KEY, NULL},
+        {"manifest", "text", T(""), SQL_NOT_NULL, NULL}
+};
+table_info_t manifest = {
+        "manifest",
+        manifest_columns, 2,
+        NULL, 0
+};
+
 table_info_t *tables[] = {
         &geopackage_contents,
         &spatial_ref_sys,
@@ -131,6 +141,7 @@ table_info_t *tables[] = {
         &tile_matrix_metadata,
         &xml_metadata,
         &metadata_reference,
+        &manifest,
         NULL
 };
 
