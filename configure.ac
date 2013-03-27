@@ -7,7 +7,6 @@ AM_INIT_AUTOMAKE
 LT_PREREQ([2.2])
 LT_INIT([shared disable-static pic-only])
 AC_CONFIG_MACRO_DIR([m4])
-ACLOCAL_AMFLAGS = -I m4
 AC_CONFIG_SRCDIR([common/gpkg.c])
 AC_CONFIG_HEADERS([config.h])
 
@@ -17,7 +16,7 @@ AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
 # Checks for libraries.
-PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
+AM_PATH_CHECK([0.9.4])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stddef.h stdint.h stdlib.h string.h sys/file.h sys/ioctl.h sys/mount.h sys/param.h sys/statvfs.h sys/time.h unistd.h utime.h])

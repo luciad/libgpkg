@@ -2,7 +2,6 @@
 #define GPB_STRBUF_H
 
 #include <string.h>
-#include "constants.h"
 
 typedef struct {
     char *buffer;

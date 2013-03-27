@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "constants.h"
 
 typedef enum { LITTLE, BIG } binstream_endianness;
 

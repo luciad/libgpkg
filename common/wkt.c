@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include "sqlite.h"
 #include "wkt.h"
 
 static void wkt_begin(geom_reader_t *reader, geom_header_t *header) {
@@ -113,7 +114,7 @@ static void wkt_end(geom_reader_t *reader, geom_header_t *header) {
 int wkt_writer_init(wkt_writer_t *writer) {
     geom_reader_init(&writer->geom_reader, wkt_begin, wkt_end, wkt_coordinates);
     int res = strbuf_init(&writer->strbuf, 256);
-    if (res != GPKG_OK) {
+    if (res != SQLITE_OK) {
         return res;
     }
 
@@ -121,7 +122,7 @@ int wkt_writer_init(wkt_writer_t *writer) {
     memset(writer->children, 0, GEOM_MAX_DEPTH);
     writer->offset = -1;
 
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 void wkt_writer_destroy(wkt_writer_t *writer) {
@@ -258,7 +259,7 @@ static int wkt_read_point(wkt_tokenizer_t *tok, geom_header_t *header, geom_read
 
     for (int i = 0; i < header->coord_size; i++) {
         if (tok->token != WKT_NUMBER) {
-            return GPKG_IO;
+            return SQLITE_IOERR;
         }
 
         coords[i] = tok->token_value;
@@ -269,7 +270,7 @@ static int wkt_read_point(wkt_tokenizer_t *tok, geom_header_t *header, geom_read
         reader->coordinates(reader, header, 1, coords);
     }
 
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
@@ -282,7 +283,7 @@ static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_rea
     do {
         for (int i = 0; i < header->coord_size; i++) {
             if (tok->token != WKT_NUMBER) {
-                return GPKG_IO;
+                return SQLITE_IOERR;
             }
 
             coords[coord_offset++] = tok->token_value;
@@ -305,42 +306,42 @@ static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_rea
         }
     } while (more_coords);
 
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 static int wkt_read_point_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
 
     int res = wkt_read_point(tok, header, reader);
-    if (res != GPKG_OK) {
+    if (res != SQLITE_OK) {
         return res;
     }
     
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
 static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
@@ -354,7 +355,7 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header,
     do {
         reader->begin(reader, &point_header);
         int res = wkt_read_point_text(tok, &point_header, reader);
-        if (res != GPKG_OK) {
+        if (res != SQLITE_OK) {
             return res;
         }
         reader->end(reader, &point_header);
@@ -366,46 +367,46 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header,
     } while ( more_points );
 
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
 static int wkt_read_linestring_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
 
     int res = wkt_read_points(tok, header, reader);
-    if (res != GPKG_OK) {
+    if (res != SQLITE_OK) {
         return res;
     }
 
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
 static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
@@ -419,7 +420,7 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *he
     do {
         reader->begin(reader, &linestring_header);
         int res = wkt_read_linestring_text(tok, &linestring_header, reader);
-        if (res != GPKG_OK) {
+        if (res != SQLITE_OK) {
             return res;
         }
         reader->end(reader, &linestring_header);
@@ -431,21 +432,21 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *he
     } while (more_linestrings);
 
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
 static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
@@ -459,7 +460,7 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, ge
     do {
         reader->begin(reader, &ring_header);
         int res = wkt_read_linestring_text(tok, &ring_header, reader);
-        if (res != GPKG_OK) {
+        if (res != SQLITE_OK) {
             return res;
         }
         reader->end(reader, &ring_header);
@@ -471,21 +472,21 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, ge
     } while (more_rings);
 
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
 static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
@@ -499,7 +500,7 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *heade
     do {
         reader->begin(reader, &polygon_header);
         int res = wkt_read_polygon_text(tok, &polygon_header, reader);
-        if (res != GPKG_OK) {
+        if (res != SQLITE_OK) {
             return res;
         }
         reader->end(reader, &polygon_header);
@@ -511,10 +512,10 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *heade
     } while (more_polygons);
 
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
@@ -523,11 +524,11 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *pa
 static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 
     if (tok->token != WKT_LPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
     }
@@ -535,7 +536,7 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t 
     int more_geometries;
     do {
         int res = wkt_read_geometry_tagged_text(tok, header, reader);
-        if (res != GPKG_OK) {
+        if (res != SQLITE_OK) {
             return res;
         }
 
@@ -546,10 +547,10 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t 
     } while (more_geometries);
 
     if (tok->token != WKT_RPAREN) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     } else {
         wkt_next_token(tok);
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
@@ -558,7 +559,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *pa
     if (tok->token >= WKT_POINT && tok->token <= WKT_GEOMETRYCOLLECTION) {
         geometry_type = tok->token;
     } else {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     }
 
     wkt_next_token(tok);
@@ -596,7 +597,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *pa
     header.coord_size = coord_size;
 
     if (parent_header != NULL && parent_header->coord_type != header.coord_type) {
-        return GPKG_IO;
+        return SQLITE_IOERR;
     }
     
     if (reader->begin) {
@@ -627,10 +628,10 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *pa
             res = wkt_read_geometrycollection_text(tok, &header, reader);
             break;
         default:
-            res = GPKG_IO;
+            res = SQLITE_IOERR;
     }
 
-    if (res == GPKG_OK && reader->end) {
+    if (res == SQLITE_OK && reader->end) {
         reader->end(reader, &header);
     }
 

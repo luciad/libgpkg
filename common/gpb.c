@@ -1,6 +1,7 @@
 #include <float.h>
 #include <string.h>
 #include "gpb.h"
+#include "sqlite.h"
 #include "wkb.h"
 
 #define MINMAXCOORD(coord) double coord = coords[off++]; \
@@ -188,7 +189,7 @@ int gpb_read_header(binstream_t *stream, gpb_t *gpb) {
         gpb->max_m = 0.0;
     }
 
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int gpb_write_header(binstream_t *stream, gpb_t *gpb) {
@@ -266,7 +267,7 @@ int gpb_write_header(binstream_t *stream, gpb_t *gpb) {
         }
     }
 
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 static void gpb_begin(geom_reader_t *reader, geom_header_t *header) {
@@ -404,8 +405,8 @@ static void gpb_end(geom_reader_t *reader, geom_header_t *header) {
 
 int gpb_writer_init( gpb_writer_t *writer, uint32_t srid ) {
     geom_reader_init(&writer->geom_reader, gpb_begin, gpb_end, gpb_coordinates);
-    int res = binstream_init_with_allocator(&writer->stream, 256);
-    if (res != GPKG_OK) {
+    int res = binstream_init_growable(&writer->stream, 256);
+    if (res != SQLITE_OK) {
         return res;
     }
 
@@ -417,7 +418,7 @@ int gpb_writer_init( gpb_writer_t *writer, uint32_t srid ) {
     memset(writer->children, 0, GEOM_MAX_DEPTH * sizeof(size_t));
     writer->offset = -1;
 
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 void gpb_writer_destroy( gpb_writer_t *writer ) {

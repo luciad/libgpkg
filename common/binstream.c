@@ -9,13 +9,13 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
     stream->position = 0;
     stream->end = LITTLE;
     stream->fixed_size = 1;
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
-int binstream_init_with_allocator(binstream_t *stream, size_t initial_cap) {
+int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
     void *data = sqlite3_malloc(initial_cap);
     if (data == NULL) {
-        return GPKG_NOMEM;
+        return SQLITE_NOMEM;
     }
 
     stream->data = data;
@@ -24,7 +24,7 @@ int binstream_init_with_allocator(binstream_t *stream, size_t initial_cap) {
     stream->position = 0;
     stream->end = LITTLE;
     stream->fixed_size = 0;
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 void binstream_destroy(binstream_t *stream) {
@@ -35,17 +35,17 @@ void binstream_destroy(binstream_t *stream) {
 
 static int binstream_ensureavailable(binstream_t *stream, size_t needed) {
     if (needed <= stream->limit) {
-        return GPKG_OK;
+        return SQLITE_OK;
     } else {
-        return GPKG_EOF;
+        return SQLITE_IOERR;
     }
 }
 
 static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
     if (needed <= stream->capacity) {
-        return GPKG_OK;
+        return SQLITE_OK;
     } else if (stream->fixed_size) {
-        return GPKG_EOF;
+        return SQLITE_IOERR;
     } else {
         size_t newcapacity = stream->capacity * 3 / 2;
         if (needed > newcapacity) {
@@ -53,11 +53,11 @@ static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
         }
         void *newdata = sqlite3_realloc(stream->data, newcapacity);
         if (newdata == NULL) {
-            return GPKG_NOMEM;
+            return SQLITE_NOMEM;
         }
         stream->data = newdata;
         stream->capacity = newcapacity;
-        return GPKG_OK;
+        return SQLITE_OK;
     }
 }
 
@@ -67,14 +67,14 @@ size_t binstream_position(binstream_t *stream) {
 
 int binstream_seek(binstream_t *stream, size_t position) {
     int result = binstream_ensurecapacity(stream, position);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
     stream->position = position;
     if (stream->position > stream->limit) {
         stream->limit = stream->position;
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_relseek(binstream_t *stream, size_t amount) {
@@ -99,17 +99,17 @@ binstream_endianness binstream_get_endianness(binstream_t *stream) {
 
 int binstream_read_u8(binstream_t *stream, uint8_t *out) {
     int result = binstream_ensureavailable(stream, stream->position + 1);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
     *out = stream->data[stream->position++];
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_write_u8(binstream_t *stream, uint8_t val) {
     int result = binstream_ensurecapacity(stream, stream->position + 1);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
@@ -117,23 +117,23 @@ int binstream_write_u8(binstream_t *stream, uint8_t val) {
     if (stream->position > stream->limit) {
         stream->limit = stream->position;
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_nread_u8(binstream_t *stream, uint8_t *out, size_t count) {
     int result = binstream_ensureavailable(stream, stream->position + count);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
     memmove(out, stream->data + stream->position, count);
     stream->position += count;
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_write_nu8(binstream_t *stream, uint8_t *val, size_t count) {
     int result = binstream_ensurecapacity(stream, stream->position + count);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
@@ -142,12 +142,12 @@ int binstream_write_nu8(binstream_t *stream, uint8_t *val, size_t count) {
     if (stream->position > stream->limit) {
         stream->limit = stream->position;
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_read_u32(binstream_t *stream, uint32_t *out) {
     int result = binstream_ensureavailable(stream, stream->position + 4);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
@@ -160,12 +160,12 @@ int binstream_read_u32(binstream_t *stream, uint32_t *out) {
     } else {
         *out = (v4 << 0) | (v3 << 8) | (v2 << 16) | (v1 << 24);
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_write_u32(binstream_t *stream, uint32_t val) {
     int result = binstream_ensurecapacity(stream, stream->position + 4);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
@@ -188,12 +188,12 @@ int binstream_write_u32(binstream_t *stream, uint32_t val) {
     if (stream->position > stream->limit) {
         stream->limit = stream->position;
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_read_u64(binstream_t *stream, uint64_t *out) {
     int result = binstream_ensureavailable(stream, stream->position + 8);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
@@ -210,7 +210,7 @@ int binstream_read_u64(binstream_t *stream, uint64_t *out) {
     } else {
         *out = (v8 << 0) | (v7 << 8) | (v6 << 16) | (v5 << 24) | (v4 << 32) | (v3 << 40) | (v2 << 48) | (v1 << 56);
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 static void binstream_write_u64_unchecked(binstream_t *stream, uint64_t val) {
@@ -245,7 +245,7 @@ static void binstream_write_u64_unchecked(binstream_t *stream, uint64_t val) {
 
 int binstream_write_u64(binstream_t *stream, uint64_t val) {
     int result = binstream_ensurecapacity(stream, stream->position + 8);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
 
@@ -253,18 +253,18 @@ int binstream_write_u64(binstream_t *stream, uint64_t val) {
     if (stream->position > stream->limit) {
         stream->limit = stream->position;
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_read_double(binstream_t *stream, double *out) {
     uint64_t val;
     int ok = binstream_read_u64(stream, &val);
-    if (ok != GPKG_OK) {
+    if (ok != SQLITE_OK) {
         return ok;
     }
 
     *out = *((double *) &val);
-    return GPKG_OK;
+    return SQLITE_OK;
 }
 
 int binstream_write_double(binstream_t *stream, double val) {
@@ -273,7 +273,7 @@ int binstream_write_double(binstream_t *stream, double val) {
 
 int binstream_write_ndouble(binstream_t *stream, double *val, size_t count) {
     int result = binstream_ensurecapacity(stream, stream->position + sizeof(double) * count);
-    if (result != GPKG_OK) {
+    if (result != SQLITE_OK) {
         return result;
     }
     for (int i = 0; i < count; i++) {
@@ -282,5 +282,5 @@ int binstream_write_ndouble(binstream_t *stream, double *val, size_t count) {
     if (stream->position > stream->limit) {
         stream->limit = stream->position;
     }
-    return GPKG_OK;
+    return SQLITE_OK;
 }

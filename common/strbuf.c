@@ -6,13 +6,14 @@
 int strbuf_init(strbuf_t *buffer, size_t initial_size) {
     void *data = sqlite3_malloc(initial_size);
     if (data == NULL) {
-        return GPKG_NOMEM;
+        return SQLITE_NOMEM;
     }
 
     buffer->buffer = data;
     buffer->capacity = initial_size;
     buffer->length = 0;
-    return GPKG_OK;
+    buffer->buffer[buffer->length] = 0;
+    return SQLITE_OK;
 }
 
 void strbuf_destroy(strbuf_t *buffer) {
@@ -36,11 +37,11 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
 	
 	if (formatted == NULL) {
 		sqlite3_free(formatted);
-		return GPKG_NOMEM;
+		return SQLITE_NOMEM;
 	}
 
 	size_t formatted_len = strlen(formatted);
-	size_t needed_capacity = buffer->length + formatted_len;
+	size_t needed_capacity = buffer->length + formatted_len + 1;
 	if (needed_capacity > buffer->capacity) {
 		size_t new_capacity = buffer->capacity * 3 / 2;
 		if (needed_capacity > new_capacity) {
@@ -49,7 +50,7 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
 		
 		void *data = sqlite3_realloc(buffer->buffer, new_capacity);
 		if (data == NULL) {
-			return GPKG_NOMEM;
+			return SQLITE_NOMEM;
 		}
 
 		buffer->buffer = data;
@@ -58,9 +59,10 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
 
 	memmove(buffer->buffer + buffer->length, formatted, formatted_len);
 	buffer->length += formatted_len;
+    buffer->buffer[buffer->length] = 0;
 
 	sqlite3_free(formatted);
 	
-	return GPKG_OK;
+	return SQLITE_OK;
 }
 
