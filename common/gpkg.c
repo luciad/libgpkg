@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <config.h>
+#include "config.h"
 #include "sqlite.h"
 #include "binstream.h"
 #include "geomio.h"
