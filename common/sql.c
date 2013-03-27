@@ -202,17 +202,20 @@ int sql_create_table(sqlite3 *db, strbuf_t *errors, table_info_t* table_info) {
         if (columns[i].flags & SQL_NOT_NULL) {
             strbuf_append(&sql, " NOT NULL");
         }
-        switch (columns[i].default_value_type) {
+        switch (columns[i].default_value.type) {
             default:
                 break;
-            case SQLITE_TEXT:
-                strbuf_append(&sql, " DEFAULT %Q", columns[i].default_value.text_value);
+            case VALUE_TEXT:
+                strbuf_append(&sql, " DEFAULT %Q", VALUE_AS_TEXT(columns[i].default_value));
                 break;
-            case SQLITE_FLOAT:
-                strbuf_append(&sql, " DEFAULT %g", columns[i].default_value.double_value);
+            case VALUE_FUNC:
+                strbuf_append(&sql, " DEFAULT (%s)", VALUE_AS_FUNC(columns[i].default_value));
                 break;
-            case SQLITE_INTEGER:
-                strbuf_append(&sql, " DEFAULT %d", columns[i].default_value.int_value);
+            case VALUE_DOUBLE:
+                strbuf_append(&sql, " DEFAULT %g", VALUE_AS_DOUBLE(columns[i].default_value));
+                break;
+            case VALUE_INTEGER:
+                strbuf_append(&sql, " DEFAULT %d", VALUE_AS_INT(columns[i].default_value));
                 break;
         }
 
