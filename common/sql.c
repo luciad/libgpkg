@@ -168,11 +168,6 @@ int sql_check_table(sqlite3 *db, strbuf_t *errors, table_info_t* table_info) {
         goto exit;
     }
 
-    result = strbuf_init(errors, 128);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
-
     result = sql_check_cols(stmt.stmt, errors, table_info);
 
     exit:

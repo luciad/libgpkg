@@ -244,7 +244,7 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
     table_info_t **table = tables;
     while(*table != NULL) {
-        result = sql_check_table(db, &err, &geopackage_contents);
+        result = sql_check_table(db, &err, *table);
         if (result != SQLITE_OK) {
             goto exit;
         }
