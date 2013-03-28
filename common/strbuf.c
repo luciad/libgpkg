@@ -5,11 +5,12 @@
 
 int strbuf_init(strbuf_t *buffer, size_t initial_size) {
     void *data = sqlite3_malloc(initial_size);
+    buffer->buffer = data;
+
     if (data == NULL) {
         return SQLITE_NOMEM;
     }
 
-    buffer->buffer = data;
     buffer->capacity = initial_size;
     buffer->length = 0;
     buffer->buffer[buffer->length] = 0;
