@@ -4,30 +4,22 @@
 #include "sqlite.h"
 #include "sql.h"
 
-typedef struct {
-    int result;
-    sqlite3_stmt *stmt;
-    char *sql;
-} stmt_t;
-
-static int sql_stmt_vinit(stmt_t *stmt, sqlite3 *db, char *sql, va_list args) {
+static int sql_stmt_vinit(sqlite3_stmt **stmt, sqlite3 *db, char *sql, va_list args) {
+    *stmt = NULL;
     char *formatted_sql = sqlite3_vmprintf(sql, args);
 
     if (formatted_sql == NULL) {
         return SQLITE_NOMEM;
     }
 
-    int result = sqlite3_prepare_v2(db, formatted_sql, -1, &stmt->stmt, NULL);
+    int result = sqlite3_prepare_v2(db, formatted_sql, -1, stmt, NULL);
     if (result != SQLITE_OK) {
         sqlite3_free(formatted_sql);
-        return result;
     }
-
-    stmt->sql = formatted_sql;
-    return SQLITE_OK;
+    return result;
 }
 
-static int sql_stmt_init(stmt_t *stmt, sqlite3 *db, char *sql, ...) {
+static int sql_stmt_init(sqlite3_stmt **stmt, sqlite3 *db, char *sql, ...) {
     va_list args;
     va_start(args, sql);
     int res = sql_stmt_vinit(stmt, db, sql, args);
@@ -35,26 +27,52 @@ static int sql_stmt_init(stmt_t *stmt, sqlite3 *db, char *sql, ...) {
     return res;
 }
 
-static void sql_stmt_destroy(stmt_t *stmt) {
-    if (stmt->stmt != NULL) {
-        sqlite3_finalize(stmt->stmt);
-        stmt->stmt = NULL;
+static int sql_stmt_bind(sqlite3_stmt *stmt, value_t *values, int nValues) {
+    int result = sqlite3_reset(stmt);
+    if (result != SQLITE_OK) {
+        return result;
     }
-    sqlite3_free(stmt->sql);
+    for (int cIx = 0; cIx < nValues; cIx++) {
+        switch (values[cIx].type) {
+            default:
+                break;
+            case VALUE_FUNC:
+            case VALUE_TEXT:
+                result = sqlite3_bind_text(stmt, cIx + 1, VALUE_AS_TEXT(values[cIx]), -1, SQLITE_STATIC);
+                break;
+            case VALUE_DOUBLE:
+                result = sqlite3_bind_double(stmt, cIx + 1, VALUE_AS_DOUBLE(values[cIx]));
+                break;
+            case VALUE_INTEGER:
+                result = sqlite3_bind_int(stmt, cIx + 1, VALUE_AS_INT(values[cIx]));
+                break;
+        }
+        if (result != SQLITE_OK) {
+            return result;
+        }
+    }
+
+    return result;
 }
 
-static int sql_step_for_string(stmt_t *stmt, char **out) {
+static void sql_stmt_destroy(sqlite3_stmt *stmt) {
+    if (stmt != NULL) {
+        sqlite3_finalize(stmt);
+    }
+}
+
+static int sql_step_for_string(sqlite3_stmt *stmt, char **out) {
     int result = SQLITE_OK;
 
-    int stmt_res = sqlite3_step(stmt->stmt);
+    int stmt_res = sqlite3_step(stmt);
     if (stmt_res == SQLITE_ROW) {
-        int col_count = sqlite3_column_count(stmt->stmt);
+        int col_count = sqlite3_column_count(stmt);
         if (col_count > 0) {
-            int length = sqlite3_column_bytes(stmt->stmt, 0);
+            int length = sqlite3_column_bytes(stmt, 0);
             if (length <= 0) {
                 *out = NULL;
             } else {
-                const unsigned char *text = sqlite3_column_text(stmt->stmt, 0);
+                const unsigned char *text = sqlite3_column_text(stmt, 0);
                 *out = sqlite3_malloc(length + 1);
                 if (*out == NULL) {
                     result = SQLITE_NOMEM;
@@ -76,14 +94,14 @@ static int sql_step_for_string(stmt_t *stmt, char **out) {
     return result;
 }
 
-static int sql_step_for_int(stmt_t *stmt, int *out) {
+static int sql_step_for_int(sqlite3_stmt *stmt, int *out) {
     int result = SQLITE_OK;
 
-    int stmt_res = sqlite3_step(stmt->stmt);
+    int stmt_res = sqlite3_step(stmt);
     if (stmt_res == SQLITE_ROW) {
-        int col_count = sqlite3_column_count(stmt->stmt);
+        int col_count = sqlite3_column_count(stmt);
         if (col_count > 0) {
-            *out = sqlite3_column_int(stmt->stmt, 0);
+            *out = sqlite3_column_int(stmt, 0);
         } else {
             *out = 0;
         }
@@ -96,9 +114,9 @@ static int sql_step_for_int(stmt_t *stmt, int *out) {
     return result;
 }
 
-int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...) {
+int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
     int result;
-    stmt_t stmt;
+    sqlite3_stmt *stmt;
 
     va_list args;
     va_start(args, sql);
@@ -106,26 +124,18 @@ int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...) {
     va_end(args);
 
     if (result != SQLITE_OK) {
-        goto exit;
+        return result;
     }
 
-    result = sql_step_for_string(&stmt, out);
+    result = sql_step_for_string(stmt, out);
 
-    exit:
-    if (err) {
-        if (result != SQLITE_OK) {
-            *err = sqlite3_mprintf("%s", sqlite3_errmsg(db));
-        } else {
-            *err = NULL;
-        }
-    }
-    sql_stmt_destroy(&stmt);
+    sql_stmt_destroy(stmt);
     return result;
 }
 
-int sql_exec_for_int(sqlite3 *db, int *out, char **err, char *sql, ...) {
+int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...) {
     int result;
-    stmt_t stmt;
+    sqlite3_stmt *stmt;
 
     va_list args;
     va_start(args, sql);
@@ -133,25 +143,39 @@ int sql_exec_for_int(sqlite3 *db, int *out, char **err, char *sql, ...) {
     va_end(args);
 
     if (result != SQLITE_OK) {
-        goto exit;
+        return result;
     }
 
-    result = sql_step_for_int(&stmt, out);
+    result = sql_step_for_int(stmt, out);
 
-    exit:
-    if (err) {
-        if (result != SQLITE_OK) {
-            *err = sqlite3_mprintf("%s", sqlite3_errmsg(db));
-        } else {
-            *err = NULL;
-        }
-    }
-    sql_stmt_destroy(&stmt);
+    sql_stmt_destroy(stmt);
     return result;
 }
 
-static int sql_table_exists(sqlite3 *db, char* db_name, char* table_name, int *exists) {
-    stmt_t stmt;
+int sql_exec(sqlite3 *db, char *sql, ...) {
+    int result;
+    sqlite3_stmt *stmt;
+
+    va_list args;
+    va_start(args, sql);
+    result = sql_stmt_vinit(&stmt, db, sql, args);
+    va_end(args);
+
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    int stmt_res = sqlite3_step(stmt);
+    if (stmt_res != SQLITE_ROW && stmt_res != SQLITE_DONE) {
+        result = stmt_res;
+    }
+
+    sql_stmt_destroy(stmt);
+    return result;
+}
+
+int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *exists) {
+    sqlite3_stmt *stmt;
     int result;
 
     result = sql_stmt_init(&stmt, db, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_name);
@@ -159,7 +183,7 @@ static int sql_table_exists(sqlite3 *db, char* db_name, char* table_name, int *e
         return result;
     }
 
-    result = sqlite3_step(stmt.stmt);
+    result = sqlite3_step(stmt);
     if (result == SQLITE_ROW) {
         *exists = 1;
         result = SQLITE_OK;
@@ -170,7 +194,7 @@ static int sql_table_exists(sqlite3 *db, char* db_name, char* table_name, int *e
         *exists = 0;
     }
 
-    sql_stmt_destroy(&stmt);
+    sql_stmt_destroy(stmt);
     return result;
 }
 
@@ -258,12 +282,12 @@ static int sql_check_cols(sqlite3_stmt *stmt, table_info_t *table_info, int *err
 }
 
 static int sql_check_table_schema(sqlite3 *db, char* db_name, table_info_t* table_info, int *errors, strbuf_t *errmsg) {
-    stmt_t stmt;
+    sqlite3_stmt *stmt;
     int result = sql_stmt_init(&stmt, db, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_info->name);
     if (result == SQLITE_OK) {
-        result = sql_check_cols(stmt.stmt, table_info, errors, errmsg);
+        result = sql_check_cols(stmt, table_info, errors, errmsg);
     }
-    sql_stmt_destroy(&stmt);
+    sql_stmt_destroy(stmt);
     return result;
 }
 
@@ -334,40 +358,20 @@ static int sql_check_data(sqlite3 *db, char* db_name, table_info_t* table_info, 
         return result;
     }
 
-    stmt_t stmt;
+    sqlite3_stmt *stmt;
     result = sql_stmt_init(&stmt, db, query);
     if (result != SQLITE_OK) {
         return result;
     }
 
-    sqlite3_stmt *sqlite_stmt = stmt.stmt;
-
     for (int rIx = 0; rIx < table_info->nRows; rIx++) {
         value_t *row = table_info->rows + (rIx * table_info->nColumns);
-        result = sqlite3_reset(sqlite_stmt);
+        result = sql_stmt_bind(stmt, row, table_info->nColumns);
         if (result != SQLITE_OK) {
             goto exit;
         }
-        for (int cIx = 0; cIx < table_info->nColumns; cIx++) {
-            switch (row[cIx].type) {
-                default:
-                    break;
-                case VALUE_FUNC:
-                case VALUE_TEXT:
-                    result = sqlite3_bind_text(sqlite_stmt, cIx + 1, VALUE_AS_TEXT(row[cIx]), -1, SQLITE_STATIC);
-                    break;
-                case VALUE_DOUBLE:
-                    result = sqlite3_bind_double(sqlite_stmt, cIx + 1, VALUE_AS_DOUBLE(row[cIx]));
-                    break;
-                case VALUE_INTEGER:
-                    result = sqlite3_bind_int(sqlite_stmt, cIx + 1, VALUE_AS_INT(row[cIx]));
-                    break;
-            }
-            if (result != SQLITE_OK) {
-                goto exit;
-            }
-        }
-        int step_res = sqlite3_step(sqlite_stmt);
+
+        int step_res = sqlite3_step(stmt);
         if (step_res == SQLITE_ROW) {
             // OK
         } else if (step_res == SQLITE_DONE) {
@@ -385,7 +389,7 @@ static int sql_check_data(sqlite3 *db, char* db_name, table_info_t* table_info, 
     }
 
     exit:
-    sql_stmt_destroy(&stmt);
+    sql_stmt_destroy(stmt);
     return result;
 }
 
@@ -395,7 +399,7 @@ int sql_check_table(sqlite3* db, char* db_name, table_info_t* table_info, int *e
     }
 
     int exists = 0;
-    int result = sql_table_exists(db, db_name, table_info->name, &exists);
+    int result = sql_check_table_exists(db, db_name, table_info->name, &exists);
     if (result == SQLITE_OK) {
         if (exists) {
             if (result == SQLITE_OK) {
@@ -408,7 +412,7 @@ int sql_check_table(sqlite3* db, char* db_name, table_info_t* table_info, int *e
         } else {
             *errors = *errors + 1;
             if (errmsg) {
-                strbuf_append(errmsg, "Table %s does not exist\n", table_info->name);
+                strbuf_append(errmsg, "Table %s.%s does not exist\n", db_name, table_info->name);
             }
         }
     }
@@ -477,34 +481,19 @@ static int sql_insert_data(sqlite3 *db, char *db_name, table_info_t* table_info,
         return result;
     }
 
-    stmt_t stmt;
+    sqlite3_stmt *stmt;
     result = sql_stmt_init(&stmt, db, query);
     if (result != SQLITE_OK) {
         return result;
     }
 
-    sqlite3_stmt *sqlite_stmt = stmt.stmt;
-
     for (int rIx = 0; rIx < table_info->nRows; rIx++) {
         value_t *row = table_info->rows + (rIx * table_info->nColumns);
-        sqlite3_reset(sqlite_stmt);
-        for (int cIx = 0; cIx < table_info->nColumns; cIx++) {
-            switch (row[cIx].type) {
-                default:
-                    break;
-                case VALUE_FUNC:
-                case VALUE_TEXT:
-                    sqlite3_bind_text(sqlite_stmt, cIx + 1, VALUE_AS_TEXT(row[cIx]), -1, SQLITE_STATIC);
-                    break;
-                case VALUE_DOUBLE:
-                    sqlite3_bind_double(sqlite_stmt, cIx + 1, VALUE_AS_DOUBLE(row[cIx]));
-                    break;
-                case VALUE_INTEGER:
-                    sqlite3_bind_int(sqlite_stmt, cIx + 1, VALUE_AS_INT(row[cIx]));
-                    break;
-            }
+        result = sql_stmt_bind(stmt, row, table_info->nColumns);
+        if (result != SQLITE_OK) {
+            goto exit;
         }
-        int step_res = sqlite3_step(sqlite_stmt);
+        int step_res = sqlite3_step(stmt);
         if (step_res != SQLITE_DONE) {
             result = step_res;
             *errors = *errors + 1;
@@ -519,7 +508,7 @@ static int sql_insert_data(sqlite3 *db, char *db_name, table_info_t* table_info,
     }
 
     exit:
-    sql_stmt_destroy(&stmt);
+    sql_stmt_destroy(stmt);
     return result;
 }
 
@@ -652,7 +641,7 @@ int sql_init_table(sqlite3 *db, char* db_name, table_info_t* table_info, int *er
     int result;
 
     int exists = 0;
-    result = sql_table_exists(db, db_name, table_info->name, &exists);
+    result = sql_check_table_exists(db, db_name, table_info->name, &exists);
     if (result != SQLITE_OK) {
         return result;
     }
@@ -668,4 +657,16 @@ int sql_init_table(sqlite3 *db, char* db_name, table_info_t* table_info, int *er
     }
 
     return result;
+}
+
+int sql_begin(sqlite3 *db, char *name) {
+    return sql_exec(db, "SAVEPOINT %Q", name);
+}
+
+int sql_commit(sqlite3 *db, char *name) {
+    return sql_exec(db, "RELEASE SAVEPOINT %Q", name);
+}
+
+int sql_rollback(sqlite3 *db, char *name) {
+    return sql_exec(db, "ROLLBACK TO SAVEPOINT %Q", name);
 }

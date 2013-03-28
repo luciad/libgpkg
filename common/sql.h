@@ -59,9 +59,19 @@ typedef struct {
     size_t nRows;
 } table_info_t;
 
-int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...);
+int sql_begin(sqlite3 *db, char *name);
 
-int sql_exec_for_int(sqlite3 *db, int *out, char **err, char *sql, ...);
+int sql_commit(sqlite3 *db, char *name);
+
+int sql_rollback(sqlite3 *db, char *name);
+
+int sql_exec(sqlite3 *db, char *sql, ...);
+
+int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...);
+
+int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
+
+int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *exists);
 
 int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
 

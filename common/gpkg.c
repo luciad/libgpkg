@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
 #include "config.h"
@@ -231,6 +230,21 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
     gpb_writer_destroy(&writer);
 }
 
+static int CheckGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
+    int result = SQLITE_OK;
+    table_info_t **table = tables;
+
+    while (*table != NULL) {
+        result = sql_check_table(db, db_name, *table, errors, errmsg);
+        if (result != SQLITE_OK) {
+            break;
+        }
+        table++;
+    }
+
+    return result;
+}
+
 static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     int result;
 
@@ -241,23 +255,16 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
         goto exit;
     }
 
-    char* db_name;
+    char *db_name;
     if (nbArgs == 0) {
         db_name = "main";
     } else {
-        db_name = (char*)sqlite3_value_text(args[0]);
+        db_name = (char *) sqlite3_value_text(args[0]);
     }
 
     sqlite3 *db = sqlite3_context_db_handle(context);
 
-    table_info_t **table = tables;
-    while(*table != NULL) {
-        result = sql_check_table(db, db_name, *table, &errors, &errmsg);
-        if (result != SQLITE_OK) {
-            goto exit;
-        }
-        table++;
-    }
+    result = CheckGpkg_(db, db_name, &errors, &errmsg);
 
     exit:
     if (result == SQLITE_OK) {
@@ -267,9 +274,24 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
             sqlite3_result_null(context);
         }
     } else {
-        sqlite3_result_error_code(context, result);
+        sqlite3_result_error(context, sqlite3_errmsg(db), -1);
     }
     strbuf_destroy(&errmsg);
+}
+
+static int InitGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
+    int result = SQLITE_OK;
+    table_info_t **table = tables;
+
+    while (*table != NULL) {
+        result = sql_init_table(db, db_name, *table, errors, errmsg);
+        if (result != SQLITE_OK) {
+            break;
+        }
+        table++;
+    }
+
+    return result;
 }
 
 static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
@@ -282,22 +304,27 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
         goto exit;
     }
 
-    char* db_name;
+    char *db_name;
     if (nbArgs == 0) {
         db_name = "main";
     } else {
-        db_name = (char*)sqlite3_value_text(args[0]);
+        db_name = (char *) sqlite3_value_text(args[0]);
     }
 
     sqlite3 *db = sqlite3_context_db_handle(context);
 
-    table_info_t **table = tables;
-    while(*table != NULL) {
-        result = sql_init_table(db, db_name, *table, &errors, &errmsg);
-        if (result != SQLITE_OK) {
-            goto exit;
-        }
-        table++;
+    char *transaction_name = "__initgpkg";
+    result = sql_begin(db, transaction_name);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    result = InitGpkg_(db, db_name, &errors, &errmsg);
+
+    if (result == SQLITE_OK && errors == 0) {
+        result = sql_commit(db, transaction_name);
+    } else {
+         sql_rollback(db, transaction_name);
     }
 
     exit:
@@ -308,8 +335,140 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
             sqlite3_result_null(context);
         }
     } else {
-        sqlite3_result_error_code(context, result);
+        sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
     }
+    strbuf_destroy(&errmsg);
+}
+
+static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int *errors, strbuf_t *errmsg) {
+    int result;
+
+    // Check if the target table exists
+    int exists = 0;
+    result= sql_check_table_exists(db, db_name, table_name, &exists);
+    if (result != SQLITE_OK) {
+        (*errors)++;
+        return result;
+    }
+
+    if (!exists) {
+        (*errors)++;
+        strbuf_append(errmsg, "Table %s.%s does not exist", db_name, table_name);
+        return SQLITE_OK;
+    }
+
+    // Check if required meta tables exist
+    int check_errors = 0;
+    result = sql_check_table(db, db_name, &spatial_ref_sys, &check_errors, errmsg);
+    if (result != SQLITE_OK) {
+        (*errors)++;
+        return result;
+    }
+    result = sql_check_table(db, db_name, &geometry_columns, &check_errors, errmsg);
+    if (result != SQLITE_OK) {
+        (*errors)++;
+        return result;
+    }
+
+    if (check_errors > 0) {
+        (*errors) += check_errors;
+        return SQLITE_OK;
+    }
+
+    // Check if the SRID is defined
+    int count = 0;
+    result = sql_exec_for_int(db, &count, "SELECT count(*) FROM spatial_ref_sys WHERE srid = %d", srid);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    if (count == 0) {
+        (*errors)++;
+        strbuf_append(errmsg, "SRID %d does not exist", srid);
+        return SQLITE_OK;
+    }
+
+    result = sql_exec(db, "ALTER TABLE \"%w\".\"%w\" ADD COLUMN \"%w\" %s", db_name, table_name, column_name, geom_type);
+    if (result != SQLITE_OK) {
+        (*errors)++;
+        strbuf_append(errmsg, sqlite3_errmsg(db));
+        return result;
+    }
+
+    result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, geometry_type, srid) VALUES (%Q, %Q, %Q, %d)", db_name, "geometry_columns", table_name, column_name, geom_type, srid);
+    if (result != SQLITE_OK) {
+        (*errors)++;
+        strbuf_append(errmsg, sqlite3_errmsg(db));
+        return result;
+    }
+
+    return SQLITE_OK;
+}
+
+static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+    sqlite3 *db = sqlite3_context_db_handle(context);
+
+    int arg = 0;
+    char *db_name;
+    int free_db_name;
+    if (nbArgs == 6) {
+        db_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
+        free_db_name = 1;
+    } else {
+        db_name = "main";
+        free_db_name = 0;
+    }
+
+    char *table_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
+    char *column_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
+    int srid = sqlite3_value_int(args[arg++]);
+    char *geometry_type = sqlite3_mprintf("%s", sqlite3_value_text(args[arg]));
+
+    if (db_name == NULL || table_name == NULL || column_name == NULL || geometry_type == NULL) {
+        sqlite3_result_error_code(context, SQLITE_NOMEM);
+        goto exit;
+    }
+
+    strbuf_t errmsg;
+    if (strbuf_init(&errmsg, 256) != SQLITE_OK) {
+        sqlite3_result_error_code(context, SQLITE_NOMEM);
+        goto exit;
+    }
+
+    int errors = 0;
+    int result;
+    char *transaction_name = "__add_geom_col";
+
+    result = sql_begin(db, transaction_name);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    result = AddGeometryColumn_(db, db_name, table_name, column_name, srid, geometry_type, &errors, &errmsg);
+
+    if (result == SQLITE_OK && errors == 0) {
+        result = sql_commit(db, transaction_name);
+    } else {
+        sql_rollback(db, transaction_name);
+    }
+
+    if (result == SQLITE_OK) {
+        if (errors == 0) {
+            sqlite3_result_null(context);
+        } else {
+            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
+        }
+    } else {
+        sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
+    }
+
+    exit:
+    if (free_db_name) {
+        sqlite3_free(db_name);
+    }
+    sqlite3_free(table_name);
+    sqlite3_free(column_name);
+    sqlite3_free(geometry_type);
     strbuf_destroy(&errmsg);
 }
 
@@ -352,6 +511,10 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3
     FUNC( CheckGpkg, 1 );
     FUNC( InitGpkg, 0 );
     FUNC( InitGpkg, 1 );
+    FUNC( CheckGpkg, 0 );
+    FUNC( CheckGpkg, 1 );
+    FUNC( AddGeometryColumn, 4 );
+    FUNC( AddGeometryColumn, 5 );
 
     return SQLITE_OK;
 }
