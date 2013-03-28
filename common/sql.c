@@ -17,9 +17,10 @@ static int sql_stmt_vinit(stmt_t *stmt, sqlite3 *db, char *sql, va_list args) {
         return SQLITE_NOMEM;
     }
 
-    if (sqlite3_prepare_v2(db, formatted_sql, -1, &stmt->stmt, NULL) != SQLITE_OK) {
+    int result = sqlite3_prepare_v2(db, formatted_sql, -1, &stmt->stmt, NULL);
+    if (result != SQLITE_OK) {
         sqlite3_free(formatted_sql);
-        return SQLITE_IOERR;
+        return result;
     }
 
     stmt->sql = formatted_sql;
@@ -42,6 +43,59 @@ static void sql_stmt_destroy(stmt_t *stmt) {
     sqlite3_free(stmt->sql);
 }
 
+static int sql_step_for_string(stmt_t *stmt, char **out) {
+    int result = SQLITE_OK;
+
+    int stmt_res = sqlite3_step(stmt->stmt);
+    if (stmt_res == SQLITE_ROW) {
+        int col_count = sqlite3_column_count(stmt->stmt);
+        if (col_count > 0) {
+            int length = sqlite3_column_bytes(stmt->stmt, 0);
+            if (length <= 0) {
+                *out = NULL;
+            } else {
+                const unsigned char *text = sqlite3_column_text(stmt->stmt, 0);
+                *out = sqlite3_malloc(length + 1);
+                if (*out == NULL) {
+                    result = SQLITE_NOMEM;
+                    goto exit;
+                }
+                memmove(*out, text, (size_t)length + 1);
+            }
+
+        } else {
+            *out = NULL;
+        }
+    } else if (stmt_res == SQLITE_DONE) {
+        *out = NULL;
+    } else {
+        result = SQLITE_IOERR;
+    }
+
+    exit:
+    return result;
+}
+
+static int sql_step_for_int(stmt_t *stmt, int *out) {
+    int result = SQLITE_OK;
+
+    int stmt_res = sqlite3_step(stmt->stmt);
+    if (stmt_res == SQLITE_ROW) {
+        int col_count = sqlite3_column_count(stmt->stmt);
+        if (col_count > 0) {
+            *out = sqlite3_column_int(stmt->stmt, 0);
+        } else {
+            *out = 0;
+        }
+    } else if (stmt_res == SQLITE_DONE) {
+        *out = 0;
+    } else {
+        result = SQLITE_IOERR;
+    }
+
+    return result;
+}
+
 int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...) {
     int result;
     stmt_t stmt;
@@ -55,31 +109,7 @@ int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...) {
         goto exit;
     }
 
-    int stmt_res = sqlite3_step(stmt.stmt);
-    if (stmt_res == SQLITE_ROW) {
-        int col_count = sqlite3_column_count(stmt.stmt);
-        if (col_count > 0) {
-            int length = sqlite3_column_bytes(stmt.stmt, 0);
-            if (length <= 0) {
-                *out = NULL;
-            } else {
-                const unsigned char *text = sqlite3_column_text(stmt.stmt, 0);
-                *out = sqlite3_malloc(length + 1);
-                if (*out == NULL) {
-                    result = SQLITE_NOMEM;
-                    goto exit;
-                }
-                memmove(*out, text, length + 1);
-            }
-
-        } else {
-            *out = NULL;
-        }
-    } else if (stmt_res == SQLITE_DONE) {
-        *out = NULL;
-    } else {
-        result = SQLITE_IOERR;
-    }
+    result = sql_step_for_string(&stmt, out);
 
     exit:
     if (err) {
@@ -93,16 +123,64 @@ int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...) {
     return result;
 }
 
-static int sql_check_cols(sqlite3_stmt *stmt, strbuf_t *errors, table_info_t *table_info) {
+int sql_exec_for_int(sqlite3 *db, int *out, char **err, char *sql, ...) {
+    int result;
+    stmt_t stmt;
+
+    va_list args;
+    va_start(args, sql);
+    result = sql_stmt_vinit(&stmt, db, sql, args);
+    va_end(args);
+
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    result = sql_step_for_int(&stmt, out);
+
+    exit:
+    if (err) {
+        if (result != SQLITE_OK) {
+            *err = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+        } else {
+            *err = NULL;
+        }
+    }
+    sql_stmt_destroy(&stmt);
+    return result;
+}
+
+static int sql_table_exists(sqlite3 *db, char* table_name, int *exists) {
+    stmt_t stmt;
+    int result;
+
+    result = sql_stmt_init(&stmt, db, "PRAGMA table_info(\"%w\")", table_name);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    result = sqlite3_step(stmt.stmt);
+    if (result == SQLITE_ROW) {
+        *exists = 1;
+        result = SQLITE_OK;
+    } else if (result == SQLITE_DONE) {
+        *exists = 0;
+        result = SQLITE_OK;
+    } else {
+        *exists = 0;
+    }
+
+    exit:
+    sql_stmt_destroy(&stmt);
+    return result;
+}
+
+static int sql_check_cols(sqlite3_stmt *stmt, table_info_t *table_info, int *errors, strbuf_t *errmsg) {
     int found[table_info->nColumns];
     memset(found, 0, table_info->nColumns * sizeof(int));
     int result;
 
     result = sqlite3_step(stmt);
-    if (result == SQLITE_DONE) {
-        strbuf_append(errors, "Table %Q does not exist\n", table_info->name);
-        return SQLITE_OK;
-    }
 
     while( result == SQLITE_ROW ) {
         // 0 index
@@ -123,25 +201,43 @@ static int sql_check_cols(sqlite3_stmt *stmt, strbuf_t *errors, table_info_t *ta
         if (index != -1) {
             char *type = (char*)sqlite3_column_text(stmt, 2);
             if (strcasecmp(table_info->columns[index].type, type) != 0) {
-                strbuf_append(errors, "Column %Q.%Q has incorrect type (expected: %s, actual: %s)\n", table_info->name, name, table_info->columns[index].type, type);
+                *errors = *errors + 1;
+                if (errmsg) {
+                    strbuf_append(errmsg, "Column %s.%s has incorrect type (expected: %s, actual: %s)\n", table_info->name, name, table_info->columns[index].type, type);
+                }
             }
 
             int not_null = sqlite3_column_int(stmt, 3);
             if (not_null != 0 && (table_info->columns[index].flags & SQL_NOT_NULL) == 0) {
-                strbuf_append(errors, "Column %Q.%Q should not have 'not null' constraint\n", table_info->name, name);
+                *errors = *errors + 1;
+                if (errmsg) {
+                    strbuf_append(errmsg, "Column %s.%s should not have 'not null' constraint\n", table_info->name, name);
+                }
             } else if (not_null == 0 && table_info->columns[index].flags & SQL_NOT_NULL) {
-                strbuf_append(errors, "Column %Q.%Q should have 'not null' constraint\n", table_info->name, name);
+                *errors = *errors + 1;
+                if (errmsg) {
+                    strbuf_append(errmsg, "Column %s.%s should have 'not null' constraint\n", table_info->name, name);
+                }
             }
 
             int pk = sqlite3_column_int(stmt, 5);
             if (pk != 0 && (table_info->columns[index].flags & SQL_PRIMARY_KEY) == 0) {
-                strbuf_append(errors, "Column %Q.%Q should not be part of primary key\n", table_info->name, name);
+                *errors = *errors + 1;
+                if (errmsg) {
+                    strbuf_append(errmsg, "Column %s.%s should not be part of primary key\n", table_info->name, name);
+                }
             } else if (pk == 0 && table_info->columns[index].flags & SQL_PRIMARY_KEY) {
-                strbuf_append(errors, "Column %Q.%Q should be part of primary key\n", table_info->name, name);
+                *errors = *errors + 1;
+                if (errmsg) {
+                    strbuf_append(errmsg, "Column %s.%s should be part of primary key\n", table_info->name, name);
+                }
             }
             found[index] = 1;
         } else {
-            strbuf_append(errors, "Redundant column %Q.%Q\n", table_info->name, name);
+            *errors = *errors + 1;
+            if (errmsg) {
+                strbuf_append(errmsg, "Redundant column %s.%s\n", table_info->name, name);
+            }
         }
 
         result = sqlite3_step(stmt);
@@ -153,31 +249,322 @@ static int sql_check_cols(sqlite3_stmt *stmt, strbuf_t *errors, table_info_t *ta
 
     for (int i = 0; i < table_info->nColumns; i++) {
         if (found[i] == 0) {
-            strbuf_append(errors, "Column %Q.%Q is missing\n", table_info->name, table_info->columns[i].name);
+            *errors = *errors + 1;
+            if (errmsg) {
+                strbuf_append(errmsg, "Column %s.%s is missing\n", table_info->name, table_info->columns[i].name);
+            }
         }
     }
     return SQLITE_OK;
 }
 
-int sql_check_table(sqlite3 *db, strbuf_t *errors, table_info_t* table_info) {
+static int sql_check_table_schema(sqlite3 *db, table_info_t* table_info, int *errors, strbuf_t *errmsg) {
     stmt_t stmt;
+    int result = sql_stmt_init(&stmt, db, "PRAGMA table_info(\"%w\")", table_info->name);
+    if (result == SQLITE_OK) {
+        result = sql_check_cols(stmt.stmt, table_info, errors, errmsg);
+    }
+    sql_stmt_destroy(&stmt);
+    return result;
+}
+
+static int sql_format_missing_row(table_info_t *table_info, strbuf_t *errmsg, value_t *row) {
     int result;
 
-    result = sql_stmt_init(&stmt, db, "PRAGMA table_info(%Q)", table_info->name);
+    result = strbuf_append(errmsg, "Table %s is missing row (", table_info->name);
     if (result != SQLITE_OK) {
         goto exit;
     }
+    for (int cIx = 0; cIx < table_info->nColumns; cIx++) {
+        if (cIx > 0) {
+            result = strbuf_append(errmsg, ", ");
+            if (result != SQLITE_OK) {
+                goto exit;
+            }
+        }
 
-    result = sql_check_cols(stmt.stmt, errors, table_info);
+        switch (row[cIx].type) {
+            default:
+                break;
+            case VALUE_FUNC:
+            case VALUE_TEXT:
+                result = strbuf_append(errmsg, "%s: '%s'", table_info->columns[cIx].name, VALUE_AS_TEXT(row[cIx]));
+                break;
+            case VALUE_DOUBLE:
+                result = strbuf_append(errmsg, "%s: %g", table_info->columns[cIx].name, VALUE_AS_DOUBLE(row[cIx]));
+                break;
+            case VALUE_INTEGER:
+                result = strbuf_append(errmsg, "%s: %d", table_info->columns[cIx].name, VALUE_AS_INT(row[cIx]));
+                break;
+        }
+        if (result != SQLITE_OK) {
+            goto exit;
+        }
+    }
+    result = strbuf_append(errmsg, ")\n", table_info->name);
+
+    exit:
+    return result;
+}
+
+static int sql_check_data(sqlite3 *db, table_info_t* table_info, int *errors, strbuf_t *errmsg) {
+    if (table_info->nRows <= 0 || table_info->nColumns <= 0) {
+        return SQLITE_OK;
+    }
+    
+    int result;
+    strbuf_t sql;
+    result = strbuf_init(&sql, 4096);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    column_info_t *columns = table_info->columns;
+    strbuf_append(&sql, "SELECT * FROM \"%w\" WHERE", table_info->name);
+    for(int i = 0; i < table_info->nColumns; i++) {
+        if (i > 0) {
+            strbuf_append(&sql, " AND");
+        }
+        strbuf_append(&sql, " \"%w\" = ?", columns[i].name);
+    }
+    char *query;
+    result = strbuf_data(&sql, &query);
+    strbuf_destroy(&sql);
+
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    stmt_t stmt;
+    result = sql_stmt_init(&stmt, db, query);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    sqlite3_stmt *sqlite_stmt = stmt.stmt;
+
+    for (int rIx = 0; rIx < table_info->nRows; rIx++) {
+        value_t *row = table_info->rows + (rIx * table_info->nColumns);
+        result = sqlite3_reset(sqlite_stmt);
+        if (result != SQLITE_OK) {
+            goto exit;
+        }
+        for (int cIx = 0; cIx < table_info->nColumns; cIx++) {
+            switch (row[cIx].type) {
+                default:
+                    break;
+                case VALUE_FUNC:
+                case VALUE_TEXT:
+                    result = sqlite3_bind_text(sqlite_stmt, cIx + 1, VALUE_AS_TEXT(row[cIx]), -1, SQLITE_STATIC);
+                    break;
+                case VALUE_DOUBLE:
+                    result = sqlite3_bind_double(sqlite_stmt, cIx + 1, VALUE_AS_DOUBLE(row[cIx]));
+                    break;
+                case VALUE_INTEGER:
+                    result = sqlite3_bind_int(sqlite_stmt, cIx + 1, VALUE_AS_INT(row[cIx]));
+                    break;
+            }
+            if (result != SQLITE_OK) {
+                goto exit;
+            }
+        }
+        int step_res = sqlite3_step(sqlite_stmt);
+        if (step_res == SQLITE_ROW) {
+            // OK
+        } else if (step_res == SQLITE_DONE) {
+            *errors = *errors + 1;
+            if (errmsg) {
+                result = sql_format_missing_row(table_info, errmsg, row);
+                if (result != SQLITE_OK) {
+                    goto exit;
+                }
+            }
+        } else {
+            result = step_res;
+            goto exit;
+        }
+    }
 
     exit:
     sql_stmt_destroy(&stmt);
     return result;
 }
 
-int sql_create_table(sqlite3 *db, strbuf_t *errors, table_info_t* table_info) {
-    int result;
+int sql_check_table(sqlite3* db, table_info_t* table_info, int *errors, strbuf_t* errmsg) {
+    if (errors == NULL) {
+        return SQLITE_MISUSE;
+    }
 
+    int exists = 0;
+    int result = sql_table_exists(db, table_info->name, &exists);
+    if (result == SQLITE_OK) {
+        if (exists) {
+            if (result == SQLITE_OK) {
+                result = sql_check_table_schema(db, table_info, errors, errmsg);
+            }
+
+            if (result == SQLITE_OK) {
+                result = sql_check_data(db, table_info, errors, errmsg);
+            }
+        } else {
+            *errors = *errors + 1;
+            if (errmsg) {
+                strbuf_append(errmsg, "Table %s does not exist\n", table_info->name);
+            }
+        }
+    }
+
+    return result;
+}
+
+static int sql_format_insert_data(table_info_t* table_info, char **query) {
+    strbuf_t sql;
+    int result = strbuf_init(&sql, 4096);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    column_info_t *columns = table_info->columns;
+    result = strbuf_append(&sql, "INSERT OR REPLACE INTO \"%w\" (", table_info->name);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+    for(int i = 0; i < table_info->nColumns; i++) {
+        if (i > 0) {
+            result = strbuf_append(&sql, ",\"%w\"", columns[i].name);
+        } else {
+            result = strbuf_append(&sql, "\"%w\"", columns[i].name);
+        }
+        if (result != SQLITE_OK) {
+            goto exit;
+        }
+    }
+    result = strbuf_append(&sql, ") VALUES (", table_info->name);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    for(int i = 0; i < table_info->nColumns; i++) {
+        if (i > 0) {
+            result = strbuf_append(&sql, ",?");
+        } else {
+            result = strbuf_append(&sql, "?");
+        }
+        if (result != SQLITE_OK) {
+            goto exit;
+        }
+    }
+    result = strbuf_append(&sql, ")");
+
+    if (result == SQLITE_OK) {
+        result = strbuf_data(&sql, query);
+    }
+
+    exit:
+    strbuf_destroy(&sql);
+    return result;
+}
+
+static int sql_insert_data(sqlite3 *db, table_info_t* table_info, int *errors, strbuf_t *errmsg) {
+    if (table_info->nRows <= 0 || table_info->nColumns <= 0) {
+        return SQLITE_OK;
+    }
+
+    int result;
+    char* query = NULL;
+    result = sql_format_insert_data(table_info, &query);
+
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    stmt_t stmt;
+    result = sql_stmt_init(&stmt, db, query);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    sqlite3_stmt *sqlite_stmt = stmt.stmt;
+
+    for (int rIx = 0; rIx < table_info->nRows; rIx++) {
+        value_t *row = table_info->rows + (rIx * table_info->nColumns);
+        sqlite3_reset(sqlite_stmt);
+        for (int cIx = 0; cIx < table_info->nColumns; cIx++) {
+            switch (row[cIx].type) {
+                default:
+                    break;
+                case VALUE_FUNC:
+                case VALUE_TEXT:
+                    sqlite3_bind_text(sqlite_stmt, cIx + 1, VALUE_AS_TEXT(row[cIx]), -1, SQLITE_STATIC);
+                    break;
+                case VALUE_DOUBLE:
+                    sqlite3_bind_double(sqlite_stmt, cIx + 1, VALUE_AS_DOUBLE(row[cIx]));
+                    break;
+                case VALUE_INTEGER:
+                    sqlite3_bind_int(sqlite_stmt, cIx + 1, VALUE_AS_INT(row[cIx]));
+                    break;
+            }
+        }
+        int step_res = sqlite3_step(sqlite_stmt);
+        if (step_res != SQLITE_DONE) {
+            result = step_res;
+            *errors = *errors + 1;
+            if (errmsg) {
+                result = strbuf_append(errmsg, sqlite3_errmsg(db));
+                if (result != SQLITE_OK) {
+                    goto exit;
+                }
+            }
+            goto exit;
+        }
+    }
+
+    exit:
+    sql_stmt_destroy(&stmt);
+    return result;
+}
+
+static void appendTableConstraint(table_info_t *table_info, strbuf_t *sql, int constraint_mask, int constraint_idx) {
+    char* constraint_name;
+    if (constraint_mask == SQL_PRIMARY_KEY_MASK) {
+        constraint_name = "PRIMARY KEY";
+    } else if (constraint_mask == SQL_UNIQUE_MASK) {
+        constraint_name = "UNIQUE KEY";
+    } else {
+        return;
+    }
+
+    int has_cols = 0;
+    for(int i = 0; i < table_info->nColumns; i++) {
+        int flags = table_info->columns[i].flags;
+        if (SQL_IS_CONSTRAINT(flags, constraint_mask, constraint_idx)) {
+            has_cols = 1;
+            break;
+        }
+    }
+    
+    if (!has_cols) {
+        return;
+    }
+    
+    strbuf_append(sql, ",\n  %s (", constraint_name);
+    int first = 1;
+    for(int i = 0; i < table_info->nColumns; i++) {
+        int flags = table_info->columns[i].flags;
+        if (SQL_IS_CONSTRAINT(flags, constraint_mask, constraint_idx)) {
+            if (first) {
+                first = 0;
+                strbuf_append(sql, "\"%w\"", table_info->columns[i].name);
+            } else {
+                strbuf_append(sql, ", \"%w\"", table_info->columns[i].name);
+            }
+        }
+    }
+    strbuf_append(sql, ")");
+}
+
+static int sql_create_table(sqlite3 *db, table_info_t* table_info, int *errors, strbuf_t *errmsg) {
+    int result;
     strbuf_t sql;
     result = strbuf_init(&sql, 4096);
     if (result != SQLITE_OK) {
@@ -185,16 +572,18 @@ int sql_create_table(sqlite3 *db, strbuf_t *errors, table_info_t* table_info) {
     }
 
     int has_pk = 0;
+    int max_uk = -1;
 
-    strbuf_append(&sql, "CREATE TABLE IF NOT EXISTS %Q (", table_info->name);
+    strbuf_append(&sql, "CREATE TABLE IF NOT EXISTS \"%w\" (", table_info->name);
     column_info_t *columns = table_info->columns;
     for(int i = 0; i < table_info->nColumns; i++) {
         if (i > 0) {
-            strbuf_append(&sql, ",\n  %Q %s", columns[i].name, columns[i].type);
+            strbuf_append(&sql, ",\n  \"%w\" %s", columns[i].name, columns[i].type);
         } else {
-            strbuf_append(&sql, "\n  %Q %s", columns[i].name, columns[i].type);
+            strbuf_append(&sql, "\n  \"%w\" %s", columns[i].name, columns[i].type);
         }
-        if (columns[i].flags & SQL_NOT_NULL) {
+        int flags = columns[i].flags;
+        if (flags & SQL_NOT_NULL_MASK) {
             strbuf_append(&sql, " NOT NULL");
         }
         switch (columns[i].default_value.type) {
@@ -218,33 +607,65 @@ int sql_create_table(sqlite3 *db, strbuf_t *errors, table_info_t* table_info) {
             strbuf_append(&sql, " %s", columns[i].column_constraints);
         }
 
-        if (columns[i].flags & SQL_PRIMARY_KEY) {
+        if (flags & SQL_PRIMARY_KEY_MASK) {
             has_pk = 1;
+        }
+
+        if (flags & SQL_UNIQUE_MASK) {
+            int ix = SQL_CONSTRAINT_IX(flags);
+            if (ix > max_uk) {
+                max_uk = ix;
+            }
         }
     }
 
     if (has_pk) {
-        strbuf_append(&sql, ",\n  PRIMARY KEY (");
-        int first = 1;
-        for(int i = 0; i < table_info->nColumns; i++) {
-            if (columns[i].flags & SQL_PRIMARY_KEY) {
-                if (first) {
-                    first = 0;
-                    strbuf_append(&sql, "%Q", columns[i].name);
-                } else {
-                    strbuf_append(&sql, ", %Q", columns[i].name);
-                }
-            }
+        appendTableConstraint(table_info, &sql, SQL_PRIMARY_KEY_MASK, 0);
+    }
+
+    if (max_uk > 0) {
+        for( int i = 0; i <= max_uk; i++) {
+            appendTableConstraint(table_info, &sql, SQL_UNIQUE_MASK, i);
         }
-        strbuf_append(&sql, ")");
     }
 
     strbuf_append(&sql, "\n)");
 
     char* err = NULL;
-    result = sqlite3_exec(db, strbuf_data(&sql), NULL, NULL, &err);
+    result = sqlite3_exec(db, strbuf_data_pointer(&sql), NULL, NULL, &err);
     if (err) {
-        strbuf_append(errors, err);
+        *errors = *errors + 1;
+        if (errmsg) {
+            strbuf_append(errmsg, err);
+        }
+    }
+
+    strbuf_destroy(&sql);
+
+    return result;
+}
+
+int sql_init_table(sqlite3 *db, table_info_t* table_info, int *errors, strbuf_t* errmsg) {
+    if (errors == NULL) {
+        return SQLITE_MISUSE;
+    }
+
+    int result;
+
+    int exists = 0;
+    result = sql_table_exists(db, table_info->name, &exists);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    if (exists) {
+        result = sql_check_table_schema(db, table_info, errors, errmsg);
+    } else {
+        result = sql_create_table(db, table_info, errors, errmsg);
+    }
+
+    if (result == SQLITE_OK && *errors == 0) {
+        result = sql_insert_data(db, table_info, errors, errmsg);
     }
 
     return result;

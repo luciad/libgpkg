@@ -234,8 +234,9 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
 static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     int result;
 
-    strbuf_t err;
-    result = strbuf_init(&err, 128);
+    int errors = 0;
+    strbuf_t errmsg;
+    result = strbuf_init(&errmsg, 128);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -244,7 +245,7 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
     table_info_t **table = tables;
     while(*table != NULL) {
-        result = sql_check_table(db, &err, *table);
+        result = sql_check_table(db, *table, &errors, &errmsg);
         if (result != SQLITE_OK) {
             goto exit;
         }
@@ -253,22 +254,23 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
     exit:
     if (result == SQLITE_OK) {
-        if (strbuf_length(&err) > 0) {
-            sqlite3_result_error(context, strbuf_data(&err), -1);
+        if (errors > 0) {
+            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
         } else {
             sqlite3_result_null(context);
         }
     } else {
         sqlite3_result_error_code(context, result);
     }
-    strbuf_destroy(&err);
+    strbuf_destroy(&errmsg);
 }
 
 static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     int result;
 
-    strbuf_t err;
-    result = strbuf_init(&err, 128);
+    int errors = 0;
+    strbuf_t errmsg;
+    result = strbuf_init(&errmsg, 128);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -277,7 +279,7 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
 
     table_info_t **table = tables;
     while(*table != NULL) {
-        result = sql_create_table(db, &err, *table);
+        result = sql_init_table(db, *table, &errors, &errmsg);
         if (result != SQLITE_OK) {
             goto exit;
         }
@@ -286,15 +288,15 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
 
     exit:
     if (result == SQLITE_OK) {
-        if (strbuf_length(&err) > 0) {
-            sqlite3_result_error(context, strbuf_data(&err), -1);
+        if (errors > 0) {
+            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
         } else {
             sqlite3_result_null(context);
         }
     } else {
         sqlite3_result_error_code(context, result);
     }
-    strbuf_destroy(&err);
+    strbuf_destroy(&errmsg);
 }
 
 const char *gpkg_libversion(void) {

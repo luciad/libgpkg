@@ -130,7 +130,7 @@ void wkt_writer_destroy(wkt_writer_t *writer) {
 }
 
 char *wkt_writer_getwkt(wkt_writer_t *writer) {
-    return strbuf_data(&writer->strbuf);
+    return strbuf_data_pointer(&writer->strbuf);
 }
 
 size_t wkt_writer_length(wkt_writer_t *writer) {

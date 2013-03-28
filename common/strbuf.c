@@ -24,8 +24,20 @@ size_t strbuf_length(strbuf_t *buffer) {
     return buffer->length;
 }
 
-char * strbuf_data(strbuf_t *buffer) {
+char *strbuf_data_pointer(strbuf_t *buffer) {
     return buffer->buffer;
+}
+
+int strbuf_data(strbuf_t *buffer, char **out) {
+    size_t length = strbuf_length(buffer);
+    *out = sqlite3_malloc(length + 1);
+    if (*out == NULL) {
+        return SQLITE_NOMEM;
+    } else {
+        memmove(*out, buffer->buffer, length);
+        (*out)[length] = 0;
+        return SQLITE_OK;
+    }
 }
 
 int strbuf_append(strbuf_t *buffer, const char* msg, ...) {

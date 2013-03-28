@@ -95,6 +95,14 @@ table_info_t tile_matrix_metadata = {
         NULL, 0
 };
 
+column_info_t tiles_columns[] = {
+        {"id", "integer", N, SQL_PRIMARY_KEY, "AUTOINCREMENT"},
+        {"zoom_level", "integer", I(0), SQL_NOT_NULL | SQL_UNIQUE(0), NULL},
+        {"tile_column", "integer", I(0), SQL_NOT_NULL | SQL_UNIQUE(0), NULL},
+        {"tile_row", "integer", I(0), SQL_NOT_NULL | SQL_UNIQUE(0), NULL},
+        {"tile_data", "blob", N, SQL_NOT_NULL, NULL},
+};
+
 column_info_t xml_metadata_columns[] = {
         {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
         {"md_scope", "text", T("undefined"), SQL_NOT_NULL, NULL},
