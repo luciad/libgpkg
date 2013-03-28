@@ -63,8 +63,8 @@ int sql_exec_for_string(sqlite3 *db, char **out, char **err, char *sql, ...);
 
 int sql_exec_for_int(sqlite3 *db, int *out, char **err, char *sql, ...);
 
-int sql_check_table(sqlite3 *db, table_info_t *table_info, int *errors, strbuf_t *errmsg);
+int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
 
-int sql_init_table(sqlite3 *db, table_info_t *table_info, int *errors, strbuf_t *errmsg);
+int sql_init_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
 
 #endif

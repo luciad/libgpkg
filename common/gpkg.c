@@ -241,11 +241,18 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
         goto exit;
     }
 
+    char* db_name;
+    if (nbArgs == 0) {
+        db_name = "main";
+    } else {
+        db_name = (char*)sqlite3_value_text(args[0]);
+    }
+
     sqlite3 *db = sqlite3_context_db_handle(context);
 
     table_info_t **table = tables;
     while(*table != NULL) {
-        result = sql_check_table(db, *table, &errors, &errmsg);
+        result = sql_check_table(db, db_name, *table, &errors, &errmsg);
         if (result != SQLITE_OK) {
             goto exit;
         }
@@ -275,11 +282,18 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
         goto exit;
     }
 
+    char* db_name;
+    if (nbArgs == 0) {
+        db_name = "main";
+    } else {
+        db_name = (char*)sqlite3_value_text(args[0]);
+    }
+
     sqlite3 *db = sqlite3_context_db_handle(context);
 
     table_info_t **table = tables;
     while(*table != NULL) {
-        result = sql_init_table(db, *table, &errors, &errmsg);
+        result = sql_init_table(db, db_name, *table, &errors, &errmsg);
         if (result != SQLITE_OK) {
             goto exit;
         }
@@ -335,7 +349,9 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3
     ST_ALIAS( WKTToSQL, GeomFromText, 1 );
     ST_FUNC( GeomFromText, 2 );
     FUNC( CheckGpkg, 0 );
+    FUNC( CheckGpkg, 1 );
     FUNC( InitGpkg, 0 );
+    FUNC( InitGpkg, 1 );
 
     return SQLITE_OK;
 }
