@@ -1,0 +1,8 @@
+if (READLINE_INCLUDE_DIR AND READLINE_LIBRARY AND NCURSES_LIBRARY)
+  set ( READLINE_FOUND TRUE )
+else()
+  find_path( READLINE_INCLUDE_DIR readline/readline.h /usr/include/readline )
+  find_library( READLINE_LIBRARY NAMES readline)
+  include(FindPackageHandleStandardArgs)
+  find_package_handle_standard_args( Readline DEFAULT_MSG READLINE_INCLUDE_DIR READLINE_LIBRARY )
+endif()

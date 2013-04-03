@@ -1,0 +1,6 @@
+#ifndef _SQLITE_CONFIG_H
+#define _SQLITE_CONFIG_H
+
+#cmakedefine01 HAVE_READLINE
+
+#endif
