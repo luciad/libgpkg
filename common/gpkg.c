@@ -476,7 +476,7 @@ const char *gpkg_libversion(void) {
     return VERSION;
 }
 
-#define REGISTER_FUNC(name, function, args) if (sqlite3_create_function_v2( db, #name, args, SQLITE_ANY, NULL, function, NULL, NULL, NULL ) != SQLITE_OK) return SQLITE_ERROR;
+#define REGISTER_FUNC(name, function, args) if (sqlite3_create_function_v2( db, #name, args, SQLITE_UTF8, NULL, function, NULL, NULL, NULL ) != SQLITE_OK) return SQLITE_ERROR;
 #define FUNC(name, args) REGISTER_FUNC(name, name, args)
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
