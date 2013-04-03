@@ -13,6 +13,10 @@ add_library (
 set ( gpkg_VERSION_MAJOR 1 )
 set ( gpkg_VERSION_MINOR 0 )
 
+if ( CMAKE_C_COMPILE_ID EQUAL "GNU" )
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99" )
+endif()
+
 include(CheckFunctionExists)
 
 check_function_exists(strcasecmp HAVE_STR_CASE_CMP)
