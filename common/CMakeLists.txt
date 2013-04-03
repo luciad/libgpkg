@@ -13,9 +13,10 @@ add_library (
 set ( gpkg_VERSION_MAJOR 1 )
 set ( gpkg_VERSION_MINOR 0 )
 
-if ( CMAKE_C_COMPILE_ID EQUAL "GNU" )
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99" )
 endif()
+message( "C compile flags: ${CMAKE_C_FLAGS}" )
 
 include(CheckFunctionExists)
 
