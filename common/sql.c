@@ -1,6 +1,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
-#include "string.h"
+#include "str.h"
 #include "sqlite.h"
 #include "sql.h"
 
@@ -215,7 +215,7 @@ static int sql_check_cols(sqlite3_stmt *stmt, table_info_t *table_info, int *err
         char *name = (char*)sqlite3_column_text(stmt, 1);
         int index = -1;
         for( int c = 0; c < table_info->nColumns; c++) {
-            if (strcasecmp(table_info->columns[c].name, name) == 0) {
+            if (STRICMP(table_info->columns[c].name, name) == 0) {
                 index = c;
                 break;
             }
@@ -223,7 +223,7 @@ static int sql_check_cols(sqlite3_stmt *stmt, table_info_t *table_info, int *err
 
         if (index != -1) {
             char *type = (char*)sqlite3_column_text(stmt, 2);
-            if (strcasecmp(table_info->columns[index].type, type) != 0) {
+            if (STRICMP(table_info->columns[index].type, type) != 0) {
                 *errors = *errors + 1;
                 if (errmsg) {
                     strbuf_append(errmsg, "Column %s.%s has incorrect type (expected: %s, actual: %s)\n", table_info->name, name, table_info->columns[index].type, type);
