@@ -1,5 +1,5 @@
 add_library (
-  gpkgcommon
+  gpkgcommon STATIC
   binstream.c
   geomio.c
   gpb.c
@@ -10,13 +10,14 @@ add_library (
   wkt.c
 )
 
+set_target_properties( gpkgcommon PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 set ( gpkg_VERSION_MAJOR 1 )
 set ( gpkg_VERSION_MINOR 0 )
 
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99" )
 endif()
-message( "C compile flags: ${CMAKE_C_FLAGS}" )
 
 include(CheckFunctionExists)
 

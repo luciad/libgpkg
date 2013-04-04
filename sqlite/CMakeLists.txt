@@ -1,5 +1,6 @@
 add_library ( sqlite STATIC sqlite3.c )
 add_definitions ( -D_HAVE_SQLITE_CONFIG_H=1 )
+set_target_properties( sqlite PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 set ( CMAKE_VERBOSE_MAKEFILE 1 )
 
@@ -18,10 +19,17 @@ check_function_exists(usleep HAVE_USLEEP)
 set ( SQLITE_ENABLE_RTREE 1 )
 
 find_package ( Threads )
-if ( CMAKE_USE_PTHREADS_INIT OR CMAKE_USE_WIN32_THREADS_INIT )
+if ( CMAKE_USE_PTHREADS_INIT )
+  set( SQLITE_THREADSAFE 2 )
+  target_link_libraries( sqlite "${CMAKE_THREAD_LIBS_INIT}" )
+elseif ( CMAKE_USE_WIN32_THREADS_INIT )
   set( SQLITE_THREADSAFE 2 )
 else()
   set( SQLITE_THREADSAFE 1 )
+endif()
+
+if ( UNIX )
+  target_link_libraries( sqlite "${CMAKE_DL_LIBS}" )
 endif()
 
 configure_file (

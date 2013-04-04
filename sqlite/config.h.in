@@ -7,5 +7,5 @@
 
 #cmakedefine HAVE_GMTIME_R
 #cmakedefine01 HAVE_LOCALTIME_R
-#cmakedefine HAVE_POSIX_FALLOCATE
+#cmakedefine01 HAVE_POSIX_FALLOCATE
 #cmakedefine01 HAVE_USLEEP
