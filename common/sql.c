@@ -13,9 +13,7 @@ static int sql_stmt_vinit(sqlite3_stmt **stmt, sqlite3 *db, char *sql, va_list a
     }
 
     int result = sqlite3_prepare_v2(db, formatted_sql, -1, stmt, NULL);
-    if (result != SQLITE_OK) {
-        sqlite3_free(formatted_sql);
-    }
+    sqlite3_free(formatted_sql);
     return result;
 }
 
@@ -175,8 +173,8 @@ int sql_exec(sqlite3 *db, char *sql, ...) {
 }
 
 int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *exists) {
-    sqlite3_stmt *stmt;
-    int result;
+    sqlite3_stmt *stmt = NULL;
+    int result = SQLITE_OK;
 
     result = sql_stmt_init(&stmt, db, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_name);
     if (result != SQLITE_OK) {
@@ -282,7 +280,7 @@ static int sql_check_cols(sqlite3_stmt *stmt, table_info_t *table_info, int *err
 }
 
 static int sql_check_table_schema(sqlite3 *db, char* db_name, table_info_t* table_info, int *errors, strbuf_t *errmsg) {
-    sqlite3_stmt *stmt;
+    sqlite3_stmt *stmt = NULL;
     int result = sql_stmt_init(&stmt, db, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_info->name);
     if (result == SQLITE_OK) {
         result = sql_check_cols(stmt, table_info, errors, errmsg);
@@ -335,11 +333,13 @@ static int sql_check_data(sqlite3 *db, char* db_name, table_info_t* table_info, 
         return SQLITE_OK;
     }
     
-    int result;
+    int result = SQLITE_OK;
     strbuf_t sql;
+    char *query = NULL;
+
     result = strbuf_init(&sql, 4096);
     if (result != SQLITE_OK) {
-        return result;
+        goto exit;
     }
 
     column_info_t *columns = table_info->columns;
@@ -350,18 +350,16 @@ static int sql_check_data(sqlite3 *db, char* db_name, table_info_t* table_info, 
         }
         strbuf_append(&sql, " \"%w\" = ?", columns[i].name);
     }
-    char *query;
     result = strbuf_data(&sql, &query);
-    strbuf_destroy(&sql);
 
     if (result != SQLITE_OK) {
-        return result;
+        goto exit;
     }
 
-    sqlite3_stmt *stmt;
+    sqlite3_stmt *stmt = NULL;
     result = sql_stmt_init(&stmt, db, query);
     if (result != SQLITE_OK) {
-        return result;
+        goto exit;
     }
 
     for (int rIx = 0; rIx < table_info->nRows; rIx++) {
@@ -389,7 +387,9 @@ static int sql_check_data(sqlite3 *db, char* db_name, table_info_t* table_info, 
     }
 
     exit:
+    strbuf_destroy(&sql);
     sql_stmt_destroy(stmt);
+    sqlite3_free(query);
     return result;
 }
 
@@ -473,18 +473,18 @@ static int sql_insert_data(sqlite3 *db, char *db_name, table_info_t* table_info,
         return SQLITE_OK;
     }
 
-    int result;
+    sqlite3_stmt *stmt = NULL;
+    int result = SQLITE_OK;
     char* query = NULL;
-    result = sql_format_insert_data(db_name, table_info, &query);
 
+    result = sql_format_insert_data(db_name, table_info, &query);
     if (result != SQLITE_OK) {
-        return result;
+        goto exit;
     }
 
-    sqlite3_stmt *stmt;
     result = sql_stmt_init(&stmt, db, query);
     if (result != SQLITE_OK) {
-        return result;
+        goto exit;
     }
 
     for (int rIx = 0; rIx < table_info->nRows; rIx++) {
@@ -508,6 +508,7 @@ static int sql_insert_data(sqlite3 *db, char *db_name, table_info_t* table_info,
     }
 
     exit:
+    sqlite3_free(query);
     sql_stmt_destroy(stmt);
     return result;
 }
