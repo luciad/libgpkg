@@ -1,7 +1,7 @@
-= Description
+# Description
 A SQLite 3 extension that provides a minimal GeoPackage implementation.
 
-= Compilation
+# Compilation
 
 - Install CMake 3.8 or newer. CMake can be downloaded from www.cmake.org or installed using
   your systems package manager.
