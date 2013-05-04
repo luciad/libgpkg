@@ -46,9 +46,10 @@ endmacro(create_test)
 file(GLOB test_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test*.c)
 foreach(test_file IN LISTS test_files)
   string(REGEX MATCH "test[^\\.]+" test_name ${test_file})
+  string(REGEX REPLACE "^test" "" test_name ${test_name})
 
   set(run_test_source "run_${test_name}.c")
-  create_test(${test_file} "run_${test_file}")
+  create_test(${test_file} ${run_test_source})
 
   set(run_test "run_${test_name}")
   add_executable(${run_test} ${run_test_source} ${test_file} cutest/CuTest.c)
