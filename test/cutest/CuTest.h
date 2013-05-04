@@ -3,7 +3,11 @@
 
 #include <setjmp.h>
 #include <stdarg.h>
+
+// Modification
+// CuFail macro uses NULL. This include ensures NULL is defined.
 #include <stdlib.h>
+// End modification
 
 #define CUTEST_VERSION  "CuTest 1.5"
 
