@@ -19,6 +19,11 @@
 #include <sqlite3.h>
 #include "strbuf.h"
 
+/**
+ * \addtogroup sql SQL utilities
+ * @{
+ */
+
 #define SQL_NOT_NULL_MASK 0x1
 #define SQL_PRIMARY_KEY_MASK 0x2
 #define SQL_UNIQUE_MASK 0x4
@@ -91,5 +96,7 @@ int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *ex
 int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
 
 int sql_init_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
+
+/** @} */
 
 #endif

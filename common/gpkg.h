@@ -18,6 +18,11 @@
 
 #include <sqlite3.h>
 
+/**
+ * \addtogroup gpkg Library initialization and metadata
+ * @{
+ */
+
 const char *gpkg_libversion(void);
 int gpkg_extension_init(sqlite3*, const char **, const void *);
 

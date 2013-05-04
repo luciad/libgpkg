@@ -19,8 +19,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/**
+ * \addtogroup binstream Binary I/O
+ * @{
+ */
+
 typedef enum { LITTLE, BIG } binstream_endianness;
 
+/**
+ * A stream-like object that can be used to read/write binary data.
+ */
 typedef struct {
 	uint8_t *data;
 	size_t limit;
@@ -30,6 +38,12 @@ typedef struct {
     int fixed_size;
 } binstream_t;
 
+/**
+ * Initialise a fixed size binary stream.
+ * @param stream the stream to initialize
+ * @param data an array of 8-bit bytes that will be encapsulated by the stream
+ * @param length the length of data
+ */
 int binstream_init(binstream_t *stream, uint8_t *data, size_t length);
 
 int binstream_init_growable(binstream_t *stream, size_t initial_cap);
@@ -71,5 +85,7 @@ int binstream_read_double(binstream_t *stream, double *out);
 int binstream_write_double(binstream_t *stream, double val);
 
 int binstream_write_ndouble(binstream_t *stream, double *val, size_t count);
+
+/** @} */
 
 #endif

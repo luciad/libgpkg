@@ -20,6 +20,11 @@
 #include "strbuf.h"
 #include "geomio.h"
 
+/**
+ * \addtogroup wkt Well-known text I/O
+ * @{
+ */
+
 typedef struct wkt_writer_t {
     geom_reader_t geom_reader;
     strbuf_t strbuf;
@@ -37,5 +42,7 @@ char* wkt_writer_getwkt( wkt_writer_t *writer );
 size_t wkt_writer_length( wkt_writer_t *writer );
 
 int wkt_read_geometry(char *data, size_t length, geom_reader_t *reader);
+
+/** @} */
 
 #endif

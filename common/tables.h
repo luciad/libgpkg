@@ -25,6 +25,11 @@
 #define T(v) TEXT_VALUE(v)
 #define F(v) FUNC_VALUE(v)
 
+/**
+ * \addtogroup tables Geopackage table definitions
+ * @{
+ */
+
 column_info_t geopackage_contents_columns[] = {
         {"table_name", "text", N, SQL_PRIMARY_KEY | SQL_NOT_NULL, NULL},
         {"data_type", "text", N, SQL_NOT_NULL, NULL},
@@ -167,6 +172,8 @@ table_info_t *tables[] = {
         &manifest,
         NULL
 };
+
+/** @} */
 
 #undef N
 #undef D

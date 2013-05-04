@@ -19,8 +19,15 @@
 #include "binstream.h"
 #include "geomio.h"
 
+/**
+ * \addtogroup wkb Well-known binary I/O
+ * @{
+ */
+
 int wkb_read_geometry(binstream_t *stream, geom_reader_t *reader);
 
 int wkb_read_header(binstream_t *stream, geom_header_t *header);
+
+/** @} */
 
 #endif

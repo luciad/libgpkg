@@ -18,6 +18,11 @@
 
 #include <string.h>
 
+/**
+ * \addtogroup strbuf Strings
+ * @{
+ */
+
 typedef struct {
     char *buffer;
     size_t capacity;
@@ -35,5 +40,7 @@ char *strbuf_data_pointer(strbuf_t *buffer);
 int strbuf_data(strbuf_t *buffer, char **out);
 
 int strbuf_append(strbuf_t *buffer, const char* msg, ...);
+
+/** @} */
 
 #endif

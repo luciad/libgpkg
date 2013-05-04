@@ -20,6 +20,11 @@
 #include "binstream.h"
 #include "geomio.h"
 
+/**
+ * \addtogroup gpb GeoPackage Binary Header I/O
+ * @{
+ */
+
 typedef struct {
     uint8_t version;
     uint32_t srid;
@@ -61,5 +66,7 @@ size_t gpb_size(gpb_t *gpb);
 int gpb_read_header(binstream_t *stream, gpb_t *gpb);
 
 int gpb_write_header(binstream_t *stream, gpb_t *gpb);
+
+/** @} */
 
 #endif

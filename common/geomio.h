@@ -18,6 +18,11 @@
 
 #include <stdint.h>
 
+/**
+ * \addtogroup geomio Geometry I/O
+ * @{
+ */
+
 #define GEOM_POINT 1
 #define GEOM_LINESTRING 2
 #define GEOM_POLYGON 3
@@ -62,5 +67,7 @@ void geom_reader_init(
 int geom_coord_dim(geom_header_t *wkb);
 
 char* geom_type_name(geom_header_t *wkb);
+
+/** @} */
 
 #endif
