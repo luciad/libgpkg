@@ -272,13 +272,16 @@ int binstream_write_u64(binstream_t *stream, uint64_t val) {
 }
 
 int binstream_read_double(binstream_t *stream, double *out) {
-    uint64_t val;
-    int result = binstream_read_u64(stream, &val);
+    union {
+        uint64_t L;
+        double D;
+    } T;
+    int result = binstream_read_u64(stream, &T.L);
     if (result != SQLITE_OK) {
         return result;
     }
 
-    *out = *((double *) &val);
+    *out = T.D;
     return SQLITE_OK;
 }
 
