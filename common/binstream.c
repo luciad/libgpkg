@@ -43,6 +43,10 @@ int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
 }
 
 void binstream_destroy(binstream_t *stream) {
+    if (stream == NULL) {
+      return;
+    }
+
     if (stream->fixed_size == 0) {
         sqlite3_free(stream->data);
     }
@@ -92,8 +96,12 @@ int binstream_seek(binstream_t *stream, size_t position) {
     return SQLITE_OK;
 }
 
-int binstream_relseek(binstream_t *stream, size_t amount) {
-    return binstream_seek(stream, stream->position + amount);
+int binstream_relseek(binstream_t *stream, int32_t amount) {
+    size_t position = stream->position;
+    if (amount < 0 && -amount > position) {
+        return SQLITE_IOERR;
+    }
+    return binstream_seek(stream, position + amount);
 }
 
 uint8_t *binstream_data(binstream_t *stream) {

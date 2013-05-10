@@ -19,6 +19,10 @@
 #include "sqlite.h"
 #include "sql.h"
 
+#define SQL_NOT_NULL_MASK SQL_NOT_NULL
+#define SQL_PRIMARY_KEY_MASK SQL_PRIMARY_KEY
+#define SQL_UNIQUE_MASK SQL_UNIQUE(0)
+
 static int sql_stmt_vinit(sqlite3_stmt **stmt, sqlite3 *db, char *sql, va_list args) {
     *stmt = NULL;
     char *formatted_sql = sqlite3_vmprintf(sql, args);

@@ -19,8 +19,8 @@
 #include "sqlite.h"
 #include "wkt.h"
 
-static void wkt_begin(geom_reader_t *reader, geom_header_t *header) {
-    wkt_writer_t *writer = (wkt_writer_t *) reader;
+static void wkt_begin(geom_consumer_t *consumer, geom_header_t *header) {
+    wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
     if (writer->offset >= 0) {
         if (writer->children[writer->offset] > 0) {
@@ -58,6 +58,10 @@ static void wkt_begin(geom_reader_t *reader, geom_header_t *header) {
             case GEOM_GEOMETRYCOLLECTION:
                 strbuf_append(&writer->strbuf, "GeometryCollection ");
                 break;
+            case GEOM_LINEARRING:
+                // Should never happen, since linear ring is not a top level geometry type.
+                strbuf_append(&writer->strbuf, "LinearRing ");
+                break;
         }
 
         if (header->coord_type == GEOM_XYZ) {
@@ -70,8 +74,8 @@ static void wkt_begin(geom_reader_t *reader, geom_header_t *header) {
     }
 }
 
-static void wkt_coordinates(geom_reader_t *reader, geom_header_t *header, size_t point_count, double *coords) {
-    wkt_writer_t *writer = (wkt_writer_t *) reader;
+static void wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords) {
+    wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
     if (writer->children[writer->offset] == 0) {
         strbuf_append(&writer->strbuf, "(");
@@ -116,8 +120,8 @@ static void wkt_coordinates(geom_reader_t *reader, geom_header_t *header, size_t
     }
 }
 
-static void wkt_end(geom_reader_t *reader, geom_header_t *header) {
-    wkt_writer_t *writer = (wkt_writer_t *) reader;
+static void wkt_end(geom_consumer_t *consumer, geom_header_t *header) {
+    wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
     if (writer->children[writer->offset] == 0) {
         strbuf_append(&writer->strbuf, "EMPTY");
@@ -128,7 +132,7 @@ static void wkt_end(geom_reader_t *reader, geom_header_t *header) {
 }
 
 int wkt_writer_init(wkt_writer_t *writer) {
-    geom_reader_init(&writer->geom_reader, wkt_begin, wkt_end, wkt_coordinates);
+    geom_consumer_init(&writer->geom_consumer, wkt_begin, wkt_end, wkt_coordinates);
     int res = strbuf_init(&writer->strbuf, 256);
     if (res != SQLITE_OK) {
         return res;
@@ -139,6 +143,10 @@ int wkt_writer_init(wkt_writer_t *writer) {
     writer->offset = -1;
 
     return SQLITE_OK;
+}
+
+geom_consumer_t* wkt_writer_geom_consumer(wkt_writer_t *writer) {
+    return &writer->geom_consumer;
 }
 
 void wkt_writer_destroy(wkt_writer_t *writer) {
@@ -270,7 +278,7 @@ static void wkt_next_token(wkt_tokenizer_t *tok) {
     tok->token = WKT_ERROR;
 }
 
-static int wkt_read_point(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_point(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     double coords[header->coord_size];
 
     for (int i = 0; i < header->coord_size; i++) {
@@ -282,14 +290,14 @@ static int wkt_read_point(wkt_tokenizer_t *tok, geom_header_t *header, geom_read
         wkt_next_token(tok);
     }
 
-    if (reader->coordinates) {
-        reader->coordinates(reader, header, 1, coords);
+    if (consumer->coordinates) {
+        consumer->coordinates(consumer, header, 1, coords);
     }
 
     return SQLITE_OK;
 }
 
-static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     double coords[header->coord_size * GEOM_BATCH_SIZE];
 
     size_t coord_count = 0;
@@ -310,8 +318,8 @@ static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_rea
         more_coords = tok->token == WKT_COMMA;
 
         if (coord_count == GEOM_BATCH_SIZE || !more_coords) {
-            if (reader->coordinates) {
-                reader->coordinates(reader, header, coord_count, coords);
+            if (consumer->coordinates) {
+                consumer->coordinates(consumer, header, coord_count, coords);
             }
             coord_count = 0;
             coord_offset = 0;
@@ -325,7 +333,7 @@ static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_rea
     return SQLITE_OK;
 }
 
-static int wkt_read_point_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_point_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -337,7 +345,7 @@ static int wkt_read_point_text(wkt_tokenizer_t *tok, geom_header_t *header, geom
         wkt_next_token(tok);
     }
 
-    int res = wkt_read_point(tok, header, reader);
+    int res = wkt_read_point(tok, header, consumer);
     if (res != SQLITE_OK) {
         return res;
     }
@@ -350,7 +358,7 @@ static int wkt_read_point_text(wkt_tokenizer_t *tok, geom_header_t *header, geom
     }
 }
 
-static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -369,12 +377,12 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header,
 
     int more_points;
     do {
-        reader->begin(reader, &point_header);
-        int res = wkt_read_point_text(tok, &point_header, reader);
+        consumer->begin(consumer, &point_header);
+        int res = wkt_read_point_text(tok, &point_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        reader->end(reader, &point_header);
+        consumer->end(consumer, &point_header);
 
         more_points = tok->token == WKT_COMMA;
         if (more_points) {
@@ -390,7 +398,7 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header,
     }
 }
 
-static int wkt_read_linestring_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_linestring_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -402,7 +410,7 @@ static int wkt_read_linestring_text(wkt_tokenizer_t *tok, geom_header_t *header,
         wkt_next_token(tok);
     }
 
-    int res = wkt_read_points(tok, header, reader);
+    int res = wkt_read_points(tok, header, consumer);
     if (res != SQLITE_OK) {
         return res;
     }
@@ -415,7 +423,7 @@ static int wkt_read_linestring_text(wkt_tokenizer_t *tok, geom_header_t *header,
     }
 }
 
-static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -434,12 +442,12 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *he
 
     int more_linestrings;
     do {
-        reader->begin(reader, &linestring_header);
-        int res = wkt_read_linestring_text(tok, &linestring_header, reader);
+        consumer->begin(consumer, &linestring_header);
+        int res = wkt_read_linestring_text(tok, &linestring_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        reader->end(reader, &linestring_header);
+        consumer->end(consumer, &linestring_header);
 
         more_linestrings = tok->token == WKT_COMMA;
         if (more_linestrings) {
@@ -455,7 +463,7 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *he
     }
 }
 
-static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -474,12 +482,12 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, ge
 
     int more_rings;
     do {
-        reader->begin(reader, &ring_header);
-        int res = wkt_read_linestring_text(tok, &ring_header, reader);
+        consumer->begin(consumer, &ring_header);
+        int res = wkt_read_linestring_text(tok, &ring_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        reader->end(reader, &ring_header);
+        consumer->end(consumer, &ring_header);
 
         more_rings = tok->token == WKT_COMMA;
         if (more_rings) {
@@ -495,7 +503,7 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, ge
     }
 }
 
-static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -514,12 +522,12 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *heade
 
     int more_polygons;
     do {
-        reader->begin(reader, &polygon_header);
-        int res = wkt_read_polygon_text(tok, &polygon_header, reader);
+        consumer->begin(consumer, &polygon_header);
+        int res = wkt_read_polygon_text(tok, &polygon_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        reader->end(reader, &polygon_header);
+        consumer->end(consumer, &polygon_header);
 
         more_polygons = tok->token == WKT_COMMA;
         if (more_polygons) {
@@ -535,9 +543,9 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *heade
     }
 }
 
-static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *parent_header, geom_reader_t *reader);
+static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *parent_header, geom_consumer_t *consumer);
 
-static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_reader_t *reader) {
+static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
         wkt_next_token(tok);
         return SQLITE_OK;
@@ -551,7 +559,7 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t 
 
     int more_geometries;
     do {
-        int res = wkt_read_geometry_tagged_text(tok, header, reader);
+        int res = wkt_read_geometry_tagged_text(tok, header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
@@ -570,7 +578,7 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t 
     }
 }
 
-static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *parent_header, geom_reader_t *reader) {
+static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *parent_header, geom_consumer_t *consumer) {
     uint32_t geometry_type;
     if (tok->token >= WKT_POINT && tok->token <= WKT_GEOMETRYCOLLECTION) {
         geometry_type = tok->token;
@@ -616,49 +624,49 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *pa
         return SQLITE_IOERR;
     }
     
-    if (reader->begin) {
-        reader->begin(reader, &header);
+    if (consumer->begin) {
+        consumer->begin(consumer, &header);
     }
 
     int res;
     switch (geometry_type) {
         case GEOM_POINT:
-            res = wkt_read_point_text(tok, &header, reader);
+            res = wkt_read_point_text(tok, &header, consumer);
             break;
         case GEOM_LINESTRING:
-            res = wkt_read_linestring_text(tok, &header, reader);
+            res = wkt_read_linestring_text(tok, &header, consumer);
             break;
         case GEOM_POLYGON:
-            res = wkt_read_polygon_text(tok, &header, reader);
+            res = wkt_read_polygon_text(tok, &header, consumer);
             break;
         case GEOM_MULTIPOINT:
-            res = wkt_read_multipoint_text(tok, &header, reader);
+            res = wkt_read_multipoint_text(tok, &header, consumer);
             break;
         case GEOM_MULTILINESTRING:
-            res = wkt_read_multilinestring_text(tok, &header, reader);
+            res = wkt_read_multilinestring_text(tok, &header, consumer);
             break;
         case GEOM_MULTIPOLYGON:
-            res = wkt_read_multipolygon_text(tok, &header, reader);
+            res = wkt_read_multipolygon_text(tok, &header, consumer);
             break;
         case GEOM_GEOMETRYCOLLECTION:
-            res = wkt_read_geometrycollection_text(tok, &header, reader);
+            res = wkt_read_geometrycollection_text(tok, &header, consumer);
             break;
         default:
             res = SQLITE_IOERR;
     }
 
-    if (res == SQLITE_OK && reader->end) {
-        reader->end(reader, &header);
+    if (res == SQLITE_OK && consumer->end) {
+        consumer->end(consumer, &header);
     }
 
     return res;
 }
 
-int wkt_read_geometry(char *data, size_t length, geom_reader_t *reader) {
+int wkt_read_geometry(char *data, size_t length, geom_consumer_t *consumer) {
     wkt_tokenizer_t tok;
     tok.start = data;
     tok.end = data + length;
 
     wkt_next_token(&tok);
-    return wkt_read_geometry_tagged_text(&tok, NULL, reader);
+    return wkt_read_geometry_tagged_text(&tok, NULL, consumer);
 }

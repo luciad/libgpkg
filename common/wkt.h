@@ -25,15 +25,27 @@
  * @{
  */
 
-typedef struct wkt_writer_t {
-    geom_reader_t geom_reader;
+/**
+ * A Well-Known Text writer. wkt_writer_t instances can be used to generate a WKT geometry strings based on
+ * any geometry source. Use wkt_writer_geom_consumer() to obtain a geom_consumer_t pointer that can be passed to
+ * geomtery sources.
+ */
+typedef struct {
+    /** @private */
+    geom_consumer_t geom_consumer;
+    /** @private */
     strbuf_t strbuf;
+    /** @private */
     int type[GEOM_MAX_DEPTH];
+    /** @private */
     int children[GEOM_MAX_DEPTH];
+    /** @private */
     int offset;
 } wkt_writer_t;
 
 int wkt_writer_init( wkt_writer_t *writer );
+
+geom_consumer_t* wkt_writer_geom_consumer(wkt_writer_t *writer);
 
 void wkt_writer_destroy( wkt_writer_t *writer );
 
@@ -41,7 +53,7 @@ char* wkt_writer_getwkt( wkt_writer_t *writer );
 
 size_t wkt_writer_length( wkt_writer_t *writer );
 
-int wkt_read_geometry(char *data, size_t length, geom_reader_t *reader);
+int wkt_read_geometry(char *data, size_t length, geom_consumer_t *consumer);
 
 /** @} */
 

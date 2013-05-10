@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 #include <string.h>
+#include <float.h>
 #include "geomio.h"
 
-void geom_reader_init(
-        geom_reader_t *reader,
-        void (*begin)(struct geom_reader_t*, geom_header_t*),
-        void (*end)(struct geom_reader_t*, geom_header_t*),
-        void (*coordinates)(struct geom_reader_t*, geom_header_t*, size_t point_count, double* coords)
+void geom_consumer_init(
+        geom_consumer_t *consumer,
+        void (*begin)(struct geom_consumer_t*, geom_header_t*),
+        void (*end)(struct geom_consumer_t*, geom_header_t*),
+        void (*coordinates)(struct geom_consumer_t*, geom_header_t*, size_t point_count, double* coords)
 ) {
-    reader->begin = begin;
-    reader->end = end;
-    reader->coordinates = coordinates;
+    consumer->begin = begin;
+    consumer->end = end;
+    consumer->coordinates = coordinates;
 }
 
 int geom_coord_dim(geom_header_t *wkb) {
@@ -59,4 +60,19 @@ char* geom_type_name(geom_header_t *wkb) {
 		default:
 			return NULL;
 	}
+}
+
+static void geom_envelope_init(geom_envelope_t *envelope) {
+    envelope->has_env_x = 0;
+    envelope->min_x = DBL_MAX;
+    envelope->max_x = -DBL_MAX;
+    envelope->has_env_y = 0;
+    envelope->min_y = DBL_MAX;
+    envelope->max_y = -DBL_MAX;
+    envelope->has_env_z = 0;
+    envelope->min_z = DBL_MAX;
+    envelope->max_z = -DBL_MAX;
+    envelope->has_env_m = 0;
+    envelope->min_m = DBL_MAX;
+    envelope->max_m = -DBL_MAX;
 }

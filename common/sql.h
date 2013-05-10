@@ -24,77 +24,277 @@
  * @{
  */
 
-#define SQL_NOT_NULL_MASK 0x1
-#define SQL_PRIMARY_KEY_MASK 0x2
-#define SQL_UNIQUE_MASK 0x4
-
-#define SQL_NOT_NULL SQL_NOT_NULL_MASK
-#define SQL_PRIMARY_KEY SQL_PRIMARY_KEY_MASK
-#define SQL_UNIQUE(i) (SQL_UNIQUE_MASK | (i << 4))
+/**
+ * Column flag that indicates the column may not contain NULL values.
+ */
+#define SQL_NOT_NULL 0x1
+/**
+ * Column flag that indicates the column is part of the primary key of the table.
+ */
+#define SQL_PRIMARY_KEY 0x2
+/**
+ * Macro to generate a column flag that indicates the column is part of a unique constraint. The index value
+ * indicates which unique constraint the column is part of. Index must be greater than 0.
+ */
+#define SQL_UNIQUE(i) (0x4 | (i << 4))
 #define SQL_CONSTRAINT_IX(flags) (flags >> 4)
 #define SQL_IS_CONSTRAINT(flags, mask, ix) ((flags & mask) && (SQL_CONSTRAINT_IX(flags) == ix))
 
+/**
+ * Enumeration of value types.
+ */
 typedef enum {
+    /**
+     * Indicates the value of a value_t struct contains a text value.
+     */
     VALUE_TEXT,
+    /**
+     * Indicates the value of a value_t struct contains a function name value.
+     */
     VALUE_FUNC,
+    /**
+     * Indicates the value of a value_t struct contains an integer value.
+     */
     VALUE_INTEGER,
+    /**
+     * Indicates the value of a value_t struct contains a double value.
+     */
     VALUE_DOUBLE,
-    VALUE_NONE
+    /**
+     * Indicates the value of a value_t struct contains a NULL value.
+     */
+    VALUE_NULL
 } value_type_t;
 
+/**
+ * A SQL value.
+ */
 typedef struct {
+    /**
+     * The actual value.
+     */
     union {
+        /**
+         * The value as a string. This field is valid if type is VALUE_TEXT or VALUE_FUNC.
+         */
         char *text;
+        /**
+         * The value as a double. This field is valid if type is VALUE_DOUBLE.
+         */
         double dbl;
+        /**
+         * The value as an integer. This field is valid if type is VALUE_INTEGER.
+         */
         int integer;
     } value;
+    /**
+     * The type of this value.
+     */
     value_type_t type;
 } value_t;
 
-#define NULL_VALUE {{NULL}, VALUE_NONE}
+/**
+ * Macro to initialize a value_t containing a NULL value.
+ */
+#define NULL_VALUE {{NULL}, VALUE_NULL}
+
+/**
+ * Macro to initialize a value_t containing a string value.
+ */
 #define TEXT_VALUE(t) {{.text = t}, VALUE_TEXT}
+/**
+ * Macro to initialize a value_t containing a function name value.
+ */
 #define FUNC_VALUE(t) {{.text = t}, VALUE_FUNC}
+
+/**
+ * Macro to initialize a value_t containing a double value.
+ */
 #define DOUBLE_VALUE(t) {{.dbl = t}, VALUE_DOUBLE}
+
+/**
+ * Macro to initialize a value_t containing an integer value.
+ */
 #define INT_VALUE(t) {{.integer = t}, VALUE_INTEGER}
 
+/**
+ * Macro to retrieve the NULL value contained in a value_t.
+ */
 #define VALUE_AS_NULL(v) (NULL)
+/**
+ * Macro to retrieve the string value contained in a value_t.
+ */
 #define VALUE_AS_TEXT(v) (v.value.text)
+/**
+ * Macro to retrieve the function name value contained in a value_t.
+ */
 #define VALUE_AS_FUNC(v) (v.value.text)
+/**
+ * Macro to retrieve the double value contained in a value_t.
+ */
 #define VALUE_AS_DOUBLE(v) (v.value.dbl)
+/**
+ * Macro to retrieve the integer value contained in a value_t.
+ */
 #define VALUE_AS_INT(v) (v.value.integer)
 
+/**
+ * Description of a column in a SQL table.
+ */
 typedef struct {
+    /**
+     * The name of the column.
+     */
     char *name;
+    /**
+     * The SQL type of the column.
+     */
     char *type;
+    /**
+     * The default value of the column. This field may be set to NULL.
+     */
     value_t default_value;
+    /**
+     * Bitwise OR of any flags that apply to this column. This field may contain a combination of:
+     * \li SQL_NOT_NULL
+     * \li SQL_PRIMARY_KEY
+     * \li SQL_UNIQUE
+     */
     int flags;
+    /**
+     * The column constraints that should be applied to the column as a SQL expression.
+     */
     char *column_constraints;
 } column_info_t;
 
+/**
+ * Description of a SQL table.
+ */
 typedef struct {
+    /**
+     * The name of the table.
+     */
     char *name;
+    /**
+     * An array of column information.
+     */
     column_info_t *columns;
+    /**
+     * The number of elements in columns.
+     */
     size_t nColumns;
+    /**
+     * An array of rows that should be present in the table. Each row is an array of value_t and should contain
+     * nColumns elements.
+     */
     value_t *rows;
+    /**
+     * The number of elements in rows.
+     */
     size_t nRows;
 } table_info_t;
 
+/**
+ * Begins a named SQLite transaction. See the documentation on SQLite savepoints for more details.
+ * @param db the SQLite database context
+ * @param name the name of the transaction
+ * @return SQLITE_OK if the transaction was started successfully\n
+ *         A SQLite error code otherwise
+ * @see sql_commit
+ * @see sql_rollback
+ */
 int sql_begin(sqlite3 *db, char *name);
 
+/**
+ * Commits a named SQLite transaction. See the documentation on SQLite savepoints for more details.
+ * @param db the SQLite database context
+ * @param name the name of the transaction
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ * @see sql_begin
+ * @see sql_rollback
+ */
 int sql_commit(sqlite3 *db, char *name);
 
+/**
+ * Rolls back a named SQLite transaction. See the documentation on SQLite savepoints for more details.
+ * @param db the SQLite database context
+ * @param name the name of the transaction
+ * @return SQLITE_OK if the transaction was successfully rolled back\n
+ *         A SQLite error code otherwise
+ * @see sql_begin
+ * @see sql_commit
+ */
 int sql_rollback(sqlite3 *db, char *name);
 
+/**
+ * Executes a SQL statement. The SQL statement can be a printf style format pattern.
+ * @param db the SQLite database context
+ * @param sql the SQL statement to execute
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
 int sql_exec(sqlite3 *db, char *sql, ...);
 
+/**
+ * Executes a SQL statement that is expected to return a single string value. The SQL statement can be a printf style
+ * format pattern.
+ * @param db the SQLite database context
+ * @param[out] out on success, out will be set to the returned string value
+ * @param sql the SQL statement to execute
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
 int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...);
 
+/**
+ * Executes a SQL statement that is expected to return a single integer value. The SQL statement can be a printf style
+ * format pattern.
+ * @param db the SQLite database context
+ * @param[out] out on success, out will be set to the returned integer value
+ * @param sql the SQL statement to execute
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
 int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
 
+/**
+ * Checks if a table exists in the database.
+ * @param db the SQLite database context
+ * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
+ * @param table_name the name of the table to check.
+ * @param[out] exists on success, exists will be set to 1 if the table exists or to 0 otherwise
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
 int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *exists);
 
+/**
+ * Checks if a table matches the given table specification.
+ * @param db the SQLite database context
+ * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
+ * @param table_name the name of the table to check.
+ * @param table_info the table specification
+ * @param[out] errors on success, errors will be set to the number of cases where the actual table did not match the specification.
+ * @param[out] errmsg if not null, newline separated descriptive messages will be written to errmsg for each encountered error.
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
 int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
 
+/**
+ * Initializes a table based on the given table specification. If the table already exists, then this function is
+ * equivalent to slq_check_table(). Otherwise a new table will be created based on the specification.
+ *
+ * @param db the SQLite database context
+ * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
+ * @param table_name the name of the table to check.
+ * @param table_info the table specification
+ * @param[out] errors on success, errors will be set to the number of errors that was encountered while initializing the table.
+ * @param[out] errmsg if not null, newline separated descriptive messages will be written to errmsg for each encountered error.
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
 int sql_init_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
 
 /** @} */

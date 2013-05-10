@@ -19,9 +19,9 @@
 #include "sqlite.h"
 #include "binstream.h"
 #include "geomio.h"
+#include "wkb.h"
 #include "gpb.h"
 #include "sql.h"
-#include "wkb.h"
 #include "wkt.h"
 
 #include "tables.h"
@@ -30,7 +30,7 @@ SQLITE_EXTENSION_INIT1
 
 #define ST_MIN_MAX(name, check, field) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) { \
     binstream_t stream; \
-    gpb_t gpb; \
+    gpb_header_t gpb; \
     \
     binstream_init( &stream, (uint8_t*)sqlite3_value_blob(args[0]), sqlite3_value_bytes(args[0]) ); \
     if (gpb_read_header( &stream, &gpb ) != SQLITE_OK) { \
@@ -38,17 +38,17 @@ SQLITE_EXTENSION_INIT1
         return; \
     } \
  \
-    if (gpb.check == 0) { \
-        if (gpb_envelope_init_from_wkb(&stream, &gpb) != SQLITE_OK) { \
+    if (gpb.envelope.check == 0) { \
+        if (wkb_fill_envelope(&stream, &gpb.envelope) != SQLITE_OK) { \
             sqlite3_result_error(context, "Invalid GPB header", -1); \
             return; \
         } \
     } \
 \
-    if (gpb.check) { \
-        sqlite3_result_double( context, gpb.field ); \
+    if (gpb.envelope.check) { \
+        sqlite3_result_double(context, gpb.envelope.field); \
     } else { \
-        sqlite3_result_error(context, "Geometry envelope does not contain " #name, -1); \
+        sqlite3_result_null(context); \
     } \
 }
 
@@ -63,7 +63,7 @@ ST_MIN_MAX(MaxM, has_env_m, max_m)
 
 static void ST_SRID(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -84,7 +84,7 @@ static void ST_SRID(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
 
 static void ST_IsMeasured(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -100,7 +100,7 @@ static void ST_IsMeasured(sqlite3_context *context, int nbArgs, sqlite3_value **
 
 static void ST_Is3d(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -116,7 +116,7 @@ static void ST_Is3d(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
 
 static void ST_IsValid(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -124,9 +124,9 @@ static void ST_IsValid(sqlite3_context *context, int nbArgs, sqlite3_value **arg
         return;
     }
 
-    geom_reader_t reader;
-    geom_reader_init(&reader, NULL, NULL, NULL);
-    if (wkb_read_geometry(&stream, &reader) != SQLITE_OK) {
+    geom_consumer_t consumer;
+    geom_consumer_init(&consumer, NULL, NULL, NULL);
+    if (wkb_read_geometry(&stream, &consumer) != SQLITE_OK) {
         sqlite3_result_int(context, 0);
         return;
     }
@@ -136,7 +136,7 @@ static void ST_IsValid(sqlite3_context *context, int nbArgs, sqlite3_value **arg
 
 static void ST_CoordDim(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -151,7 +151,7 @@ static void ST_CoordDim(sqlite3_context *context, int nbArgs, sqlite3_value **ar
 
 static void ST_GeometryType(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -171,7 +171,7 @@ static void ST_GeometryType(sqlite3_context *context, int nbArgs, sqlite3_value 
 
 static void ST_AsBinary(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != SQLITE_OK) {
@@ -194,7 +194,7 @@ static void ST_GeomFromWKB(sqlite3_context *context, int nbArgs, sqlite3_value *
     gpb_writer_t writer;
     gpb_writer_init(&writer, srid);
 
-    int result = wkb_read_geometry(&stream, &writer.geom_reader);
+    int result = wkb_read_geometry(&stream, gpb_writer_geom_consumer(&writer));
 
     if (result != SQLITE_OK) {
         sqlite3_result_error(context, "Could not parse WKB", -1);
@@ -206,7 +206,7 @@ static void ST_GeomFromWKB(sqlite3_context *context, int nbArgs, sqlite3_value *
 
 static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     binstream_t stream;
-    gpb_t gpb;
+    gpb_header_t gpb;
 
     binstream_init(&stream, (uint8_t *) sqlite3_value_blob(args[0]), (size_t) sqlite3_value_bytes(args[0]));
     if (gpb_read_header(&stream, &gpb) != 0) {
@@ -216,7 +216,7 @@ static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
     wkt_writer_t writer;
     wkt_writer_init(&writer);
-    int result = wkb_read_geometry(&stream, &writer.geom_reader);
+    int result = wkb_read_geometry(&stream, wkt_writer_geom_consumer(&writer));
     if (result != SQLITE_OK) {
         sqlite3_result_error(context, "Could not parse WKB", -1);
     } else {
@@ -229,6 +229,11 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
     char *text = (char *) sqlite3_value_text(args[0]);
     size_t length = (size_t) sqlite3_value_bytes(args[0]);
 
+    if (text == NULL || length == 0) {
+        sqlite3_result_error(context, "Could not parse WKT", -1);
+        return;
+    }
+
     uint32_t srid = 0;
     if (nbArgs == 2) {
         srid = (uint32_t) sqlite3_value_int(args[1]);
@@ -236,7 +241,7 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
 
     gpb_writer_t writer;
     gpb_writer_init(&writer, srid);
-    int result = wkt_read_geometry(text, length, &writer.geom_reader);
+    int result = wkt_read_geometry(text, length, gpb_writer_geom_consumer(&writer));
     if (result != SQLITE_OK) {
         sqlite3_result_error(context, "Could not parse WKT", -1);
     } else {
