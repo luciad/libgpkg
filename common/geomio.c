@@ -62,7 +62,7 @@ char* geom_type_name(geom_header_t *wkb) {
 	}
 }
 
-static void geom_envelope_init(geom_envelope_t *envelope) {
+void geom_envelope_init(geom_envelope_t *envelope) {
     envelope->has_env_x = 0;
     envelope->min_x = DBL_MAX;
     envelope->max_x = -DBL_MAX;
