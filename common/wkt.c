@@ -74,6 +74,11 @@ static void wkt_begin(geom_consumer_t *consumer, geom_header_t *header) {
     }
 }
 
+#define WKT_COORD "%.25g"
+#define WKT_COORD_2 WKT_COORD " " WKT_COORD
+#define WKT_COORD_3 WKT_COORD_2 " " WKT_COORD
+#define WKT_COORD_4 WKT_COORD_3 " " WKT_COORD
+
 static void wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords) {
     wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
@@ -89,9 +94,9 @@ static void wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, si
 			double y = coords[offset++];
 
             if (i == 0) {
-                strbuf_append(&writer->strbuf, "%g %g", x, y);
+                strbuf_append(&writer->strbuf, WKT_COORD_2, x, y);
             } else {
-                strbuf_append(&writer->strbuf, ", %g %g", x, y);
+                strbuf_append(&writer->strbuf, ", "WKT_COORD_2, x, y);
             }
         }
     } else if (header->coord_size == 3) {
@@ -100,9 +105,9 @@ static void wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, si
 			double y = coords[offset++];
 			double zm = coords[offset++];
             if (i == 0) {
-                strbuf_append(&writer->strbuf, "%g %g %g", x, y, zm);
+                strbuf_append(&writer->strbuf, WKT_COORD_3, x, y, zm);
             } else {
-                strbuf_append(&writer->strbuf, ", %g %g %g", x, y, zm);
+                strbuf_append(&writer->strbuf, ", "WKT_COORD_3, x, y, zm);
             }
         }
     } else if (header->coord_size == 4) {
@@ -112,9 +117,9 @@ static void wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, si
 			double z = coords[offset++];
 			double m = coords[offset++];
             if (i == 0) {
-                strbuf_append(&writer->strbuf, "%g %g %g %g", x, y, z, m);
+                strbuf_append(&writer->strbuf, WKT_COORD_4, x, y, z, m);
             } else {
-                strbuf_append(&writer->strbuf, ", %g %g %g %g", x, y, z, m);
+                strbuf_append(&writer->strbuf, ", "WKT_COORD_4, x, y, z, m);
             }
         }
     }
