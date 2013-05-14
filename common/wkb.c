@@ -436,7 +436,8 @@ static void wkb_end(geom_consumer_t *consumer, geom_header_t *header) {
     size_t current_pos = binstream_position(stream);
     size_t children = writer->children[writer->offset];
 
-    binstream_seek(stream, writer->start[writer->offset]);
+    size_t start = writer->start[writer->offset];
+    binstream_seek(stream, start);
 
     if (header->geom_type == GEOM_LINEARRING) {
         binstream_write_u32(stream, (uint32_t)children);
@@ -485,19 +486,18 @@ static void wkb_end(geom_consumer_t *consumer, geom_header_t *header) {
         }
 
         binstream_write_u8(stream, binstream_get_endianness(stream) == LITTLE ? WKB_LE : WKB_BE);
-        switch (geom_type) {
-            case WKB_POINT:
-                binstream_write_u32(stream, geom_type + modifier);
-                break;
-            default:
-                binstream_write_u32(stream, geom_type + modifier);
-                binstream_write_u32(stream, (uint32_t)children);
+        binstream_write_u32(stream, geom_type + modifier);
+        if (geom_type != WKB_POINT) {
+            binstream_write_u32(stream, (uint32_t)children);
         }        
     }
 
-    binstream_seek(stream, current_pos);
-
     writer->offset--;
+    if (writer->offset >= 0) {
+        binstream_seek(stream, current_pos);
+    } else {
+        binstream_seek(stream, start);
+    }
 }
 
 int wkb_writer_init(wkb_writer_t *writer) {
@@ -507,8 +507,8 @@ int wkb_writer_init(wkb_writer_t *writer) {
         return res;
     }
 
-    memset(writer->start, 0, GEOM_MAX_DEPTH * sizeof(int));
-    memset(writer->children, 0, GEOM_MAX_DEPTH * sizeof(int));
+    memset(writer->start, 0, GEOM_MAX_DEPTH * sizeof(size_t));
+    memset(writer->children, 0, GEOM_MAX_DEPTH * sizeof(size_t));
     writer->offset = -1;
 
     return SQLITE_OK;
@@ -520,4 +520,12 @@ geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer) {
 
 void wkb_writer_destroy(wkb_writer_t *writer) {
     binstream_destroy(&writer->stream);
+}
+
+uint8_t* wkb_writer_getwkb( wkb_writer_t *writer ) {
+    return binstream_data(&writer->stream);
+}
+
+size_t wkb_writer_length( wkb_writer_t *writer ) {
+    return binstream_available(&writer->stream);
 }

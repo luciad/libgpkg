@@ -52,7 +52,10 @@ foreach(test_file IN LISTS test_files)
   create_test(${test_file} ${run_test_source})
 
   set(run_test "run_${test_name}")
-  add_executable(${run_test} ${run_test_source} ${test_file} cutest/CuTest.c)
+  add_executable(${run_test} ${run_test_source} ${test_file} util.c cutest/CuTest.c)
+  target_link_libraries(${run_test} gpkgcommon sqlite)
+
   add_test(NAME ${test_name} COMMAND ${run_test})
 endforeach(test_file)
 
+include_directories( "../common" "../sqlite" )

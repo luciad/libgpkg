@@ -17,9 +17,10 @@
 #include <stdio.h>
 #include "sqlite.h"
 #include "strbuf.h"
+#include "alloc.h"
 
 int strbuf_init(strbuf_t *buffer, size_t initial_size) {
-    void *data = sqlite3_malloc(initial_size);
+    void *data = gpkg_malloc(initial_size);
     buffer->buffer = data;
 
     if (data == NULL) {
@@ -33,7 +34,7 @@ int strbuf_init(strbuf_t *buffer, size_t initial_size) {
 }
 
 void strbuf_destroy(strbuf_t *buffer) {
-    sqlite3_free(buffer->buffer);
+    gpkg_free(buffer->buffer);
 }
 
 size_t strbuf_length(strbuf_t *buffer) {
@@ -46,7 +47,7 @@ char *strbuf_data_pointer(strbuf_t *buffer) {
 
 int strbuf_data(strbuf_t *buffer, char **out) {
     size_t length = strbuf_length(buffer);
-    *out = sqlite3_malloc(length + 1);
+    *out = gpkg_malloc(length + 1);
     if (*out == NULL) {
         return SQLITE_NOMEM;
     } else {
@@ -64,7 +65,7 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
     va_end(args);
 	
 	if (formatted == NULL) {
-		sqlite3_free(formatted);
+        gpkg_free(formatted);
 		return SQLITE_NOMEM;
 	}
 
@@ -76,7 +77,7 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
 			new_capacity = needed_capacity;
 		}
 		
-		void *data = sqlite3_realloc(buffer->buffer, new_capacity);
+		void *data = gpkg_realloc(buffer->buffer, new_capacity);
 		if (data == NULL) {
 			return SQLITE_NOMEM;
 		}
@@ -89,7 +90,7 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
 	buffer->length += formatted_len;
     buffer->buffer[buffer->length] = 0;
 
-	sqlite3_free(formatted);
+    gpkg_free(formatted);
 	
 	return SQLITE_OK;
 }

@@ -18,6 +18,7 @@
 #include "str.h"
 #include "sqlite.h"
 #include "sql.h"
+#include "alloc.h"
 
 #define SQL_NOT_NULL_MASK SQL_NOT_NULL
 #define SQL_PRIMARY_KEY_MASK SQL_PRIMARY_KEY
@@ -32,7 +33,7 @@ static int sql_stmt_vinit(sqlite3_stmt **stmt, sqlite3 *db, char *sql, va_list a
     }
 
     int result = sqlite3_prepare_v2(db, formatted_sql, -1, stmt, NULL);
-    sqlite3_free(formatted_sql);
+    gpkg_free(formatted_sql);
     return result;
 }
 
@@ -90,7 +91,7 @@ static int sql_step_for_string(sqlite3_stmt *stmt, char **out) {
                 *out = NULL;
             } else {
                 const unsigned char *text = sqlite3_column_text(stmt, 0);
-                *out = sqlite3_malloc(length + 1);
+                *out = gpkg_malloc(length + 1);
                 if (*out == NULL) {
                     result = SQLITE_NOMEM;
                     goto exit;
@@ -408,7 +409,7 @@ static int sql_check_data(sqlite3 *db, char* db_name, table_info_t* table_info, 
     exit:
     strbuf_destroy(&sql);
     sql_stmt_destroy(stmt);
-    sqlite3_free(query);
+    gpkg_free(query);
     return result;
 }
 
@@ -527,7 +528,7 @@ static int sql_insert_data(sqlite3 *db, char *db_name, table_info_t* table_info,
     }
 
     exit:
-    sqlite3_free(query);
+    gpkg_free(query);
     sql_stmt_destroy(stmt);
     return result;
 }

@@ -17,6 +17,7 @@
 #define GPKG_H
 
 #include <sqlite3.h>
+#import "alloc.h"
 
 /**
  * \addtogroup gpkg Library initialization and metadata
@@ -33,5 +34,7 @@ const char *gpkg_libversion(void);
  * Entry point for the GeoPackage SQLite extension.
  */
 int gpkg_extension_init(sqlite3*, const char **, const void *);
+
+void gpkg_init(const alloc_t *allocator);
 
 #endif

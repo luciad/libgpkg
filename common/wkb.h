@@ -35,9 +35,9 @@ typedef struct {
     /** @private */
     binstream_t stream;
     /** @private */
-    int start[GEOM_MAX_DEPTH];
+    size_t start[GEOM_MAX_DEPTH];
     /** @private */
-    int children[GEOM_MAX_DEPTH];
+    size_t children[GEOM_MAX_DEPTH];
     /** @private */
     int offset;
 } wkb_writer_t;
@@ -48,7 +48,7 @@ geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer);
 
 void wkb_writer_destroy( wkb_writer_t *writer );
 
-char* wkb_writer_getwkb( wkb_writer_t *writer );
+uint8_t* wkb_writer_getwkb( wkb_writer_t *writer );
 
 size_t wkb_writer_length( wkb_writer_t *writer );
 

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 #include <string.h>
+#include <stdio.h>
+#include "alloc.h"
 #include "binstream.h"
 #include "sqlite.h"
 
@@ -28,7 +30,7 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
 }
 
 int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
-    void *data = sqlite3_malloc(initial_cap);
+    void *data = gpkg_malloc(initial_cap * sizeof(uint8_t));
     if (data == NULL) {
         return SQLITE_NOMEM;
     }
@@ -48,7 +50,7 @@ void binstream_destroy(binstream_t *stream) {
     }
 
     if (stream->fixed_size == 0) {
-        sqlite3_free(stream->data);
+        gpkg_free(stream->data);
     }
 }
 
@@ -70,7 +72,7 @@ static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
         if (needed > newcapacity) {
             newcapacity = needed;
         }
-        void *newdata = sqlite3_realloc(stream->data, newcapacity);
+        void *newdata = gpkg_realloc(stream->data, newcapacity);
         if (newdata == NULL) {
             return SQLITE_NOMEM;
         }

@@ -25,8 +25,10 @@
 #include "wkt.h"
 
 #include "tables.h"
+#include "alloc.h"
 
 SQLITE_EXTENSION_INIT1
+const alloc_t *gpkg_allocator = NULL;
 
 #define ST_MIN_MAX(name, check, field) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) { \
     binstream_t stream; \
@@ -248,6 +250,26 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
         sqlite3_result_blob(context, gpb_writer_getgpb(&writer), (int) gpb_writer_length(&writer), SQLITE_TRANSIENT);
     }
     gpb_writer_destroy(&writer);
+}
+
+static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+    char *text = (char *) sqlite3_value_text(args[0]);
+    size_t length = (size_t) sqlite3_value_bytes(args[0]);
+
+    if (text == NULL || length == 0) {
+        sqlite3_result_error(context, "Could not parse WKT", -1);
+        return;
+    }
+
+    wkb_writer_t writer;
+    wkb_writer_init(&writer);
+    int result = wkt_read_geometry(text, length, wkb_writer_geom_consumer(&writer));
+    if (result != SQLITE_OK) {
+        sqlite3_result_error(context, "Could not parse WKT", -1);
+    } else {
+        sqlite3_result_blob(context, wkb_writer_getwkb(&writer), (int) wkb_writer_length(&writer), SQLITE_TRANSIENT);
+    }
+    wkb_writer_destroy(&writer);
 }
 
 static int CheckGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
@@ -484,11 +506,11 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
 
     exit:
     if (free_db_name) {
-        sqlite3_free(db_name);
+        gpkg_free(db_name);
     }
-    sqlite3_free(table_name);
-    sqlite3_free(column_name);
-    sqlite3_free(geometry_type);
+    gpkg_free(table_name);
+    gpkg_free(column_name);
+    gpkg_free(geometry_type);
     strbuf_destroy(&errmsg);
 }
 
@@ -496,13 +518,31 @@ const char *gpkg_libversion(void) {
     return VERSION;
 }
 
+void gpkg_init(const alloc_t *allocator) {
+    if (gpkg_allocator == NULL) {
+        gpkg_allocator = allocator;
+    }
+}
+
+
 #define REGISTER_FUNC(name, function, args) if (sqlite3_create_function_v2( db, #name, args, SQLITE_UTF8, NULL, function, NULL, NULL, NULL ) != SQLITE_OK) return SQLITE_ERROR;
 #define FUNC(name, args) REGISTER_FUNC(name, name, args)
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
 
+static alloc_t sqlite3_allocator = {
+        NULL,
+        NULL,
+        NULL
+};
+
 int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
+
+    sqlite3_allocator.malloc = sqlite3_malloc;
+    sqlite3_allocator.realloc = sqlite3_realloc;
+    sqlite3_allocator.free = sqlite3_free;
+    gpkg_init(&sqlite3_allocator);
 
     ST_FUNC( MinX, 1 );
     ST_FUNC( MaxX, 1 );
@@ -525,6 +565,7 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3
     ST_FUNC( GeomFromWKB, 2 );
     ST_FUNC( AsText, 1 );
     ST_FUNC( GeomFromText, 1 );
+    ST_FUNC( WKBFromText, 1 );
     ST_ALIAS( WKTToSQL, GeomFromText, 1 );
     ST_FUNC( GeomFromText, 2 );
     FUNC( CheckGpkg, 0 );

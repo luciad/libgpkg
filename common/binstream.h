@@ -49,8 +49,8 @@ typedef struct {
 	/** @private */
 	size_t position;
 	/** @private */
-  size_t capacity;
-  /** @private */
+    size_t capacity;
+    /** @private */
 	binstream_endianness end;
 	/** @private */
   int fixed_size;
