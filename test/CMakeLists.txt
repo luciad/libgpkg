@@ -1,61 +1,39 @@
-include_directories( cutest )
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99" )
+endif()
 
-macro(create_test in_file out_file)
-  file(READ ${in_file} test_contents)
-  string(REGEX MATCHALL "void Test[^\\(]+\\([\\t ]*CuTest[ ]*\\*[^\\)]+\\)" test_cases ${test_contents})
-
+macro(create_test_runner out_file test_name)
   file(WRITE ${out_file}
-"#include <stdio.h>
-#include <stdlib.h>
+"#include \"unittest.h\"
 
-#include \"cutest/CuTest.h\"
+extern void ${test_name}();
 
-")
-
-  foreach(test_case IN LISTS test_cases)
-    file(APPEND ${out_file} "extern ${test_case};\n")
-  endforeach(test_case)
-
-  file(APPEND ${out_file}
-"
 int main(void) {
-  CuString *output = CuStringNew();
-  CuSuite* suite = CuSuiteNew();
-
-")
-
-  foreach(test_case IN LISTS test_cases)
-    string(REGEX MATCH "Test[^\\(]+" test_case_name ${test_case})
-    file(APPEND ${out_file} "  SUITE_ADD_TEST(suite, ${test_case_name});\n")
-  endforeach(test_case)
-
-  file(APPEND ${out_file}
-"
-  CuSuiteRun(suite);
-  CuSuiteSummary(suite, output);
-  CuSuiteDetails(suite, output);
-  printf(\"%s\\n\", output->buffer);
-  CuStringDelete(output);
-  CuSuiteDelete(suite);
-
-  return suite->failCount == 0 ? 0 : 1;
+  ${test_name}();
+  return 0;
 }
 ")
-endmacro(create_test)
+endmacro(create_test_runner)
 
 file(GLOB test_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test*.c)
 foreach(test_file IN LISTS test_files)
   string(REGEX MATCH "test[^\\.]+" test_name ${test_file})
   string(REGEX REPLACE "^test" "" test_name ${test_name})
 
-  set(run_test_source "run_${test_name}.c")
-  create_test(${test_file} ${run_test_source})
+  file(READ ${test_file} test_contents)
+  string(REGEX MATCHALL "void Test[^\\(]+\\(\\)" test_cases ${test_contents})
+  foreach(test_case IN LISTS test_cases)
+    string(REGEX MATCH "Test[^\\(]+" test_case_name ${test_case})
 
-  set(run_test "run_${test_name}")
-  add_executable(${run_test} ${run_test_source} ${test_file} util.c cutest/CuTest.c)
-  target_link_libraries(${run_test} gpkgcommon sqlite)
+    set(run_test_source "run_${test_name}_${test_case_name}.c")
+    create_test_runner(${run_test_source} ${test_case_name})
 
-  add_test(NAME ${test_name} COMMAND ${run_test})
+    set(run_test "run_${test_name}_${test_case_name}")
+
+    add_executable(${run_test} ${run_test_source} ${test_file} unittest.c)
+    target_link_libraries(${run_test} gpkgcommon sqlite)
+    add_test(NAME ${test_name}_${test_case_name} COMMAND ${run_test})
+  endforeach(test_case)
 endforeach(test_file)
 
 include_directories( "../common" "../sqlite" )

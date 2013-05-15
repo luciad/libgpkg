@@ -15,7 +15,6 @@
  */
 #include <string.h>
 #include <stdio.h>
-#include "alloc.h"
 #include "binstream.h"
 #include "sqlite.h"
 
@@ -25,22 +24,22 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
     stream->limit = length;
     stream->position = 0;
     stream->end = LITTLE;
-    stream->fixed_size = 1;
+    stream->allocator = NULL;
     return SQLITE_OK;
 }
 
-int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
-    void *data = gpkg_malloc(initial_cap * sizeof(uint8_t));
+int binstream_init_growable(binstream_t *stream, allocator_t *allocator, size_t initial_cap) {
+    void *data = allocator->malloc(initial_cap * sizeof(uint8_t));
     if (data == NULL) {
         return SQLITE_NOMEM;
     }
 
     stream->data = data;
-    stream->limit = 0;
+    stream->limit = initial_cap;
     stream->capacity = initial_cap;
     stream->position = 0;
     stream->end = LITTLE;
-    stream->fixed_size = 0;
+    stream->allocator = allocator;
     return SQLITE_OK;
 }
 
@@ -49,8 +48,8 @@ void binstream_destroy(binstream_t *stream) {
       return;
     }
 
-    if (stream->fixed_size == 0) {
-        gpkg_free(stream->data);
+    if (stream->allocator != NULL) {
+        stream->allocator->free(stream->data);
     }
 }
 
@@ -65,18 +64,21 @@ static int binstream_ensureavailable(binstream_t *stream, size_t needed) {
 static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
     if (needed <= stream->capacity) {
         return SQLITE_OK;
-    } else if (stream->fixed_size) {
+    } else if (stream->allocator == NULL) {
         return SQLITE_IOERR;
     } else {
         size_t newcapacity = stream->capacity * 3 / 2;
         if (needed > newcapacity) {
             newcapacity = needed;
         }
-        void *newdata = gpkg_realloc(stream->data, newcapacity);
+        void *newdata = stream->allocator->realloc(stream->data, newcapacity);
         if (newdata == NULL) {
             return SQLITE_NOMEM;
         }
         stream->data = newdata;
+        if (stream->limit == stream->capacity) {
+            stream->limit = newcapacity;
+        }
         stream->capacity = newcapacity;
         return SQLITE_OK;
     }
@@ -86,15 +88,21 @@ size_t binstream_position(binstream_t *stream) {
     return stream->position;
 }
 
+void binstream_flip(binstream_t *stream) {
+    stream->limit = stream->position;
+    stream->position = 0;
+}
+
 int binstream_seek(binstream_t *stream, size_t position) {
     int result = binstream_ensurecapacity(stream, position);
     if (result != SQLITE_OK) {
         return result;
     }
-    stream->position = position;
-    if (stream->position > stream->limit) {
-        stream->limit = stream->position;
+    if (position > stream->limit) {
+        return SQLITE_IOERR;
     }
+
+    stream->position = position;
     return SQLITE_OK;
 }
 
@@ -139,9 +147,6 @@ int binstream_write_u8(binstream_t *stream, uint8_t val) {
     }
 
     stream->data[stream->position++] = val;
-    if (stream->position > stream->limit) {
-        stream->limit = stream->position;
-    }
     return SQLITE_OK;
 }
 
@@ -164,9 +169,6 @@ int binstream_write_nu8(binstream_t *stream, uint8_t *val, size_t count) {
 
     memmove(stream->data + stream->position, val, count);
     stream->position += count;
-    if (stream->position > stream->limit) {
-        stream->limit = stream->position;
-    }
     return SQLITE_OK;
 }
 
@@ -209,9 +211,6 @@ int binstream_write_u32(binstream_t *stream, uint32_t val) {
         stream->data[stream->position++] = v3;
         stream->data[stream->position++] = v2;
         stream->data[stream->position++] = v1;
-    }
-    if (stream->position > stream->limit) {
-        stream->limit = stream->position;
     }
     return SQLITE_OK;
 }
@@ -275,9 +274,6 @@ int binstream_write_u64(binstream_t *stream, uint64_t val) {
     }
 
     binstream_write_u64_unchecked(stream, val);
-    if (stream->position > stream->limit) {
-        stream->limit = stream->position;
-    }
     return SQLITE_OK;
 }
 
@@ -306,9 +302,6 @@ int binstream_write_ndouble(binstream_t *stream, double *val, size_t count) {
     }
     for (int i = 0; i < count; i++) {
         binstream_write_u64_unchecked(stream, *((uint64_t *) &val[i]));
-    }
-    if (stream->position > stream->limit) {
-        stream->limit = stream->position;
     }
     return SQLITE_OK;
 }

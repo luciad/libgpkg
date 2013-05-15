@@ -25,10 +25,14 @@
 #include "wkt.h"
 
 #include "tables.h"
-#include "alloc.h"
+#include "allocator.h"
 
 SQLITE_EXTENSION_INIT1
-const alloc_t *gpkg_allocator = NULL;
+static allocator_t sqlite3_allocator = {
+        NULL,
+        NULL,
+        NULL
+};
 
 #define ST_MIN_MAX(name, check, field) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) { \
     binstream_t stream; \
@@ -127,7 +131,7 @@ static void ST_IsValid(sqlite3_context *context, int nbArgs, sqlite3_value **arg
     }
 
     geom_consumer_t consumer;
-    geom_consumer_init(&consumer, NULL, NULL, NULL);
+    geom_consumer_init(&consumer, NULL, NULL, NULL, NULL, NULL);
     if (wkb_read_geometry(&stream, &consumer) != SQLITE_OK) {
         sqlite3_result_int(context, 0);
         return;
@@ -194,7 +198,7 @@ static void ST_GeomFromWKB(sqlite3_context *context, int nbArgs, sqlite3_value *
     }
 
     gpb_writer_t writer;
-    gpb_writer_init(&writer, srid);
+    gpb_writer_init(&writer, &sqlite3_allocator, srid);
 
     int result = wkb_read_geometry(&stream, gpb_writer_geom_consumer(&writer));
 
@@ -217,7 +221,7 @@ static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args
     }
 
     wkt_writer_t writer;
-    wkt_writer_init(&writer);
+    wkt_writer_init(&writer, &sqlite3_allocator);
     int result = wkb_read_geometry(&stream, wkt_writer_geom_consumer(&writer));
     if (result != SQLITE_OK) {
         sqlite3_result_error(context, "Could not parse WKB", -1);
@@ -242,7 +246,7 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
     }
 
     gpb_writer_t writer;
-    gpb_writer_init(&writer, srid);
+    gpb_writer_init(&writer, &sqlite3_allocator, srid);
     int result = wkt_read_geometry(text, length, gpb_writer_geom_consumer(&writer));
     if (result != SQLITE_OK) {
         sqlite3_result_error(context, "Could not parse WKT", -1);
@@ -262,7 +266,7 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
     }
 
     wkb_writer_t writer;
-    wkb_writer_init(&writer);
+    wkb_writer_init(&writer, &sqlite3_allocator);
     int result = wkt_read_geometry(text, length, wkb_writer_geom_consumer(&writer));
     if (result != SQLITE_OK) {
         sqlite3_result_error(context, "Could not parse WKT", -1);
@@ -277,7 +281,7 @@ static int CheckGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg)
     table_info_t **table = tables;
 
     while (*table != NULL) {
-        result = sql_check_table(db, db_name, *table, errors, errmsg);
+        result = sql_check_table(db, db_name, *table, &sqlite3_allocator, errors, errmsg);
         if (result != SQLITE_OK) {
             break;
         }
@@ -292,7 +296,7 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
     int errors = 0;
     strbuf_t errmsg;
-    result = strbuf_init(&errmsg, 128);
+    result = strbuf_init(&errmsg, &sqlite3_allocator, 128);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -326,7 +330,7 @@ static int InitGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) 
     table_info_t **table = tables;
 
     while (*table != NULL) {
-        result = sql_init_table(db, db_name, *table, errors, errmsg);
+        result = sql_init_table(db, db_name, *table, &sqlite3_allocator, errors, errmsg);
         if (result != SQLITE_OK) {
             break;
         }
@@ -341,7 +345,7 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
 
     int errors = 0;
     strbuf_t errmsg;
-    result = strbuf_init(&errmsg, 128);
+    result = strbuf_init(&errmsg, &sqlite3_allocator, 128);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -401,12 +405,12 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
 
     // Check if required meta tables exist
     int check_errors = 0;
-    result = sql_check_table(db, db_name, &spatial_ref_sys, &check_errors, errmsg);
+    result = sql_check_table(db, db_name, &spatial_ref_sys, &sqlite3_allocator, &check_errors, errmsg);
     if (result != SQLITE_OK) {
         (*errors)++;
         return result;
     }
-    result = sql_check_table(db, db_name, &geometry_columns, &check_errors, errmsg);
+    result = sql_check_table(db, db_name, &geometry_columns, &sqlite3_allocator, &check_errors, errmsg);
     if (result != SQLITE_OK) {
         (*errors)++;
         return result;
@@ -472,7 +476,7 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     }
 
     strbuf_t errmsg;
-    if (strbuf_init(&errmsg, 256) != SQLITE_OK) {
+    if (strbuf_init(&errmsg, &sqlite3_allocator, 256) != SQLITE_OK) {
         sqlite3_result_error_code(context, SQLITE_NOMEM);
         goto exit;
     }
@@ -506,11 +510,11 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
 
     exit:
     if (free_db_name) {
-        gpkg_free(db_name);
+        sqlite3_allocator.free(db_name);
     }
-    gpkg_free(table_name);
-    gpkg_free(column_name);
-    gpkg_free(geometry_type);
+    sqlite3_allocator.free(table_name);
+    sqlite3_allocator.free(column_name);
+    sqlite3_allocator.free(geometry_type);
     strbuf_destroy(&errmsg);
 }
 
@@ -518,23 +522,10 @@ const char *gpkg_libversion(void) {
     return VERSION;
 }
 
-void gpkg_init(const alloc_t *allocator) {
-    if (gpkg_allocator == NULL) {
-        gpkg_allocator = allocator;
-    }
-}
-
-
 #define REGISTER_FUNC(name, function, args) if (sqlite3_create_function_v2( db, #name, args, SQLITE_UTF8, NULL, function, NULL, NULL, NULL ) != SQLITE_OK) return SQLITE_ERROR;
 #define FUNC(name, args) REGISTER_FUNC(name, name, args)
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
-
-static alloc_t sqlite3_allocator = {
-        NULL,
-        NULL,
-        NULL
-};
 
 int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
@@ -542,7 +533,6 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3
     sqlite3_allocator.malloc = sqlite3_malloc;
     sqlite3_allocator.realloc = sqlite3_realloc;
     sqlite3_allocator.free = sqlite3_free;
-    gpkg_init(&sqlite3_allocator);
 
     ST_FUNC( MinX, 1 );
     ST_FUNC( MaxX, 1 );

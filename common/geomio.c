@@ -15,17 +15,42 @@
  */
 #include <string.h>
 #include <float.h>
+#include "sqlite.h"
 #include "geomio.h"
+
+static int geom_begin(geom_consumer_t *consumer) {
+    return SQLITE_OK;
+}
+
+static int geom_end(geom_consumer_t *consumer) {
+    return SQLITE_OK;
+}
+
+static int geom_begin_geometry(geom_consumer_t *consumer, geom_header_t *header) {
+    return SQLITE_OK;
+}
+
+static int geom_end_geometry(geom_consumer_t *consumer, geom_header_t *header) {
+    return SQLITE_OK;
+}
+
+static int geom_coordinates(geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords) {
+    return SQLITE_OK;
+}
 
 void geom_consumer_init(
         geom_consumer_t *consumer,
-        void (*begin)(struct geom_consumer_t*, geom_header_t*),
-        void (*end)(struct geom_consumer_t*, geom_header_t*),
-        void (*coordinates)(struct geom_consumer_t*, geom_header_t*, size_t point_count, double* coords)
+        int (*begin)(geom_consumer_t *),
+        int (*end)(geom_consumer_t *),
+        int (*begin_geometry)(geom_consumer_t*, geom_header_t*),
+        int (*end_geometry)(geom_consumer_t*, geom_header_t*),
+        int (*coordinates)(geom_consumer_t*, geom_header_t*, size_t point_count, double* coords)
 ) {
-    consumer->begin = begin;
-    consumer->end = end;
-    consumer->coordinates = coordinates;
+    consumer->begin = begin != NULL ? begin : geom_begin;
+    consumer->end = end != NULL ? end : geom_end;
+    consumer->begin_geometry = begin_geometry != NULL ? begin_geometry : geom_begin_geometry;
+    consumer->end_geometry = end_geometry != NULL ? end_geometry : geom_end_geometry;
+    consumer->coordinates = coordinates != NULL ? coordinates : geom_coordinates;
 }
 
 int geom_coord_dim(geom_header_t *wkb) {

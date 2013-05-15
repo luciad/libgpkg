@@ -168,23 +168,38 @@ typedef struct geom_consumer_t {
     /**
      * Called at the beginning of each geometry.
      * @param consumer the geometry consumer
-     * @param header the geometry header
+     * @return SQLITE_OK or an error code
      */
-    void (*begin)(struct geom_consumer_t *consumer, geom_header_t *header);
+    int (*begin)(struct geom_consumer_t *consumer);
+    /**
+     * Called at the end of each geometry.
+     * @param consumer the geometry consumer
+     * @return SQLITE_OK or an error code
+     */
+    int (*end)(struct geom_consumer_t *consumer);
+    /**
+     * Called at the beginning of each geometry.
+     * @param consumer the geometry consumer
+     * @param header the geometry header
+     * @return SQLITE_OK or an error code
+     */
+    int (*begin_geometry)(struct geom_consumer_t *consumer, geom_header_t *header);
     /**
      * Called at the end of each geometry.
      * @param consumer the geometry consumer
      * @param header the geometry header
+     * @return SQLITE_OK or an error code
      */
-    void (*end)(struct geom_consumer_t *consumer, geom_header_t *header);
+    int (*end_geometry)(struct geom_consumer_t *consumer, geom_header_t *header);
     /**
      * Called zero or more times per geometry to pass coordinates to the geometry consumer.
      * @param consumer the geometry consumer
      * @param header the geometry header
      * @param point_count the number of points
      * @param coords the coordinate array. This array contains (point_count * header->coord_size) values.
+     * @return SQLITE_OK or an error code
      */
-    void (*coordinates)(struct geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords);
+    int (*coordinates)(struct geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords);
 } geom_consumer_t;
 
 /**
@@ -195,9 +210,11 @@ typedef struct geom_consumer_t {
  */
 void geom_consumer_init(
         geom_consumer_t *consumer,
-        void (*begin)(geom_consumer_t *, geom_header_t *),
-        void (*end)(geom_consumer_t *, geom_header_t *),
-        void (*coordinates)(geom_consumer_t *, geom_header_t *, size_t point_count, double *coords)
+        int (*begin)(geom_consumer_t *),
+        int (*end)(geom_consumer_t *),
+        int (*begin_geometry)(geom_consumer_t *, geom_header_t *),
+        int (*end_geometry)(geom_consumer_t *, geom_header_t *),
+        int (*coordinates)(geom_consumer_t *, geom_header_t *, size_t point_count, double *coords)
 );
 
 /**

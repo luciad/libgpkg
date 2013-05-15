@@ -17,6 +17,7 @@
 #define GPKG_GPB_H
 
 #include <stdint.h>
+#include "allocator.h"
 #include "binstream.h"
 #include "geomio.h"
 #include "wkb.h"
@@ -63,7 +64,7 @@ typedef struct {
  * @param writer the writer to initialize
  * @param srid the SRID that should be used
  */
-int gpb_writer_init( gpb_writer_t *writer, uint32_t srid );
+int gpb_writer_init( gpb_writer_t *writer, allocator_t *allocator, uint32_t srid );
 
 /**
  * Returns a GeoPackage Binary writer as a geometry consumer. This function should be used

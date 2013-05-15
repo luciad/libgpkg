@@ -17,6 +17,7 @@
 #define GPKG_SQL_H
 
 #include <sqlite3.h>
+#include "allocator.h"
 #include "strbuf.h"
 
 /**
@@ -240,12 +241,13 @@ int sql_exec(sqlite3 *db, char *sql, ...);
  * Executes a SQL statement that is expected to return a single string value. The SQL statement can be a printf style
  * format pattern.
  * @param db the SQLite database context
+ * @param allocator the memory allocator that should be used to allocate the string
  * @param[out] out on success, out will be set to the returned string value
  * @param sql the SQL statement to execute
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...);
+int sql_exec_for_string(sqlite3 *db, allocator_t *allocator, char **out, char *sql, ...);
 
 /**
  * Executes a SQL statement that is expected to return a single integer value. The SQL statement can be a printf style
@@ -280,7 +282,7 @@ int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *ex
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
+int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, allocator_t *allocator, int *errors, strbuf_t *errmsg);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is
@@ -295,7 +297,7 @@ int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *e
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_init_table(sqlite3 *db, char* db_name, table_info_t *table_info, int *errors, strbuf_t *errmsg);
+int sql_init_table(sqlite3 *db, char* db_name, table_info_t *table_info, allocator_t *allocator, int *errors, strbuf_t *errmsg);
 
 /** @} */
 

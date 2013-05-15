@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "allocator.h"
 
 /**
  * @addtogroup binstream Binary I/O
@@ -53,7 +54,7 @@ typedef struct {
     /** @private */
 	binstream_endianness end;
 	/** @private */
-  int fixed_size;
+  allocator_t *allocator;
 } binstream_t;
 
 /**
@@ -74,7 +75,7 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length);
  * @return SQLITE_OK if the stream was successfully initialised.@n
  *         SQLITE_NOMEM if the internal buffer could not be allocated.
  */
-int binstream_init_growable(binstream_t *stream, size_t initial_cap);
+int binstream_init_growable(binstream_t *stream, allocator_t *allocator, size_t initial_cap);
 
 /**
  * Destroys the given stream.
@@ -95,6 +96,8 @@ void binstream_destroy(binstream_t *stream);
  * @see binstream_available
  */
 uint8_t* binstream_data(binstream_t *stream);
+
+void binstream_flip(binstream_t *stream);
 
 /**
  * Returns the number of bytes that can be read from the given stream. This is equivalent to the number of bytes

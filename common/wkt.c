@@ -19,16 +19,22 @@
 #include "sqlite.h"
 #include "wkt.h"
 
-static void wkt_begin(geom_consumer_t *consumer, geom_header_t *header) {
+static int wkt_begin_geometry(geom_consumer_t *consumer, geom_header_t *header) {
+    int result = SQLITE_OK;
+
     wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
     if (writer->offset >= 0) {
         if (writer->children[writer->offset] > 0) {
-            strbuf_append(&writer->strbuf, ", ");
+            result = strbuf_append(&writer->strbuf, ", ");
         } else {
-            strbuf_append(&writer->strbuf, "(");
+            result = strbuf_append(&writer->strbuf, "(");
         }
         writer->children[writer->offset]++;
+    }
+
+    if (result != SQLITE_OK) {
+        goto exit;
     }
 
     writer->offset++;
@@ -38,40 +44,51 @@ static void wkt_begin(geom_consumer_t *consumer, geom_header_t *header) {
     if (writer->offset == 0 || writer->type[writer->offset - 1] == GEOM_GEOMETRYCOLLECTION) {
         switch (header->geom_type) {
             case GEOM_POINT:
-                strbuf_append(&writer->strbuf, "Point ");
+                result = strbuf_append(&writer->strbuf, "Point ");
                 break;
             case GEOM_LINESTRING:
-                strbuf_append(&writer->strbuf, "LineString ");
+                result = strbuf_append(&writer->strbuf, "LineString ");
                 break;
             case GEOM_POLYGON:
-                strbuf_append(&writer->strbuf, "Polygon ");
+                result = strbuf_append(&writer->strbuf, "Polygon ");
                 break;
             case GEOM_MULTIPOINT:
-                strbuf_append(&writer->strbuf, "MultiPoint ");
+                result = strbuf_append(&writer->strbuf, "MultiPoint ");
                 break;
             case GEOM_MULTILINESTRING:
-                strbuf_append(&writer->strbuf, "MultiLineString ");
+                result = strbuf_append(&writer->strbuf, "MultiLineString ");
                 break;
             case GEOM_MULTIPOLYGON:
-                strbuf_append(&writer->strbuf, "MultiPolygon ");
+                result = strbuf_append(&writer->strbuf, "MultiPolygon ");
                 break;
             case GEOM_GEOMETRYCOLLECTION:
-                strbuf_append(&writer->strbuf, "GeometryCollection ");
+                result = strbuf_append(&writer->strbuf, "GeometryCollection ");
                 break;
             case GEOM_LINEARRING:
                 // Should never happen, since linear ring is not a top level geometry type.
-                strbuf_append(&writer->strbuf, "LinearRing ");
+                result = strbuf_append(&writer->strbuf, "LinearRing ");
                 break;
         }
 
+        if (result != SQLITE_OK) {
+            goto exit;
+        }
+
         if (header->coord_type == GEOM_XYZ) {
-            strbuf_append(&writer->strbuf, "Z ");
+            result = strbuf_append(&writer->strbuf, "Z ");
         } else if (header->coord_type == GEOM_XYM) {
-            strbuf_append(&writer->strbuf, "M ");
+            result = strbuf_append(&writer->strbuf, "M ");
         } else if (header->coord_type == GEOM_XYZM) {
-            strbuf_append(&writer->strbuf, "ZM ");
+            result = strbuf_append(&writer->strbuf, "ZM ");
+        }
+
+        if (result != SQLITE_OK) {
+            goto exit;
         }
     }
+
+  exit:
+    return result;
 }
 
 #define WKT_COORD "%.25g"
@@ -79,66 +96,91 @@ static void wkt_begin(geom_consumer_t *consumer, geom_header_t *header) {
 #define WKT_COORD_3 WKT_COORD_2 " " WKT_COORD
 #define WKT_COORD_4 WKT_COORD_3 " " WKT_COORD
 
-static void wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords) {
+static int wkt_coordinates(geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords) {
+    int result = SQLITE_OK;
+
     wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
     if (writer->children[writer->offset] == 0) {
-        strbuf_append(&writer->strbuf, "(");
+        result = strbuf_append(&writer->strbuf, "(");
     }
     writer->children[writer->offset]++;
+
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
 
     int offset = 0;
     if (header->coord_size == 2) {
         for (int i = 0; i < point_count; i++) {
-			double x = coords[offset++];
-			double y = coords[offset++];
+			      double x = coords[offset++];
+			      double y = coords[offset++];
 
             if (i == 0) {
-                strbuf_append(&writer->strbuf, WKT_COORD_2, x, y);
+                result = strbuf_append(&writer->strbuf, WKT_COORD_2, x, y);
             } else {
-                strbuf_append(&writer->strbuf, ", "WKT_COORD_2, x, y);
+                result = strbuf_append(&writer->strbuf, ", "WKT_COORD_2, x, y);
+            }
+
+            if (result != SQLITE_OK) {
+                goto exit;
             }
         }
     } else if (header->coord_size == 3) {
         for (int i = 0; i < point_count; i++) {
-			double x = coords[offset++];
-			double y = coords[offset++];
-			double zm = coords[offset++];
+			      double x = coords[offset++];
+			      double y = coords[offset++];
+			      double zm = coords[offset++];
             if (i == 0) {
-                strbuf_append(&writer->strbuf, WKT_COORD_3, x, y, zm);
+                result = strbuf_append(&writer->strbuf, WKT_COORD_3, x, y, zm);
             } else {
-                strbuf_append(&writer->strbuf, ", "WKT_COORD_3, x, y, zm);
+                result = strbuf_append(&writer->strbuf, ", "WKT_COORD_3, x, y, zm);
+            }
+
+            if (result != SQLITE_OK) {
+                goto exit;
             }
         }
     } else if (header->coord_size == 4) {
         for (int i = 0; i < point_count; i++) {
-			double x = coords[offset++];
-			double y = coords[offset++];
-			double z = coords[offset++];
-			double m = coords[offset++];
+			      double x = coords[offset++];
+			      double y = coords[offset++];
+			      double z = coords[offset++];
+			      double m = coords[offset++];
             if (i == 0) {
-                strbuf_append(&writer->strbuf, WKT_COORD_4, x, y, z, m);
+                result = strbuf_append(&writer->strbuf, WKT_COORD_4, x, y, z, m);
             } else {
-                strbuf_append(&writer->strbuf, ", "WKT_COORD_4, x, y, z, m);
+                result = strbuf_append(&writer->strbuf, ", "WKT_COORD_4, x, y, z, m);
+            }
+
+            if (result != SQLITE_OK) {
+                goto exit;
             }
         }
     }
+
+  exit:
+    return result;
 }
 
-static void wkt_end(geom_consumer_t *consumer, geom_header_t *header) {
+static int wkt_end_geometry(geom_consumer_t *consumer, geom_header_t *header) {
+    int result = SQLITE_OK;
+
     wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
     if (writer->children[writer->offset] == 0) {
-        strbuf_append(&writer->strbuf, "EMPTY");
+        result = strbuf_append(&writer->strbuf, "EMPTY");
     } else {
-        strbuf_append(&writer->strbuf, ")");
+        result = strbuf_append(&writer->strbuf, ")");
     }
     writer->offset--;
+
+    return result;
 }
 
-int wkt_writer_init(wkt_writer_t *writer) {
-    geom_consumer_init(&writer->geom_consumer, wkt_begin, wkt_end, wkt_coordinates);
-    int res = strbuf_init(&writer->strbuf, 256);
+int wkt_writer_init(wkt_writer_t *writer, allocator_t *allocator) {
+    geom_consumer_init(&writer->geom_consumer, NULL, NULL, wkt_begin_geometry, wkt_end_geometry, wkt_coordinates);
+    int res = strbuf_init(&writer->strbuf, allocator, 256);
     if (res != SQLITE_OK) {
         return res;
     }
@@ -193,8 +235,6 @@ typedef struct {
     wkt_token token;
     double token_value;
 } wkt_tokenizer_t;
-
-#define GEOM_BATCH_SIZE 10
 
 static void wkt_next_token(wkt_tokenizer_t *tok) {
     char *start = tok->start;
@@ -302,8 +342,10 @@ static int wkt_read_point(wkt_tokenizer_t *tok, geom_header_t *header, geom_cons
     return SQLITE_OK;
 }
 
+#define COORD_BATCH_SIZE 10
+
 static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_consumer_t *consumer) {
-    double coords[header->coord_size * GEOM_BATCH_SIZE];
+    double coords[header->coord_size * COORD_BATCH_SIZE];
 
     size_t coord_count = 0;
     int coord_offset = 0;
@@ -322,7 +364,7 @@ static int wkt_read_points(wkt_tokenizer_t *tok, geom_header_t *header, geom_con
 
         more_coords = tok->token == WKT_COMMA;
 
-        if (coord_count == GEOM_BATCH_SIZE || !more_coords) {
+        if (coord_count == COORD_BATCH_SIZE || !more_coords) {
             if (consumer->coordinates) {
                 consumer->coordinates(consumer, header, coord_count, coords);
             }
@@ -382,12 +424,12 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, geom_header_t *header,
 
     int more_points;
     do {
-        consumer->begin(consumer, &point_header);
+        consumer->begin_geometry(consumer, &point_header);
         int res = wkt_read_point_text(tok, &point_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        consumer->end(consumer, &point_header);
+        consumer->end_geometry(consumer, &point_header);
 
         more_points = tok->token == WKT_COMMA;
         if (more_points) {
@@ -447,12 +489,12 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, geom_header_t *he
 
     int more_linestrings;
     do {
-        consumer->begin(consumer, &linestring_header);
+        consumer->begin_geometry(consumer, &linestring_header);
         int res = wkt_read_linestring_text(tok, &linestring_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        consumer->end(consumer, &linestring_header);
+        consumer->end_geometry(consumer, &linestring_header);
 
         more_linestrings = tok->token == WKT_COMMA;
         if (more_linestrings) {
@@ -487,12 +529,12 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, geom_header_t *header, ge
 
     int more_rings;
     do {
-        consumer->begin(consumer, &ring_header);
+        consumer->begin_geometry(consumer, &ring_header);
         int res = wkt_read_linestring_text(tok, &ring_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        consumer->end(consumer, &ring_header);
+        consumer->end_geometry(consumer, &ring_header);
 
         more_rings = tok->token == WKT_COMMA;
         if (more_rings) {
@@ -527,12 +569,12 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, geom_header_t *heade
 
     int more_polygons;
     do {
-        consumer->begin(consumer, &polygon_header);
+        consumer->begin_geometry(consumer, &polygon_header);
         int res = wkt_read_polygon_text(tok, &polygon_header, consumer);
         if (res != SQLITE_OK) {
             return res;
         }
-        consumer->end(consumer, &polygon_header);
+        consumer->end_geometry(consumer, &polygon_header);
 
         more_polygons = tok->token == WKT_COMMA;
         if (more_polygons) {
@@ -584,11 +626,13 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, geom_header_t 
 }
 
 static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *parent_header, geom_consumer_t *consumer) {
+    int result = SQLITE_OK;
     uint32_t geometry_type;
     if (tok->token >= WKT_POINT && tok->token <= WKT_GEOMETRYCOLLECTION) {
         geometry_type = tok->token;
     } else {
-        return SQLITE_IOERR;
+        result = SQLITE_IOERR;
+        goto exit;
     }
 
     wkt_next_token(tok);
@@ -626,52 +670,70 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, geom_header_t *pa
     header.coord_size = coord_size;
 
     if (parent_header != NULL && parent_header->coord_type != header.coord_type) {
-        return SQLITE_IOERR;
+        result = SQLITE_IOERR;
+        goto exit;
     }
     
-    if (consumer->begin) {
-        consumer->begin(consumer, &header);
+    result = consumer->begin_geometry(consumer, &header);
+    if (result != SQLITE_OK) {
+        goto exit;
     }
-
-    int res;
+    
     switch (geometry_type) {
         case GEOM_POINT:
-            res = wkt_read_point_text(tok, &header, consumer);
+            result = wkt_read_point_text(tok, &header, consumer);
             break;
         case GEOM_LINESTRING:
-            res = wkt_read_linestring_text(tok, &header, consumer);
+            result = wkt_read_linestring_text(tok, &header, consumer);
             break;
         case GEOM_POLYGON:
-            res = wkt_read_polygon_text(tok, &header, consumer);
+            result = wkt_read_polygon_text(tok, &header, consumer);
             break;
         case GEOM_MULTIPOINT:
-            res = wkt_read_multipoint_text(tok, &header, consumer);
+            result = wkt_read_multipoint_text(tok, &header, consumer);
             break;
         case GEOM_MULTILINESTRING:
-            res = wkt_read_multilinestring_text(tok, &header, consumer);
+            result = wkt_read_multilinestring_text(tok, &header, consumer);
             break;
         case GEOM_MULTIPOLYGON:
-            res = wkt_read_multipolygon_text(tok, &header, consumer);
+            result = wkt_read_multipolygon_text(tok, &header, consumer);
             break;
         case GEOM_GEOMETRYCOLLECTION:
-            res = wkt_read_geometrycollection_text(tok, &header, consumer);
+            result = wkt_read_geometrycollection_text(tok, &header, consumer);
             break;
         default:
-            res = SQLITE_IOERR;
+            result = SQLITE_IOERR;
+    }
+    if (result != SQLITE_OK) {
+        goto exit;
     }
 
-    if (res == SQLITE_OK && consumer->end) {
-        consumer->end(consumer, &header);
-    }
+    result = consumer->end_geometry(consumer, &header);
 
-    return res;
+  exit:
+    return result;
 }
 
 int wkt_read_geometry(char *data, size_t length, geom_consumer_t *consumer) {
+    int result = SQLITE_OK;
+    
+    result = consumer->begin(consumer);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
     wkt_tokenizer_t tok;
     tok.start = data;
     tok.end = data + length;
-
     wkt_next_token(&tok);
-    return wkt_read_geometry_tagged_text(&tok, NULL, consumer);
+    
+    result = wkt_read_geometry_tagged_text(&tok, NULL, consumer);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    result = consumer->end(consumer);
+
+  exit:
+    return result;
 }

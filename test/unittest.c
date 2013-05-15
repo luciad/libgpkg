@@ -3,6 +3,23 @@
 #include <stdio.h>
 #include <stdint.h>
 
+void fail_flm(const char* file, int line, char* msg) {
+    printf("%s:%d: %s\n", file, line, msg);
+    exit(1);
+}
+
+void assert_str_eql_flm(const char* file, int line, char* msg, char* exc, char* act) {
+    if (
+        (exc == NULL && act == NULL) ||
+        (exc != NULL && act != NULL && strcmp(exc, act) == 0)
+    ) {
+  	  	return;
+    } else {
+        printf("%s:%d: %s: expected <%s> actual <%s>\n", file, line, msg, exc, act);
+        exit(1);
+    }
+}
+
 static char hexCharToInt(char c) {
     if ('a' <= c && c <= 'f') {
         return 10 + c - 'a';

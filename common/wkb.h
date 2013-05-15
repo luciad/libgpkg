@@ -16,6 +16,7 @@
 #ifndef GPKG_WKB_H
 #define GPKG_WKB_H
 
+#include "allocator.h"
 #include "binstream.h"
 #include "geomio.h"
 
@@ -42,7 +43,7 @@ typedef struct {
     int offset;
 } wkb_writer_t;
 
-int wkb_writer_init( wkb_writer_t *writer );
+int wkb_writer_init( wkb_writer_t *writer, allocator_t *allocator );
 
 geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer);
 
