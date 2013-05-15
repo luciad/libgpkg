@@ -69,6 +69,11 @@ extern table_info_t metadata_reference;
 extern table_info_t manifest;
 
 /**
+ * Description of the columns for a tiles table.
+ */
+extern const column_info_t tiles_table_columns[];
+
+/**
  * Null terminated array of all geopacakge metadata table descriptions.
  */
 extern const table_info_t * const tables[];

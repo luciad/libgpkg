@@ -177,13 +177,10 @@ typedef struct {
      */
     const char *name;
     /**
-     * An array of column information.
+     * An array of column information. The array is terminated by a column_info_t instance that has all fields set
+     * to NULL or zero.
      */
     const column_info_t *columns;
-    /**
-     * The number of elements in columns.
-     */
-    const size_t nColumns;
     /**
      * An array of rows that should be present in the table. Each row is an array of value_t and should contain
      * nColumns elements.

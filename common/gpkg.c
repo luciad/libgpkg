@@ -518,6 +518,100 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     strbuf_destroy(&errmsg);
 }
 
+static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, int *errors, strbuf_t *errmsg) {
+    int result = SQLITE_OK;
+
+    // Check if the target table exists
+    int exists = 0;
+    result= sql_check_table_exists(db, db_name, table_name, &exists);
+    if (result != SQLITE_OK) {
+        (*errors)++;
+        return result;
+    }
+
+    if (exists) {
+        (*errors)++;
+        strbuf_append(errmsg, "Table %s.%s already exists", db_name, table_name);
+        return SQLITE_OK;
+    }
+
+    table_info_t tile_table_info = {
+        table_name,
+        tiles_table_columns,
+        NULL, 0
+    };
+
+    // Check if required meta tables exist
+    result = sql_init_table(db, db_name, &tile_table_info, &sqlite3_allocator, errors, errmsg);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    return SQLITE_OK;
+}
+
+static void CreateTilesTable(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+    sqlite3 *db = sqlite3_context_db_handle(context);
+
+    int arg = 0;
+    char *db_name;
+    int free_db_name;
+    if (nbArgs == 2) {
+        db_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
+        free_db_name = 1;
+    } else {
+        db_name = "main";
+        free_db_name = 0;
+    }
+
+    char *table_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
+
+    if (db_name == NULL || table_name == NULL) {
+        sqlite3_result_error_code(context, SQLITE_NOMEM);
+        goto exit;
+    }
+
+    strbuf_t errmsg;
+    if (strbuf_init(&errmsg, &sqlite3_allocator, 256) != SQLITE_OK) {
+        sqlite3_result_error_code(context, SQLITE_NOMEM);
+        goto exit;
+    }
+
+    int errors = 0;
+    int result;
+    char *transaction_name = "__create_tiles_table";
+
+    result = sql_begin(db, transaction_name);
+    if (result != SQLITE_OK) {
+        goto exit;
+    }
+
+    result = CreateTilesTable_(db, db_name, table_name, &errors, &errmsg);
+
+    if (result == SQLITE_OK && errors == 0) {
+        result = sql_commit(db, transaction_name);
+    } else {
+        sql_rollback(db, transaction_name);
+    }
+
+    if (result == SQLITE_OK) {
+        if (errors == 0) {
+            sqlite3_result_null(context);
+        } else {
+            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
+        }
+    } else {
+        sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
+    }
+
+    exit:
+    if (free_db_name) {
+        sqlite3_allocator.free(db_name);
+    }
+    sqlite3_allocator.free(table_name);
+    strbuf_destroy(&errmsg);
+}
+
 const char *gpkg_libversion(void) {
     return VERSION;
 }
@@ -566,6 +660,8 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3
     FUNC( CheckGpkg, 1 );
     FUNC( AddGeometryColumn, 4 );
     FUNC( AddGeometryColumn, 5 );
+    FUNC( CreateTilesTable, 1 );
+    FUNC( CreateTilesTable, 2 );
 
     return SQLITE_OK;
 }
