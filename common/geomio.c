@@ -18,33 +18,33 @@
 #include "sqlite.h"
 #include "geomio.h"
 
-static int geom_begin(geom_consumer_t *consumer) {
+static int geom_begin(const geom_consumer_t *consumer) {
     return SQLITE_OK;
 }
 
-static int geom_end(geom_consumer_t *consumer) {
+static int geom_end(const geom_consumer_t *consumer) {
     return SQLITE_OK;
 }
 
-static int geom_begin_geometry(geom_consumer_t *consumer, geom_header_t *header) {
+static int geom_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
     return SQLITE_OK;
 }
 
-static int geom_end_geometry(geom_consumer_t *consumer, geom_header_t *header) {
+static int geom_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
     return SQLITE_OK;
 }
 
-static int geom_coordinates(geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords) {
+static int geom_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords) {
     return SQLITE_OK;
 }
 
 void geom_consumer_init(
         geom_consumer_t *consumer,
-        int (*begin)(geom_consumer_t *),
-        int (*end)(geom_consumer_t *),
-        int (*begin_geometry)(geom_consumer_t*, geom_header_t*),
-        int (*end_geometry)(geom_consumer_t*, geom_header_t*),
-        int (*coordinates)(geom_consumer_t*, geom_header_t*, size_t point_count, double* coords)
+        int (*begin)(const geom_consumer_t *),
+        int (*end)(const geom_consumer_t *),
+        int (*begin_geometry)(const geom_consumer_t*, const geom_header_t*),
+        int (*end_geometry)(const geom_consumer_t*, const geom_header_t*),
+        int (*coordinates)(const geom_consumer_t*, const geom_header_t*, size_t point_count, const double* coords)
 ) {
     consumer->begin = begin != NULL ? begin : geom_begin;
     consumer->end = end != NULL ? end : geom_end;
@@ -53,7 +53,7 @@ void geom_consumer_init(
     consumer->coordinates = coordinates != NULL ? coordinates : geom_coordinates;
 }
 
-int geom_coord_dim(geom_header_t *wkb) {
+int geom_coord_dim(const geom_header_t *wkb) {
     switch (wkb->coord_type) {
 		default:
 		case GEOM_XY:
@@ -66,7 +66,7 @@ int geom_coord_dim(geom_header_t *wkb) {
 	}
 }
 
-char* geom_type_name(geom_header_t *wkb) {
+char* geom_type_name(const geom_header_t *wkb) {
     switch (wkb->geom_type) {
 		case GEOM_POINT:
 			return "ST_Point"; 

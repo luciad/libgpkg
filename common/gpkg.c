@@ -278,7 +278,7 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
 
 static int CheckGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
     int result = SQLITE_OK;
-    table_info_t **table = tables;
+    const table_info_t * const *table = tables;
 
     while (*table != NULL) {
         result = sql_check_table(db, db_name, *table, &sqlite3_allocator, errors, errmsg);
@@ -327,7 +327,7 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
 static int InitGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
     int result = SQLITE_OK;
-    table_info_t **table = tables;
+    const table_info_t * const *table = tables;
 
     while (*table != NULL) {
         result = sql_init_table(db, db_name, *table, &sqlite3_allocator, errors, errmsg);

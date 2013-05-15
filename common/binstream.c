@@ -28,7 +28,7 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
     return SQLITE_OK;
 }
 
-int binstream_init_growable(binstream_t *stream, allocator_t *allocator, size_t initial_cap) {
+int binstream_init_growable(binstream_t *stream, const allocator_t *allocator, size_t initial_cap) {
     void *data = allocator->malloc(initial_cap * sizeof(uint8_t));
     if (data == NULL) {
         return SQLITE_NOMEM;
@@ -161,7 +161,7 @@ int binstream_nread_u8(binstream_t *stream, uint8_t *out, size_t count) {
     return SQLITE_OK;
 }
 
-int binstream_write_nu8(binstream_t *stream, uint8_t *val, size_t count) {
+int binstream_write_nu8(binstream_t *stream, const uint8_t *val, size_t count) {
     int result = binstream_ensurecapacity(stream, stream->position + count);
     if (result != SQLITE_OK) {
         return result;
@@ -295,7 +295,7 @@ int binstream_write_double(binstream_t *stream, double val) {
     return binstream_write_u64(stream, *((uint64_t *) &val));
 }
 
-int binstream_write_ndouble(binstream_t *stream, double *val, size_t count) {
+int binstream_write_ndouble(binstream_t *stream, const double *val, size_t count) {
     int result = binstream_ensurecapacity(stream, stream->position + sizeof(double) * count);
     if (result != SQLITE_OK) {
         return result;

@@ -18,7 +18,7 @@
 #include "sqlite.h"
 #include "strbuf.h"
 
-int strbuf_init(strbuf_t *buffer, allocator_t *allocator, size_t initial_size) {
+int strbuf_init(strbuf_t *buffer, const allocator_t *allocator, size_t initial_size) {
     void *data = allocator->malloc(initial_size);
     if (data == NULL) {
         return SQLITE_NOMEM;
@@ -36,7 +36,11 @@ void strbuf_destroy(strbuf_t *buffer) {
     if (buffer == NULL) {
         return;
     }
-    buffer->allocator->free(buffer->buffer);
+
+    if (buffer->allocator && buffer->buffer) {
+      buffer->allocator->free(buffer->buffer);
+      buffer->buffer = NULL;
+    }
 }
 
 size_t strbuf_length(strbuf_t *buffer) {
@@ -47,7 +51,7 @@ char *strbuf_data_pointer(strbuf_t *buffer) {
     return buffer->buffer;
 }
 
-int strbuf_data(strbuf_t *buffer, allocator_t *allocator, char **out) {
+int strbuf_data(strbuf_t *buffer, const allocator_t *allocator, char **out) {
     size_t length = strbuf_length(buffer);
     *out = allocator->malloc(length + 1);
     if (*out == NULL) {

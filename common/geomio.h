@@ -166,31 +166,31 @@ typedef struct {
  */
 typedef struct geom_consumer_t {
     /**
-     * Called at the beginning of each geometry.
+     * Called at the beginning of a root geometry.
      * @param consumer the geometry consumer
      * @return SQLITE_OK or an error code
      */
-    int (*begin)(struct geom_consumer_t *consumer);
+    int (*begin)(const struct geom_consumer_t *consumer);
     /**
-     * Called at the end of each geometry.
+     * Called at the beginning of a root geometry.
      * @param consumer the geometry consumer
      * @return SQLITE_OK or an error code
      */
-    int (*end)(struct geom_consumer_t *consumer);
+    int (*end)(const struct geom_consumer_t *consumer);
     /**
-     * Called at the beginning of each geometry.
+     * Called at the beginning of each individual geometry including the root.
      * @param consumer the geometry consumer
      * @param header the geometry header
      * @return SQLITE_OK or an error code
      */
-    int (*begin_geometry)(struct geom_consumer_t *consumer, geom_header_t *header);
+    int (*begin_geometry)(const struct geom_consumer_t *consumer, const geom_header_t *header);
     /**
-     * Called at the end of each geometry.
+     * Called at the end of each individual geometry including the root.
      * @param consumer the geometry consumer
      * @param header the geometry header
      * @return SQLITE_OK or an error code
      */
-    int (*end_geometry)(struct geom_consumer_t *consumer, geom_header_t *header);
+    int (*end_geometry)(const struct geom_consumer_t *consumer, const geom_header_t *header);
     /**
      * Called zero or more times per geometry to pass coordinates to the geometry consumer.
      * @param consumer the geometry consumer
@@ -199,35 +199,38 @@ typedef struct geom_consumer_t {
      * @param coords the coordinate array. This array contains (point_count * header->coord_size) values.
      * @return SQLITE_OK or an error code
      */
-    int (*coordinates)(struct geom_consumer_t *consumer, geom_header_t *header, size_t point_count, double *coords);
+    int (*coordinates)(const struct geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords);
 } geom_consumer_t;
 
 /**
  * Initializes a geometry consumer.
+ * @param consumer the geometry consumer to initialize
  * @param begin the begin callback
  * @param end the end callback
+ * @param begin_geometry the begin_geometry callback
+ * @param end_geometry the end_geometry callback
  * @param coordinates the coordinates callback
  */
 void geom_consumer_init(
         geom_consumer_t *consumer,
-        int (*begin)(geom_consumer_t *),
-        int (*end)(geom_consumer_t *),
-        int (*begin_geometry)(geom_consumer_t *, geom_header_t *),
-        int (*end_geometry)(geom_consumer_t *, geom_header_t *),
-        int (*coordinates)(geom_consumer_t *, geom_header_t *, size_t point_count, double *coords)
+        int (*begin)(const geom_consumer_t *),
+        int (*end)(const geom_consumer_t *),
+        int (*begin_geometry)(const geom_consumer_t *, const geom_header_t *),
+        int (*end_geometry)(const geom_consumer_t *, const geom_header_t *),
+        int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords)
 );
 
 /**
  * Returns the coordinate dimension of the geometry.
  * @param header the geometry header containing the coordinate dimension information
  */
-int geom_coord_dim(geom_header_t *header);
+int geom_coord_dim(const geom_header_t *header);
 
 /**
  * Returns the geometry type as a string.
  * @param header the geometry header containing the type information
  */
-char* geom_type_name(geom_header_t *header);
+char* geom_type_name(const geom_header_t *header);
 
 /**
  * Initializes a geometry envelope.

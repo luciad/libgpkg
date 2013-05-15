@@ -38,8 +38,6 @@
  * indicates which unique constraint the column is part of. Index must be greater than 0.
  */
 #define SQL_UNIQUE(i) (0x4 | (i << 4))
-#define SQL_CONSTRAINT_IX(flags) (flags >> 4)
-#define SQL_IS_CONSTRAINT(flags, mask, ix) ((flags & mask) && (SQL_CONSTRAINT_IX(flags) == ix))
 
 /**
  * Enumeration of value types.
@@ -71,9 +69,6 @@ typedef enum {
  * A SQL value.
  */
 typedef struct {
-    /**
-     * The actual value.
-     */
     union {
         /**
          * The value as a string. This field is valid if type is VALUE_TEXT or VALUE_FUNC.
@@ -87,7 +82,12 @@ typedef struct {
          * The value as an integer. This field is valid if type is VALUE_INTEGER.
          */
         int integer;
-    } value;
+    }
+    /**
+     * The value union.
+     */
+    value;
+
     /**
      * The type of this value.
      */
@@ -146,26 +146,26 @@ typedef struct {
     /**
      * The name of the column.
      */
-    char *name;
+    const char *name;
     /**
      * The SQL type of the column.
      */
-    char *type;
+    const char *type;
     /**
      * The default value of the column. This field may be set to NULL.
      */
-    value_t default_value;
+    const value_t default_value;
     /**
      * Bitwise OR of any flags that apply to this column. This field may contain a combination of:
      * \li SQL_NOT_NULL
      * \li SQL_PRIMARY_KEY
      * \li SQL_UNIQUE
      */
-    int flags;
+    const int flags;
     /**
      * The column constraints that should be applied to the column as a SQL expression.
      */
-    char *column_constraints;
+    const char *column_constraints;
 } column_info_t;
 
 /**
@@ -175,24 +175,24 @@ typedef struct {
     /**
      * The name of the table.
      */
-    char *name;
+    const char *name;
     /**
      * An array of column information.
      */
-    column_info_t *columns;
+    const column_info_t *columns;
     /**
      * The number of elements in columns.
      */
-    size_t nColumns;
+    const size_t nColumns;
     /**
      * An array of rows that should be present in the table. Each row is an array of value_t and should contain
      * nColumns elements.
      */
-    value_t *rows;
+    const value_t *rows;
     /**
      * The number of elements in rows.
      */
-    size_t nRows;
+    const size_t nRows;
 } table_info_t;
 
 /**
@@ -269,20 +269,20 @@ int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_check_table_exists(sqlite3 *db, char* db_name, char* table_name, int *exists);
+int sql_check_table_exists(sqlite3 *db, const char* db_name, const char* table_name, int *exists);
 
 /**
  * Checks if a table matches the given table specification.
  * @param db the SQLite database context
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
- * @param table_name the name of the table to check.
  * @param table_info the table specification
+ * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @param[out] errors on success, errors will be set to the number of cases where the actual table did not match the specification.
  * @param[out] errmsg if not null, newline separated descriptive messages will be written to errmsg for each encountered error.
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, allocator_t *allocator, int *errors, strbuf_t *errmsg);
+int sql_check_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, const allocator_t *allocator, int *errors, strbuf_t *errmsg);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is
@@ -290,14 +290,14 @@ int sql_check_table(sqlite3 *db, char* db_name, table_info_t *table_info, alloca
  *
  * @param db the SQLite database context
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
- * @param table_name the name of the table to check.
  * @param table_info the table specification
+ * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @param[out] errors on success, errors will be set to the number of errors that was encountered while initializing the table.
  * @param[out] errmsg if not null, newline separated descriptive messages will be written to errmsg for each encountered error.
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_init_table(sqlite3 *db, char* db_name, table_info_t *table_info, allocator_t *allocator, int *errors, strbuf_t *errmsg);
+int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, const allocator_t *allocator, int *errors, strbuf_t *errmsg);
 
 /** @} */
 

@@ -43,20 +43,70 @@ typedef struct {
     int offset;
 } wkb_writer_t;
 
-int wkb_writer_init( wkb_writer_t *writer, allocator_t *allocator );
+/**
+ * Initializes a Well-Known Binary writer.
+ * @param writer the writer to initialize
+ * @param allocator the memory allocator that should be used to allocate internal memory buffers
+ * @return SQLITE_OK on success, an error code otherwise
+ */
+int wkb_writer_init( wkb_writer_t *writer, const allocator_t *allocator );
 
-geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer);
-
+/**
+ * Destroys a Well-Known Binary writer.
+ * @param writer the writer to destroy
+ */
 void wkb_writer_destroy( wkb_writer_t *writer );
 
+/**
+ * Returns a Well-Known Binary writer as a geometry consumer. This function should be used
+ * to pass the writer to another function that takes a geom_consumer_t as input.
+ * @param writer the writer
+ */
+geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer);
+
+/**
+ * Returns a pointer to the Well-Known Binary data that was written by the given writer. The length of the returned
+ * buffer can be obtained using the wkb_writer_length() function.
+ * @param writer the writer
+ * @return a pointer to the Well-Known Binary data
+ */
 uint8_t* wkb_writer_getwkb( wkb_writer_t *writer );
 
+/**
+ * Returns the length of the buffer obtained using the wkb_writer_getwkb() function.
+ * @param writer the writer
+ * @return the length of the Well-Known Binary data buffer
+ */
 size_t wkb_writer_length( wkb_writer_t *writer );
 
-int wkb_read_geometry(binstream_t *stream, geom_consumer_t *consumer);
+/**
+ * Parses a Well-Known Binary geometry from the given stream. The stream should be positioned at the start
+ * of the WKB geometry.
+ *
+ * @param stream the stream containing the WKB geometry
+ * @param consumer the geometry consumer that will receive the parsed geometry
+ * @return SQLITE_OK on success, an error code otherwise
+ */
+int wkb_read_geometry(binstream_t *stream, const geom_consumer_t *consumer);
 
+/**
+ * Parses the header of a Well-Known Binary geometry from the given stream. The stream should be positioned at the start
+ * of the WKB geometry. The data contained in the header is written to the header parameter.
+ *
+ * @param stream the stream containing the WKB geometry
+ * @param[out] header the header to populate
+ * @return SQLITE_OK on success, an error code otherwise
+ */
 int wkb_read_header(binstream_t *stream, geom_header_t *header);
 
+/**
+ * Populates a geometry envelope based on the coordinates of a Well-Known Binary geometry from the given stream. The
+ * stream should be positioned at the start of the WKB geometry.
+ *
+ * @param stream the stream containing the WKB geometry
+ * @param[out] envelope the envelope to populate
+ * @return SQLITE_OK on success, an error code otherwise
+ */
 int wkb_fill_envelope(binstream_t *stream, geom_envelope_t *envelope);
 
 /** @} */

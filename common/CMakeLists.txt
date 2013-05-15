@@ -4,6 +4,7 @@ add_library (
   geomio.c
   gpb.c
   gpkg.c
+  tables.c
   sql.c
   strbuf.c
   wkb.c

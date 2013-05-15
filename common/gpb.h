@@ -62,9 +62,17 @@ typedef struct {
 /**
  * Initializes a GeoPackage Binary writer.
  * @param writer the writer to initialize
+ * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @param srid the SRID that should be used
+ * @return SQLITE_OK on success, an error code otherwise
  */
 int gpb_writer_init( gpb_writer_t *writer, allocator_t *allocator, uint32_t srid );
+
+/**
+ * Destroys a GeoPackage Binary writer.
+ * @param writer the writer to destroy
+ */
+void gpb_writer_destroy( gpb_writer_t *writer );
 
 /**
  * Returns a GeoPackage Binary writer as a geometry consumer. This function should be used
@@ -72,12 +80,6 @@ int gpb_writer_init( gpb_writer_t *writer, allocator_t *allocator, uint32_t srid
  * @param writer the writer
  */
 geom_consumer_t * gpb_writer_geom_consumer(gpb_writer_t *writer);
-
-/**
- * Destroys a GeoPackage Binary writer.
- * @param writer the writer to destroy
- */
-void gpb_writer_destroy( gpb_writer_t *writer );
 
 /**
  * Returns a pointer to the GeoPackage Binary data that was written by the given writer. The length of the returned

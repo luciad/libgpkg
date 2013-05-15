@@ -54,7 +54,7 @@ typedef struct {
     /** @private */
 	binstream_endianness end;
 	/** @private */
-  allocator_t *allocator;
+  const allocator_t *allocator;
 } binstream_t;
 
 /**
@@ -72,10 +72,11 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length);
  *
  * @param stream the stream to initialize
  * @param initial_cap the initial buffer capacity to allocate for the stream in bytes
+ * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @return SQLITE_OK if the stream was successfully initialised.@n
  *         SQLITE_NOMEM if the internal buffer could not be allocated.
  */
-int binstream_init_growable(binstream_t *stream, allocator_t *allocator, size_t initial_cap);
+int binstream_init_growable(binstream_t *stream, const allocator_t *allocator, size_t initial_cap);
 
 /**
  * Destroys the given stream.
@@ -97,6 +98,11 @@ void binstream_destroy(binstream_t *stream);
  */
 uint8_t* binstream_data(binstream_t *stream);
 
+/**
+ * Rewinds the stream, setting the limit to the current position and the position to 0. This function can be used
+ * after writing to a stream to prepare it for subsequent read operations.
+ * @param stream the stream to flip
+ */
 void binstream_flip(binstream_t *stream);
 
 /**
@@ -197,7 +203,7 @@ int binstream_nread_u8(binstream_t *stream, uint8_t *out, size_t count);
  * @return SQLITE_OK if the value was written successfully
  *         SQLITE_IOERR if insufficient space is available in the stream and the stream is not growable
  */
-int binstream_write_nu8(binstream_t *stream, uint8_t *val, size_t count);
+int binstream_write_nu8(binstream_t *stream, const uint8_t *val, size_t count);
 
 /**
  * Reads a single unsigned 32-bit value from the stream. The position of the stream is advanced by 4.
@@ -267,7 +273,7 @@ int binstream_write_double(binstream_t *stream, double val);
  * @return SQLITE_OK if the values were written successfully
  *         SQLITE_IOERR if insufficient space is available in the stream and the stream is not growable
  */
-int binstream_write_ndouble(binstream_t *stream, double *val, size_t count);
+int binstream_write_ndouble(binstream_t *stream, const double *val, size_t count);
 
 /** @} */
 
