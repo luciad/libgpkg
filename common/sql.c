@@ -664,7 +664,7 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
     strbuf_append(&sql, "\n)");
 
     char* err = NULL;
-    result = sqlite3_exec(db, strbuf_data_pointer(&sql), NULL, NULL, &err);
+    result = sql_exec(db, strbuf_data_pointer(&sql));
     if (err) {
         *errors = *errors + 1;
         if (errmsg) {

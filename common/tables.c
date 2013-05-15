@@ -26,7 +26,7 @@ static column_info_t geopackage_contents_columns[] = {
         {"data_type", "text", N, SQL_NOT_NULL, NULL},
         {"identifier", "text", N, SQL_NOT_NULL, NULL},
         {"description", "text", T(""), SQL_NOT_NULL, NULL},
-        {"last_change", "text", F("strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"), SQL_NOT_NULL, NULL},
+        {"last_change", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
         {"min_x", "double", N, SQL_NOT_NULL, NULL},
         {"min_y", "double", N, SQL_NOT_NULL, NULL},
         {"max_x", "double", N, SQL_NOT_NULL, NULL},
@@ -139,7 +139,7 @@ static column_info_t metadata_reference_columns[] = {
         {"table_name", "text", N, 0, NULL},
         {"column_name", "text", N, 0, NULL},
         {"row_id_value", "integer", N, 0, NULL},
-        {"timestamp", "text", F("strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"), SQL_NOT_NULL, NULL},
+        {"timestamp", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
         {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES xml_metadata(id)"},
         {"md_parent_id", "integer", N, 0, "REFERENCES xml_metadata(id)"},
         {NULL, NULL, N, 0, NULL}
