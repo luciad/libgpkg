@@ -386,7 +386,7 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
     strbuf_destroy(&errmsg);
 }
 
-static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int *errors, strbuf_t *errmsg) {
+static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int coord_dimension, int *errors, strbuf_t *errmsg) {
     int result;
 
     // Check if the target table exists
@@ -441,7 +441,7 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
         return result;
     }
 
-    result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, geometry_type, srid) VALUES (%Q, %Q, %Q, %d)", db_name, "geometry_columns", table_name, column_name, geom_type, srid);
+    result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, geometry_type, coord_dimension, srid) VALUES (%Q, %Q, %Q, %d, %d)", db_name, "geometry_columns", table_name, column_name, geom_type, coord_dimension, srid);
     if (result != SQLITE_OK) {
         (*errors)++;
         strbuf_append(errmsg, sqlite3_errmsg(db));
@@ -469,6 +469,7 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     char *column_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
     int srid = sqlite3_value_int(args[arg++]);
     char *geometry_type = sqlite3_mprintf("%s", sqlite3_value_text(args[arg]));
+    int coord_dimension = sqlite3_value_int(args[arg++]);
 
     if (db_name == NULL || table_name == NULL || column_name == NULL || geometry_type == NULL) {
         sqlite3_result_error_code(context, SQLITE_NOMEM);
@@ -490,7 +491,7 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
         goto exit;
     }
 
-    result = AddGeometryColumn_(db, db_name, table_name, column_name, srid, geometry_type, &errors, &errmsg);
+    result = AddGeometryColumn_(db, db_name, table_name, column_name, srid, geometry_type, coord_dimension, &errors, &errmsg);
 
     if (result == SQLITE_OK && errors == 0) {
         result = sql_commit(db, transaction_name);
@@ -656,10 +657,8 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const struct sqlite3
     FUNC( CheckGpkg, 1 );
     FUNC( InitGpkg, 0 );
     FUNC( InitGpkg, 1 );
-    FUNC( CheckGpkg, 0 );
-    FUNC( CheckGpkg, 1 );
-    FUNC( AddGeometryColumn, 4 );
     FUNC( AddGeometryColumn, 5 );
+    FUNC( AddGeometryColumn, 6 );
     FUNC( CreateTilesTable, 1 );
     FUNC( CreateTilesTable, 2 );
 
