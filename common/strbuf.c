@@ -24,6 +24,8 @@ int strbuf_init(strbuf_t *buffer, const allocator_t *allocator, size_t initial_s
         return SQLITE_NOMEM;
     }
 
+    memset(data, 0, initial_size);
+
     buffer->buffer = data;
     buffer->capacity = initial_size;
     buffer->length = 0;
@@ -89,6 +91,8 @@ int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
 			      result = SQLITE_NOMEM;
             goto exit;
 		    }
+
+        memset(data + buffer->capacity, 0, new_capacity - buffer->capacity);
 
 		    buffer->buffer = data;
 		    buffer->capacity = new_capacity;
