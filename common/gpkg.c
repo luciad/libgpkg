@@ -616,7 +616,7 @@ const char *gpkg_libversion(void) {
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
 
-int gpkg_init(const sqlite3_api_routines *pThunk) {
+void gpkg_init(const sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
 }
 
