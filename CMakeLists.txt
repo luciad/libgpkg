@@ -1,12 +1,9 @@
 cmake_minimum_required( VERSION 2.8 )
 project ( libgpkg )
 
-add_subdirectory( common )
-add_subdirectory( extension )
-add_subdirectory( shell )
-add_subdirectory( sqlite )
-enable_testing()
-add_subdirectory( test )
+if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.5" )
+endif()
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
@@ -16,3 +13,10 @@ if(DOXYGEN_FOUND)
                     COMMENT "Generating API documentation with Doxygen" VERBATIM
   )
 endif(DOXYGEN_FOUND)
+
+add_subdirectory( common )
+add_subdirectory( extension )
+add_subdirectory( shell )
+add_subdirectory( sqlite )
+enable_testing()
+add_subdirectory( test )
