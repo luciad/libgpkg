@@ -59,7 +59,7 @@ table_info_t spatial_ref_sys = {
 };
 
 static column_info_t geometry_columns_columns[] = {
-        {"f_table_name", "text", N, SQL_PRIMARY_KEY, "REFERENCES geopackage_contents(table_name)"},
+        {"f_table_name", "text", N, SQL_PRIMARY_KEY, NULL},
         {"f_geometry_column", "text", N, SQL_PRIMARY_KEY, NULL},
         {"geometry_type", "integer", N, SQL_NOT_NULL, NULL},
         {"coord_dimension", "integer", N, SQL_NOT_NULL, NULL},
@@ -73,7 +73,7 @@ table_info_t geometry_columns = {
 };
 
 static column_info_t raster_columns_columns[] = {
-        {"r_table_name", "text", N, SQL_PRIMARY_KEY, "REFERENCES geopackage_contents(table_name)"},
+        {"r_table_name", "text", N, SQL_PRIMARY_KEY, NULL},
         {"r_raster_column", "text", N, SQL_PRIMARY_KEY, NULL},
         {NULL, NULL, N, 0, NULL}
 };
@@ -120,7 +120,7 @@ static column_info_t tiles_columns[] = {
         {NULL, NULL, N, 0, NULL}
 };
 
-static column_info_t xml_metadata_columns[] = {
+static column_info_t metadata_columns[] = {
         {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
         {"md_scope", "text", T("dataset"), SQL_NOT_NULL, NULL},
         {"md_standard_uri", "text", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
@@ -128,9 +128,9 @@ static column_info_t xml_metadata_columns[] = {
         {"metadata", "text", T(""), SQL_NOT_NULL, NULL},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t xml_metadata = {
-        "xml_metadata",
-        xml_metadata_columns,
+table_info_t metadata = {
+        "metadata",
+        metadata_columns,
         NULL, 0
 };
 
@@ -140,8 +140,8 @@ static column_info_t metadata_reference_columns[] = {
         {"column_name", "text", N, 0, NULL},
         {"row_id_value", "integer", N, 0, NULL},
         {"timestamp", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
-        {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES xml_metadata(id)"},
-        {"md_parent_id", "integer", N, 0, "REFERENCES xml_metadata(id)"},
+        {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES metadata(id)"},
+        {"md_parent_id", "integer", N, 0, "REFERENCES metadata(id)"},
         {NULL, NULL, N, 0, NULL}
 };
 table_info_t metadata_reference = {
@@ -177,7 +177,7 @@ const table_info_t * const tables[] = {
         &raster_columns,
         &tile_table_metadata,
         &tile_matrix_metadata,
-        &xml_metadata,
+        &metadata,
         &metadata_reference,
         &manifest,
         NULL
