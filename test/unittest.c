@@ -45,6 +45,15 @@ void unittest_init() {
     gpkg_init(&sqlite3_api);
 }
 
+int open_database(sqlite3 **db) {
+    sqlite3_auto_extension(gpkg_extension_init);
+    return sqlite3_open_v2(":memory:", db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+}
+
+int close_database(sqlite3 *db) {
+    return sqlite3_close(db);
+}
+
 static uint8_t hexCharToInt(uint8_t c) {
     if ('a' <= c && c <= 'f') {
         return 10 + c - 'a';
@@ -93,12 +102,12 @@ char* nBinToHex(uint8_t* binString, size_t length) {
     return hex;
 }
 
-void fail_flm(const char* file, int line, char* msg) {
+void fail_flm(const char* file, int line, const char* msg) {
     printf("%s:%d: %s\n", file, line, msg);
     exit(1);
 }
 
-void assert_str_eql_flm(const char* file, int line, char* msg, char* exc, char* act) {
+void assert_str_eql_flm(const char* file, int line, const char* msg, const char* exc, const char* act) {
     if (
         (exc == NULL && act == NULL) ||
         (exc != NULL && act != NULL && strcmp(exc, act) == 0)
@@ -106,6 +115,24 @@ void assert_str_eql_flm(const char* file, int line, char* msg, char* exc, char* 
   	  	return;
     } else {
         printf("%s:%d: %s: expected <%s> actual <%s>\n", file, line, msg, exc, act);
+        exit(1);
+    }
+}
+
+void assert_double_eql_flm(const char* file, int line, const char* msg, double exc, double act) {
+    if ( exc == act ) {
+        return;
+    } else {
+        printf("%s:%d: %s: expected <%f> actual <%f>\n", file, line, msg, exc, act);
+        exit(1);
+    }
+}
+
+void assert_int_eql_flm(const char* file, int line, const char* msg, int exc, int act) {
+    if ( exc == act ) {
+        return;
+    } else {
+        printf("%s:%d: %s: expected <%d> actual <%d>\n", file, line, msg, exc, act);
         exit(1);
     }
 }
