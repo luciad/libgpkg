@@ -314,12 +314,12 @@ static int gpb_end(const geom_consumer_t *consumer) {
     return result;
 }
 
-int gpb_writer_init( gpb_writer_t *writer, allocator_t *allocator, uint32_t srid ) {
+int gpb_writer_init( gpb_writer_t *writer, uint32_t srid ) {
     geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
     geom_envelope_init(&writer->header.envelope);
     writer->header.version = 1;
     writer->header.srid = srid;
-    return wkb_writer_init(&writer->wkb_writer, allocator);
+    return wkb_writer_init(&writer->wkb_writer);
 }
 
 geom_consumer_t * gpb_writer_geom_consumer(gpb_writer_t *writer) {

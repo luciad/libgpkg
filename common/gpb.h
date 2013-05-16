@@ -17,7 +17,6 @@
 #define GPKG_GPB_H
 
 #include <stdint.h>
-#include "allocator.h"
 #include "binstream.h"
 #include "geomio.h"
 #include "wkb.h"
@@ -62,11 +61,10 @@ typedef struct {
 /**
  * Initializes a GeoPackage Binary writer.
  * @param writer the writer to initialize
- * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @param srid the SRID that should be used
  * @return SQLITE_OK on success, an error code otherwise
  */
-int gpb_writer_init( gpb_writer_t *writer, allocator_t *allocator, uint32_t srid );
+int gpb_writer_init( gpb_writer_t *writer, uint32_t srid );
 
 /**
  * Destroys a GeoPackage Binary writer.

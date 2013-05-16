@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef UNITTEST_H
+#define UNITTEST_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -12,7 +12,9 @@ void assert_str_eql_flm(const char* file, int line, char* msg, char* exc, char* 
 #define assert_str_eql(exc,act) assert_str_eql_flm(__FILE__,__LINE__,NULL,(exc),(act))
 #define assert_str_eql_m(msg,exc,act) assert_str_eql_flm(__FILE__,__LINE__,(msg),(exc),(act))
 
-char* hexToBin(char* hexString);
+void unittest_init();
+
+uint8_t* hexToBin(char* hexString);
 
 char* nBinToHex(uint8_t* binString, size_t len);
 

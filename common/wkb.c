@@ -591,9 +591,9 @@ static int wkb_end(const geom_consumer_t *consumer) {
     return SQLITE_OK;
 }
 
-int wkb_writer_init(wkb_writer_t *writer, const allocator_t *allocator) {
+int wkb_writer_init(wkb_writer_t *writer) {
     geom_consumer_init(&writer->geom_consumer, NULL, wkb_end, wkb_begin_geometry, wkb_end_geometry, wkb_coordinates);
-    int res = binstream_init_growable(&writer->stream, allocator, 256);
+    int res = binstream_init_growable(&writer->stream, 256);
     if (res != SQLITE_OK) {
         return res;
     }

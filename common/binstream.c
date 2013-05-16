@@ -24,12 +24,12 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
     stream->limit = length;
     stream->position = 0;
     stream->end = LITTLE;
-    stream->allocator = NULL;
+    stream->growable = 0;
     return SQLITE_OK;
 }
 
-int binstream_init_growable(binstream_t *stream, const allocator_t *allocator, size_t initial_cap) {
-    void *data = allocator->malloc(initial_cap * sizeof(uint8_t));
+int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
+    void *data = sqlite3_malloc(initial_cap * sizeof(uint8_t));
     if (data == NULL) {
         return SQLITE_NOMEM;
     }
@@ -39,7 +39,7 @@ int binstream_init_growable(binstream_t *stream, const allocator_t *allocator, s
     stream->capacity = initial_cap;
     stream->position = 0;
     stream->end = LITTLE;
-    stream->allocator = allocator;
+    stream->growable = 1;
     return SQLITE_OK;
 }
 
@@ -48,8 +48,8 @@ void binstream_destroy(binstream_t *stream) {
       return;
     }
 
-    if (stream->allocator != NULL) {
-        stream->allocator->free(stream->data);
+    if (stream->growable == 1) {
+        sqlite3_free(stream->data);
     }
 }
 
@@ -64,14 +64,14 @@ static int binstream_ensureavailable(binstream_t *stream, size_t needed) {
 static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
     if (needed <= stream->capacity) {
         return SQLITE_OK;
-    } else if (stream->allocator == NULL) {
+    } else if (stream->growable == 0) {
         return SQLITE_IOERR;
     } else {
         size_t newcapacity = stream->capacity * 3 / 2;
         if (needed > newcapacity) {
             newcapacity = needed;
         }
-        void *newdata = stream->allocator->realloc(stream->data, newcapacity);
+        void *newdata = sqlite3_realloc(stream->data, newcapacity);
         if (newdata == NULL) {
             return SQLITE_NOMEM;
         }

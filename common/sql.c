@@ -78,7 +78,7 @@ static void sql_stmt_destroy(sqlite3_stmt *stmt) {
     }
 }
 
-static int sql_step_for_string(sqlite3_stmt *stmt, allocator_t *allocator, char **out) {
+static int sql_step_for_string(sqlite3_stmt *stmt, char **out) {
     int result = SQLITE_OK;
 
     int stmt_res = sqlite3_step(stmt);
@@ -90,7 +90,7 @@ static int sql_step_for_string(sqlite3_stmt *stmt, allocator_t *allocator, char 
                 *out = NULL;
             } else {
                 const unsigned char *text = sqlite3_column_text(stmt, 0);
-                *out = allocator->malloc(length + 1);
+                *out = sqlite3_malloc(length + 1);
                 if (*out == NULL) {
                     result = SQLITE_NOMEM;
                     goto exit;
@@ -131,7 +131,7 @@ static int sql_step_for_int(sqlite3_stmt *stmt, int *out) {
     return result;
 }
 
-int sql_exec_for_string(sqlite3 *db, allocator_t *allocator, char **out, char *sql, ...) {
+int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
     int result;
     sqlite3_stmt *stmt;
 
@@ -144,7 +144,7 @@ int sql_exec_for_string(sqlite3 *db, allocator_t *allocator, char **out, char *s
         return result;
     }
 
-    result = sql_step_for_string(stmt, allocator, out);
+    result = sql_step_for_string(stmt, out);
 
     sql_stmt_destroy(stmt);
     return result;
@@ -360,7 +360,7 @@ static int sql_format_missing_row(const char* db_name, const table_info_t *table
     return result;
 }
 
-static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* table_info, const allocator_t *allocator, int *errors, strbuf_t *errmsg) {
+static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* table_info, int *errors, strbuf_t *errmsg) {
     if (table_info->nRows <= 0) {
         return SQLITE_OK;
     }
@@ -371,7 +371,7 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
     strbuf_t sql;
     char *query = NULL;
 
-    result = strbuf_init(&sql, allocator, 4096);
+    result = strbuf_init(&sql, 4096);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -384,7 +384,7 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
         }
         strbuf_append(&sql, " \"%w\" = ?", columns[i].name);
     }
-    result = strbuf_data(&sql, allocator, &query);
+    result = strbuf_data(&sql, &query);
 
     if (result != SQLITE_OK) {
         goto exit;
@@ -423,11 +423,11 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
     exit:
     strbuf_destroy(&sql);
     sql_stmt_destroy(stmt);
-    allocator->free(query);
+    sqlite3_free(query);
     return result;
 }
 
-int sql_check_table(sqlite3* db, const char* db_name, const table_info_t* table_info, const allocator_t *allocator, int *errors, strbuf_t* errmsg) {
+int sql_check_table(sqlite3* db, const char* db_name, const table_info_t* table_info, int *errors, strbuf_t* errmsg) {
     if (errors == NULL) {
         return SQLITE_MISUSE;
     }
@@ -441,7 +441,7 @@ int sql_check_table(sqlite3* db, const char* db_name, const table_info_t* table_
             }
 
             if (result == SQLITE_OK) {
-                result = sql_check_data(db, db_name, table_info, allocator, errors, errmsg);
+                result = sql_check_data(db, db_name, table_info, errors, errmsg);
             }
         } else {
             *errors = *errors + 1;
@@ -454,9 +454,9 @@ int sql_check_table(sqlite3* db, const char* db_name, const table_info_t* table_
     return result;
 }
 
-static int sql_format_insert_data(const char *db_name, const table_info_t* table_info, const allocator_t* allocator, char **query) {
+static int sql_format_insert_data(const char *db_name, const table_info_t* table_info, char **query) {
     strbuf_t sql;
-    int result = strbuf_init(&sql, allocator, 4096);
+    int result = strbuf_init(&sql, 4096);
     if (result != SQLITE_OK) {
         return result;
     }
@@ -495,7 +495,7 @@ static int sql_format_insert_data(const char *db_name, const table_info_t* table
     result = strbuf_append(&sql, ")");
 
     if (result == SQLITE_OK) {
-        result = strbuf_data(&sql, allocator, query);
+        result = strbuf_data(&sql, query);
     }
 
     exit:
@@ -503,7 +503,7 @@ static int sql_format_insert_data(const char *db_name, const table_info_t* table
     return result;
 }
 
-static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t* table_info, const allocator_t *allocator, int *errors, strbuf_t *errmsg) {
+static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t* table_info, int *errors, strbuf_t *errmsg) {
     if (table_info->nRows <= 0) {
         return SQLITE_OK;
     }
@@ -512,7 +512,7 @@ static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t*
     int result = SQLITE_OK;
     char* query = NULL;
 
-    result = sql_format_insert_data(db_name, table_info, allocator, &query);
+    result = sql_format_insert_data(db_name, table_info, &query);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -545,7 +545,7 @@ static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t*
     }
 
     exit:
-    allocator->free(query);
+    sqlite3_free(query);
     sql_stmt_destroy(stmt);
     return result;
 }
@@ -594,10 +594,10 @@ static void appendTableConstraint(const table_info_t *table_info, strbuf_t *sql,
     strbuf_append(sql, ")");
 }
 
-static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t* table_info, const allocator_t *allocator, int *errors, strbuf_t *errmsg) {
+static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t* table_info, int *errors, strbuf_t *errmsg) {
     int result;
     strbuf_t sql;
-    result = strbuf_init(&sql, allocator, 4096);
+    result = strbuf_init(&sql, 4096);
     if (result != SQLITE_OK) {
         return result;
     }
@@ -677,7 +677,7 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
     return result;
 }
 
-int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t* table_info, const allocator_t *allocator, int *errors, strbuf_t* errmsg) {
+int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t* table_info, int *errors, strbuf_t* errmsg) {
     if (errors == NULL) {
         return SQLITE_MISUSE;
     }
@@ -693,11 +693,11 @@ int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t* table_i
     if (exists) {
         result = sql_check_table_schema(db, db_name, table_info, errors, errmsg);
     } else {
-        result = sql_create_table(db, db_name, table_info, allocator, errors, errmsg);
+        result = sql_create_table(db, db_name, table_info, errors, errmsg);
     }
 
     if (result == SQLITE_OK && *errors == 0) {
-        result = sql_insert_data(db, db_name, table_info, allocator, errors, errmsg);
+        result = sql_insert_data(db, db_name, table_info, errors, errmsg);
     }
 
     return result;

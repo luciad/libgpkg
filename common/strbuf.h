@@ -17,7 +17,6 @@
 #define GPB_STRBUF_H
 
 #include <string.h>
-#include "allocator.h"
 
 /**
  * \addtogroup strbuf Strings
@@ -34,18 +33,15 @@ typedef struct {
     size_t capacity;
     /** @private */
     size_t length;
-    /** @private */
-    const allocator_t *allocator;
 } strbuf_t;
 
 /**
  * Initializes a string buffer.
  * @param buffer the string buffer to initialize
- * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @param initial_size the initial buffer size to preallocate in bytes
  * @return SQLITE_OK on success, an error code otherwise
  */
-int strbuf_init(strbuf_t *buffer, const allocator_t * allocator, size_t initial_size);
+int strbuf_init(strbuf_t *buffer, size_t initial_size);
 
 /**
  * Destroys a string buffer, freeing any internal data structures that have been allocated.
@@ -73,11 +69,10 @@ char *strbuf_data_pointer(strbuf_t *buffer);
  * Returns a copy of the contents of a string buffer.
  *
  * @param buffer a string buffer
- * @param allocator the memory allocator that should be used to allocate memory for the copy
  * @param[out] out on success out will be set to point to the allocated copy of the contents
  * @return SQLITE_OK on success, an error code otherwise
  */
-int strbuf_data(strbuf_t *buffer, const allocator_t *allocator, char **out);
+int strbuf_data(strbuf_t *buffer, char **out);
 
 /**
  * Appends a formatted string to this string buffer.

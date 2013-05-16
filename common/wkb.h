@@ -16,7 +16,6 @@
 #ifndef GPKG_WKB_H
 #define GPKG_WKB_H
 
-#include "allocator.h"
 #include "binstream.h"
 #include "geomio.h"
 
@@ -46,10 +45,9 @@ typedef struct {
 /**
  * Initializes a Well-Known Binary writer.
  * @param writer the writer to initialize
- * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_writer_init( wkb_writer_t *writer, const allocator_t *allocator );
+int wkb_writer_init( wkb_writer_t *writer );
 
 /**
  * Destroys a Well-Known Binary writer.

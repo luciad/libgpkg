@@ -178,9 +178,9 @@ static int wkt_end_geometry(const geom_consumer_t *consumer, const geom_header_t
     return result;
 }
 
-int wkt_writer_init(wkt_writer_t *writer, const allocator_t *allocator) {
+int wkt_writer_init(wkt_writer_t *writer) {
     geom_consumer_init(&writer->geom_consumer, NULL, NULL, wkt_begin_geometry, wkt_end_geometry, wkt_coordinates);
-    int res = strbuf_init(&writer->strbuf, allocator, 256);
+    int res = strbuf_init(&writer->strbuf, 256);
     if (res != SQLITE_OK) {
         return res;
     }

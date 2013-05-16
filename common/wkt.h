@@ -16,7 +16,6 @@
 #ifndef GPB_WKT_H
 #define GPB_WKT_H
 
-#include "allocator.h"
 #include "binstream.h"
 #include "strbuf.h"
 #include "geomio.h"
@@ -47,10 +46,9 @@ typedef struct {
 /**
  * Initializes a Well-Known Text writer.
  * @param writer the writer to initialize
- * @param allocator the memory allocator that should be used to allocate internal memory buffers
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkt_writer_init( wkt_writer_t *writer, const allocator_t *allocator );
+int wkt_writer_init( wkt_writer_t *writer );
 
 /**
  * Destroys a Well-Known Text writer.
