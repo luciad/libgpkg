@@ -1,5 +1,25 @@
 # Description
-A SQLite 3 extension that provides a minimal GeoPackage implementation.
+A SQLite 3 extension that provides a minimal [OGC GeoPackage](http://www.ogcnetwork.net/geopackage) implementation.
+
+# Usage
+libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sqlite.org/c3ref/load_extension.html) C function or using the [load\_extension](http://sqlite.org/lang_corefunc.html#load_extension) SQL function. Once loaded libgpkg extends SQLite with the function listed below. These function can be used just like any of the core functions that SQLite provides.
+
+## Standard Functions
+- ST\_MinX, ST\_MaxX, ST\_MinY, ST\_MaxY, ST\_MinZ, ST\_MaxZ, ST\_MinM, ST\_MaxM.
+- ST\_SRID
+- ST\_IsValid
+- ST\_IsMeasured
+- ST\_Is3d
+- ST\_CoordDim
+- ST\_GeometryType
+- ST\_AsBinary, ST\_GeomFromWKB, ST\_WKBToSQL
+- ST\_AsText, ST\_GeomFromText, ST\_WKBFromText, ST\_WKTToSQL
+
+## Non-Standard Functions
+- CheckGpkg
+- InitGpkg
+- AddGeometryColumn
+- CreateTilesTable
 
 # Compilation
 
