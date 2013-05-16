@@ -200,6 +200,8 @@ static int read_points(binstream_t *stream, const geom_consumer_t *consumer, con
         if (result != SQLITE_OK) {
             return result;
         }
+
+        remaining -= points_to_read;
     }
 
     return SQLITE_OK;
