@@ -18,6 +18,7 @@
 
 #include "binstream.h"
 #include "geomio.h"
+#include "error.h"
 
 /**
  * \addtogroup wkb Well-known binary I/O
@@ -85,7 +86,7 @@ size_t wkb_writer_length( wkb_writer_t *writer );
  * @param consumer the geometry consumer that will receive the parsed geometry
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_read_geometry(binstream_t *stream, const geom_consumer_t *consumer);
+int wkb_read_geometry(binstream_t *stream, geom_consumer_t const *consumer, error_t *error);
 
 /**
  * Parses the header of a Well-Known Binary geometry from the given stream. The stream should be positioned at the start
@@ -95,7 +96,7 @@ int wkb_read_geometry(binstream_t *stream, const geom_consumer_t *consumer);
  * @param[out] header the header to populate
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_read_header(binstream_t *stream, geom_header_t *header);
+int wkb_read_header(binstream_t *stream, geom_header_t *header, error_t *error);
 
 /**
  * Populates a geometry envelope based on the coordinates of a Well-Known Binary geometry from the given stream. The
@@ -105,7 +106,7 @@ int wkb_read_header(binstream_t *stream, geom_header_t *header);
  * @param[out] envelope the envelope to populate
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_fill_envelope(binstream_t *stream, geom_envelope_t *envelope);
+int wkb_fill_envelope(binstream_t *stream, geom_envelope_t *envelope, error_t *error);
 
 /** @} */
 

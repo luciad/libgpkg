@@ -224,6 +224,27 @@ int binstream_read_u32(binstream_t *stream, uint32_t *out);
 int binstream_write_u32(binstream_t *stream, uint32_t val);
 
 /**
+ * Reads a single signed 32-bit value from the stream. The position of the stream is advanced by 4.
+ *
+ * @param stream a stream
+ * @param[out] out a memory area to write the read value to.
+ * @return SQLITE_OK if the value was read successfully
+ *         SQLITE_IOERR if insufficient data is available in the stream
+ */
+int binstream_read_i32(binstream_t *stream, int32_t *out);
+
+/**
+ * Writes a single signed 32-bit value to the stream. The position of the stream is advanced by 4.
+ *
+ * @param stream a stream
+ * @param val the value to write.
+ * @return SQLITE_OK if the value was written successfully
+ *         SQLITE_IOERR if insufficient space is available in the stream and the stream is not growable
+ */
+int binstream_write_i32(binstream_t *stream, int32_t val);
+
+
+/**
  * Reads a single unsigned 64-bit value from the stream. The position of the stream is advanced by 8.
  * @param stream a stream
  * @param[out] out a memory area to write the read value to.

@@ -34,6 +34,8 @@ typedef struct {
     size_t capacity;
     /** @private */
     size_t length;
+    /** @private */
+    int growable;
 } strbuf_t;
 
 /**
@@ -42,7 +44,9 @@ typedef struct {
  * @param initial_size the initial buffer size to preallocate in bytes
  * @return SQLITE_OK on success, an error code otherwise
  */
-int strbuf_init(strbuf_t *buffer, size_t initial_size);
+int strbuf_init(strbuf_t *strbuf, size_t initial_size);
+
+int strbuf_init_fixed(strbuf_t *strbuf, char* buffer, size_t length);
 
 /**
  * Destroys a string buffer, freeing any internal data structures that have been allocated.

@@ -10,11 +10,11 @@ typedef struct {
 
 int error_init(error_t *error);
 
+int error_init_fixed(error_t *error, char* buffer, size_t length);
+
 void error_destroy(error_t *error);
 
-int error_append_fl(error_t *error, const char* file, int line, const char* msg, ...);
-
-#define error_append(error, msg...) error_append_fl( error, __FILE__, __LINE__, msg )
+int error_append(error_t *error, const char* msg, ...);
 
 size_t error_count(error_t *error);
 

@@ -12,7 +12,7 @@ void check_wkt(char* wkt, char* expected_wkb) {
     wkb_writer_t wkb_writer;
     wkb_writer_init(&wkb_writer);
 
-    int result = wkt_read_geometry(wkt, strlen(wkt), wkb_writer_geom_consumer(&wkb_writer));
+    int result = wkt_read_geometry(wkt, strlen(wkt), wkb_writer_geom_consumer(&wkb_writer), NULL);
     if (result != 0) {
         fail_m("Could not parse WKT");
     }

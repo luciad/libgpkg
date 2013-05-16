@@ -13,6 +13,16 @@ int error_init(error_t *error) {
     return SQLITE_OK;
 }
 
+
+int error_init_fixed(error_t *error, char *buffer, size_t length) {
+    int result = strbuf_init_fixed(&error->message, buffer, length);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+    error->error_count = 0;
+    return SQLITE_OK;
+}
+
 void error_destroy(error_t *error) {
     if (error == NULL) {
         return;
@@ -21,21 +31,20 @@ void error_destroy(error_t *error) {
     strbuf_destroy(&error->message);
 }
 
-int error_append_fl(error_t *error, const char* file, int line, const char* msg, ...) {
-    if (msg == NULL) {
-        printf("Misuse at %s:%d\n", file, line);
-        return SQLITE_OK;
-    }
-
+int error_append(error_t *error, const char* msg, ...) {
     error->error_count++;
 
-    va_list args;
-    va_start(args, msg);
-    int result = strbuf_vappend(&error->message, msg, args);
-    va_end(args);
+    int result=SQLITE_OK;
 
-    if (result == SQLITE_OK) {
-        result = strbuf_append(&error->message, "\n");
+    if (msg) {
+        va_list args;
+        va_start(args, msg);
+        result = strbuf_vappend(&error->message, msg, args);
+        va_end(args);
+
+        if (result == SQLITE_OK) {
+            result = strbuf_append(&error->message, "\n");
+        }
     }
 
     return result;

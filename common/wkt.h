@@ -19,6 +19,7 @@
 #include "binstream.h"
 #include "strbuf.h"
 #include "geomio.h"
+#include "error.h"
 
 /**
  * \addtogroup wkt Well-known text I/O
@@ -86,7 +87,7 @@ size_t wkt_writer_length( wkt_writer_t *writer );
  * @param consumer the geometry consumer that will receive the parsed geometry
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkt_read_geometry(const char *data, size_t length, const geom_consumer_t *consumer);
+int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, error_t *error);
 
 /** @} */
 

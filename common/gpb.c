@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <float.h>
 #include <string.h>
 #include "gpb.h"
 #include "sqlite.h"
+
+#define GPB_VERSION 0
 
 static size_t gpb_header_size(gpb_header_t *gpb) {
     return (size_t)
@@ -25,13 +26,14 @@ static size_t gpb_header_size(gpb_header_t *gpb) {
             + 8 * ((gpb->envelope.has_env_x ? 2 : 0) + (gpb->envelope.has_env_y ? 2 : 0) + (gpb->envelope.has_env_z ? 2 : 0) + (gpb->envelope.has_env_m ? 2 : 0)); // Envelope
 }
 
-int gpb_read_header(binstream_t *stream, gpb_header_t *gpb) {
+int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
     uint8_t head[3];
     if (binstream_nread_u8(stream, head, 3)) {
         return SQLITE_IOERR;
     }
 
     if (memcmp(head, "GPB", 3) != 0) {
+        if (error) error_append(error, "Incorrect magic number [expected: GPB, actual:%*s]", 3, head);
         return SQLITE_IOERR;
     }
 
@@ -44,17 +46,19 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb) {
     uint8_t envelope = (flags & 0xE) >> 1;
     uint8_t endian = flags & 0x1;
 
-    if (gpb->version != 1) {
+    if (gpb->version != GPB_VERSION) {
+        if (error) error_append(error, "Incorrect version number [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
         return SQLITE_IOERR;
     }
 
     if (envelope > 4) {
+        if (error) error_append(error, "Incorrect envelope value: [expected: [0-4], actual:%u]", envelope);
         return SQLITE_IOERR;
     }
 
     binstream_set_endianness(stream, endian == 0 ? BIG : LITTLE);
 
-    if (binstream_read_u32(stream, &gpb->srid)) {
+    if (binstream_read_i32(stream, &gpb->srid)) {
         return SQLITE_IOERR;
     }
 
@@ -137,7 +141,7 @@ int gpb_write_header(binstream_t *stream, gpb_header_t *gpb) {
         return SQLITE_IOERR;
     }
 
-    if (binstream_write_u32(stream, gpb->srid)) {
+    if (binstream_write_i32(stream, gpb->srid)) {
         return SQLITE_IOERR;
     }
 
@@ -317,7 +321,7 @@ static int gpb_end(const geom_consumer_t *consumer) {
 int gpb_writer_init( gpb_writer_t *writer, uint32_t srid ) {
     geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
     geom_envelope_init(&writer->header.envelope);
-    writer->header.version = 1;
+    writer->header.version = GPB_VERSION;
     writer->header.srid = srid;
     return wkb_writer_init(&writer->wkb_writer);
 }

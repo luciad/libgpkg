@@ -131,6 +131,26 @@ static int sql_step_for_int(sqlite3_stmt *stmt, int *out) {
     return result;
 }
 
+static int sql_step_for_double(sqlite3_stmt *stmt, double *out) {
+    int result = SQLITE_OK;
+
+    int stmt_res = sqlite3_step(stmt);
+    if (stmt_res == SQLITE_ROW) {
+        int col_count = sqlite3_column_count(stmt);
+        if (col_count > 0) {
+            *out = sqlite3_column_double(stmt, 0);
+        } else {
+            *out = 0;
+        }
+    } else if (stmt_res == SQLITE_DONE) {
+        *out = 0;
+    } else {
+        result = SQLITE_IOERR;
+    }
+
+    return result;
+}
+
 int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
     int result;
     sqlite3_stmt *stmt;
@@ -164,6 +184,25 @@ int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...) {
     }
 
     result = sql_step_for_int(stmt, out);
+
+    sql_stmt_destroy(stmt);
+    return result;
+}
+
+int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...) {
+    int result;
+    sqlite3_stmt *stmt;
+
+    va_list args;
+    va_start(args, sql);
+    result = sql_stmt_vinit(&stmt, db, sql, args);
+    va_end(args);
+
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    result = sql_step_for_double(stmt, out);
 
     sql_stmt_destroy(stmt);
     return result;

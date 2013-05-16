@@ -18,6 +18,7 @@
 #include "str.h"
 #include "sqlite.h"
 #include "wkt.h"
+#include "error.h"
 
 static int wkt_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
     int result = SQLITE_OK;
@@ -210,13 +211,13 @@ size_t wkt_writer_length(wkt_writer_t *writer) {
 
 /** @private */
 typedef enum {
-    WKT_POINT = GEOM_POINT,
-    WKT_POLYGON = GEOM_POLYGON,
-    WKT_LINESTRING = GEOM_LINESTRING,
-    WKT_MULTIPOINT = GEOM_MULTIPOINT,
-    WKT_MULTIPOLYGON = GEOM_MULTIPOLYGON,
-    WKT_MULTILINESTRING = GEOM_MULTILINESTRING,
-    WKT_GEOMETRYCOLLECTION = GEOM_GEOMETRYCOLLECTION,
+    WKT_POINT,
+    WKT_POLYGON,
+    WKT_LINESTRING,
+    WKT_MULTIPOINT,
+    WKT_MULTIPOLYGON,
+    WKT_MULTILINESTRING,
+    WKT_GEOMETRYCOLLECTION,
     WKT_Z,
     WKT_M,
     WKT_ZM,
@@ -592,7 +593,7 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, const geom_header_t 
     }
 }
 
-static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header_t *parent_header, const geom_consumer_t *consumer);
+static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header_t *parent_header, geom_consumer_t const *consumer, error_t *error);
 
 static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, const geom_header_t *header, const geom_consumer_t *consumer) {
     if (tok->token == WKT_EMPTY) {
@@ -608,7 +609,7 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, const geom_hea
 
     int more_geometries;
     do {
-        int res = wkt_read_geometry_tagged_text(tok, header, consumer);
+        int res = wkt_read_geometry_tagged_text(tok, header, consumer, NULL);
         if (res != SQLITE_OK) {
             return res;
         }
@@ -627,14 +628,35 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, const geom_hea
     }
 }
 
-static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header_t *parent_header, const geom_consumer_t *consumer) {
+static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header_t *parent_header, geom_consumer_t const *consumer, error_t *error) {
     int result = SQLITE_OK;
-    uint32_t geometry_type;
-    if (tok->token >= WKT_POINT && tok->token <= WKT_GEOMETRYCOLLECTION) {
-        geometry_type = tok->token;
-    } else {
-        result = SQLITE_IOERR;
-        goto exit;
+    geom_type_t geometry_type;
+    switch (tok->token) {
+        case WKT_POINT:
+            geometry_type = GEOM_POINT;
+            break;
+        case WKT_LINESTRING:
+            geometry_type = GEOM_LINESTRING;
+            break;
+        case WKT_POLYGON:
+            geometry_type = GEOM_POLYGON;
+            break;
+        case WKT_MULTIPOINT:
+            geometry_type = GEOM_MULTIPOINT;
+            break;
+        case WKT_MULTILINESTRING:
+            geometry_type = GEOM_MULTILINESTRING;
+            break;
+        case WKT_MULTIPOLYGON:
+            geometry_type = GEOM_MULTIPOLYGON;
+            break;
+        case WKT_GEOMETRYCOLLECTION:
+            geometry_type = GEOM_GEOMETRYCOLLECTION;
+            break;
+        default:
+            if (error) error_append(error, "Unsupported WKT geometry type");
+            result = SQLITE_IOERR;
+            goto exit;
     }
 
     wkt_next_token(tok);
@@ -716,7 +738,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header
     return result;
 }
 
-int wkt_read_geometry(const char *data, size_t length, const geom_consumer_t *consumer) {
+int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, error_t *error) {
     int result = SQLITE_OK;
     
     result = consumer->begin(consumer);
@@ -729,7 +751,7 @@ int wkt_read_geometry(const char *data, size_t length, const geom_consumer_t *co
     tok.end = data + length;
     wkt_next_token(&tok);
     
-    result = wkt_read_geometry_tagged_text(&tok, NULL, consumer);
+    result = wkt_read_geometry_tagged_text(&tok, NULL, consumer, error);
     if (result != SQLITE_OK) {
         goto exit;
     }

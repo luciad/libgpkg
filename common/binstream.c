@@ -215,6 +215,49 @@ int binstream_write_u32(binstream_t *stream, uint32_t val) {
     return SQLITE_OK;
 }
 
+int binstream_read_i32(binstream_t *stream, int32_t *out) {
+    int result = binstream_ensureavailable(stream, stream->position + 4);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    int32_t v1 = stream->data[stream->position++];
+    int32_t v2 = stream->data[stream->position++];
+    int32_t v3 = stream->data[stream->position++];
+    int32_t v4 = stream->data[stream->position++];
+    if (stream->end == LITTLE) {
+        *out = (v1 << 0) | (v2 << 8) | (v3 << 16) | (v4 << 24);
+    } else {
+        *out = (v4 << 0) | (v3 << 8) | (v2 << 16) | (v1 << 24);
+    }
+    return SQLITE_OK;
+}
+
+int binstream_write_i32(binstream_t *stream, int32_t val) {
+    int result = binstream_ensurecapacity(stream, stream->position + 4);
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    uint8_t v1 = (uint8_t) ((val >> 0) & 0xFF);
+    uint8_t v2 = (uint8_t) ((val >> 8) & 0xFF);
+    uint8_t v3 = (uint8_t) ((val >> 16) & 0xFF);
+    uint8_t v4 = (uint8_t) ((val >> 24) & 0xFF);
+
+    if (stream->end == LITTLE) {
+        stream->data[stream->position++] = v1;
+        stream->data[stream->position++] = v2;
+        stream->data[stream->position++] = v3;
+        stream->data[stream->position++] = v4;
+    } else {
+        stream->data[stream->position++] = v4;
+        stream->data[stream->position++] = v3;
+        stream->data[stream->position++] = v2;
+        stream->data[stream->position++] = v1;
+    }
+    return SQLITE_OK;
+}
+
 int binstream_read_u64(binstream_t *stream, uint64_t *out) {
     int result = binstream_ensureavailable(stream, stream->position + 8);
     if (result != SQLITE_OK) {

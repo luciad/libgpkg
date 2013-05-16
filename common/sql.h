@@ -257,6 +257,17 @@ int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...);
 int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
 
 /**
+ * Executes a SQL statement that is expected to return a single double value. The SQL statement can be a printf style
+ * format pattern.
+ * @param db the SQLite database context
+ * @param[out] out on success, out will be set to the returned double value
+ * @param sql the SQL statement to execute
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
+int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...);
+
+/**
  * Checks if a table exists in the database.
  * @param db the SQLite database context
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.

@@ -37,7 +37,7 @@ typedef struct {
     /**
      * The SRID of the geometry.
      */
-    uint32_t srid;
+    int32_t srid;
     /**
      * The envelope of the geometry.
      */
@@ -103,7 +103,7 @@ size_t gpb_writer_length( gpb_writer_t *writer );
  * @return SQLITE_OK if the header was successfully read\n
  *         SQLITE_IOERR if an I/O error occurred while reading the header
  */
-int gpb_read_header(binstream_t *stream, gpb_header_t *header);
+int gpb_read_header(binstream_t *stream, gpb_header_t *header, error_t *error);
 
 /**
  * Writes a GeoPackage Binary header to the given stream. When this method return SQLITE_OK, the stream is guaranteed
