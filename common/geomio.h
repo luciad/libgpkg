@@ -30,7 +30,7 @@ typedef enum {
     /**
      * Point
      */
-    GEOM_POINT,
+    GEOM_POINT = 1,
     /**
      * Line string
      */
