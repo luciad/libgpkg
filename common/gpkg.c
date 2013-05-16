@@ -270,12 +270,77 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
     wkb_writer_destroy(&writer);
 }
 
-static int CheckGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
+#define FUNCTION_RESULT result
+#define FUNCTION_DB_HANDLE db_handle
+#define FUNCTION_ERROR error
+#define FUNCTION_ERROR_PTR &FUNCTION_ERROR
+
+#define FUNCTION_START(context) \
+    int FUNCTION_RESULT = SQLITE_OK;\
+    int arg_counter = 0;\
+    error_t FUNCTION_ERROR;\
+    FUNCTION_RESULT = error_init(FUNCTION_ERROR_PTR);\
+    if (FUNCTION_RESULT != SQLITE_OK) {\
+        goto exit;\
+    }\
+    sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context);
+
+#define FUNCTION_END(context) \
+  exit:\
+    if (FUNCTION_RESULT == SQLITE_OK) {\
+        if (error_count(FUNCTION_ERROR_PTR) > 0) {\
+            sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
+        } else {\
+            sqlite3_result_null(context);\
+        }\
+    } else {\
+        sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
+    }\
+    error_destroy(FUNCTION_ERROR_PTR);
+
+#define FUNCTION_START_TRANSACTION(name) \
+    char *name##_transaction = #name;\
+    FUNCTION_RESULT = sql_begin(FUNCTION_DB_HANDLE, name##_transaction);\
+    if (FUNCTION_RESULT != SQLITE_OK) {\
+        goto exit;\
+    }
+#define FUNCTION_END_TRANSACTION(name) \
+    if (FUNCTION_RESULT == SQLITE_OK && error_count(FUNCTION_ERROR_PTR) == 0) {\
+        FUNCTION_RESULT = sql_commit(FUNCTION_DB_HANDLE, name##_transaction);\
+    } else {\
+        sql_rollback(FUNCTION_DB_HANDLE, name##_transaction);\
+    }                               
+                           
+#define FUNCTION_TEXT_ARG(arg) \
+    char* arg = NULL;\
+    int free_##arg = 0;
+#define FUNCTION_GET_TEXT_ARG(context, arg) \
+    arg = sqlite3_mprintf("%s", sqlite3_value_text(args[arg_counter++]));\
+    free_##arg = 1;\
+    if (arg == NULL) {\
+        sqlite3_result_error_code(context, SQLITE_NOMEM);\
+        goto exit;\
+    }
+#define FUNCTION_SET_TEXT_ARG(arg, val) \
+    arg = val;\
+    free_##arg = 0;
+#define FUNCTION_FREE_TEXT_ARG(arg) \
+    if (free_##arg = 0) {\
+        sqlite3_free(arg);\
+        arg = NULL;\
+    }
+
+#define FUNCTION_INT_ARG(arg) int arg = 0;
+#define FUNCTION_GET_INT_ARG(arg) arg = sqlite3_value_int(args[arg_counter++]);
+#define FUNCTION_SET_INT_ARG(arg, val) arg = val;
+#define FUNCTION_FREE_INT_ARG(arg)
+
+static int CheckGpkg_(sqlite3 *db, char *db_name, error_t *error) {
     int result = SQLITE_OK;
     const table_info_t * const *table = tables;
 
     while (*table != NULL) {
-        result = sql_check_table(db, db_name, *table, errors, errmsg);
+        result = sql_check_table(db, db_name, *table, error);
         if (result != SQLITE_OK) {
             break;
         }
@@ -286,45 +351,27 @@ static int CheckGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg)
 }
 
 static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    int result;
-
-    int errors = 0;
-    strbuf_t errmsg;
-    result = strbuf_init(&errmsg, 128);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
-
-    char *db_name;
+    FUNCTION_START(context)
+    FUNCTION_TEXT_ARG(db_name)
+    
     if (nbArgs == 0) {
-        db_name = "main";
+        FUNCTION_SET_TEXT_ARG(db_name,"main");
     } else {
-        db_name = (char *) sqlite3_value_text(args[0]);
+        FUNCTION_GET_TEXT_ARG(context, db_name);
     }
 
-    sqlite3 *db = sqlite3_context_db_handle(context);
+    FUNCTION_RESULT = CheckGpkg_(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
 
-    result = CheckGpkg_(db, db_name, &errors, &errmsg);
-
-    exit:
-    if (result == SQLITE_OK) {
-        if (errors > 0) {
-            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-        } else {
-            sqlite3_result_null(context);
-        }
-    } else {
-        sqlite3_result_error(context, sqlite3_errmsg(db), -1);
-    }
-    strbuf_destroy(&errmsg);
+    FUNCTION_END(context)
+    FUNCTION_FREE_TEXT_ARG(db_name)
 }
 
-static int InitGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) {
+static int InitGpkg_(sqlite3 *db, char *db_name, error_t *error) {
     int result = SQLITE_OK;
     const table_info_t * const *table = tables;
 
     while (*table != NULL) {
-        result = sql_init_table(db, db_name, *table, errors, errmsg);
+        result = sql_init_table(db, db_name, *table, error);
         if (result != SQLITE_OK) {
             break;
         }
@@ -335,83 +382,50 @@ static int InitGpkg_(sqlite3 *db, char *db_name, int *errors, strbuf_t *errmsg) 
 }
 
 static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    int result;
-
-    int errors = 0;
-    strbuf_t errmsg;
-    result = strbuf_init(&errmsg, 128);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
-
-    char *db_name;
+    FUNCTION_START(context)
+    FUNCTION_TEXT_ARG(db_name)
+    
     if (nbArgs == 0) {
-        db_name = "main";
+        FUNCTION_SET_TEXT_ARG(db_name,"main");
     } else {
-        db_name = (char *) sqlite3_value_text(args[0]);
+        FUNCTION_GET_TEXT_ARG(context, db_name);
     }
 
-    sqlite3 *db = sqlite3_context_db_handle(context);
+    FUNCTION_START_TRANSACTION(__initgpkg);
+    FUNCTION_RESULT = InitGpkg_(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
+    FUNCTION_END_TRANSACTION(__initgpkg);
 
-    char *transaction_name = "__initgpkg";
-    result = sql_begin(db, transaction_name);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
-
-    result = InitGpkg_(db, db_name, &errors, &errmsg);
-
-    if (result == SQLITE_OK && errors == 0) {
-        result = sql_commit(db, transaction_name);
-    } else {
-         sql_rollback(db, transaction_name);
-    }
-
-    exit:
-    if (result == SQLITE_OK) {
-        if (errors > 0) {
-            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-        } else {
-            sqlite3_result_null(context);
-        }
-    } else {
-        sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-    }
-    strbuf_destroy(&errmsg);
+    FUNCTION_END(context)
+    FUNCTION_FREE_TEXT_ARG(db_name)
 }
 
-static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int coord_dimension, int *errors, strbuf_t *errmsg) {
+static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int coord_dimension, error_t *error) {
     int result;
 
     // Check if the target table exists
     int exists = 0;
-    result= sql_check_table_exists(db, db_name, table_name, &exists);
+    result = sql_check_table_exists(db, db_name, table_name, &exists);
     if (result != SQLITE_OK) {
-        (*errors)++;
+        error_append(error, "Could not check if table %s.%s exists", db_name, table_name);
         return result;
     }
 
     if (!exists) {
-        (*errors)++;
-        strbuf_append(errmsg, "Table %s.%s does not exist", db_name, table_name);
+        error_append(error, "Table %s.%s does not exist", db_name, table_name);
         return SQLITE_OK;
     }
 
     // Check if required meta tables exist
-    int check_errors = 0;
-    result = sql_check_table(db, db_name, &spatial_ref_sys, &check_errors, errmsg);
+    result = sql_check_table(db, db_name, &spatial_ref_sys, error);
     if (result != SQLITE_OK) {
-        (*errors)++;
         return result;
     }
-    result = sql_check_table(db, db_name, &geometry_columns, &check_errors, errmsg);
+    result = sql_check_table(db, db_name, &geometry_columns, error);
     if (result != SQLITE_OK) {
-        (*errors)++;
         return result;
     }
 
-    if (check_errors > 0) {
-        (*errors) += check_errors;
+    if (error_count(error) > 0) {
         return SQLITE_OK;
     }
 
@@ -423,22 +437,19 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
     }
 
     if (count == 0) {
-        (*errors)++;
-        strbuf_append(errmsg, "SRID %d does not exist", srid);
+        error_append(error, "SRID %d does not exist", srid);
         return SQLITE_OK;
     }
 
     result = sql_exec(db, "ALTER TABLE \"%w\".\"%w\" ADD COLUMN \"%w\" %s", db_name, table_name, column_name, geom_type);
     if (result != SQLITE_OK) {
-        (*errors)++;
-        strbuf_append(errmsg, sqlite3_errmsg(db));
+        error_append(error, sqlite3_errmsg(db));
         return result;
     }
 
     result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, geometry_type, coord_dimension, srid) VALUES (%Q, %Q, %Q, %d, %d)", db_name, "geometry_columns", table_name, column_name, geom_type, coord_dimension, srid);
     if (result != SQLITE_OK) {
-        (*errors)++;
-        strbuf_append(errmsg, sqlite3_errmsg(db));
+        error_append(error, sqlite3_errmsg(db));
         return result;
     }
 
@@ -446,87 +457,51 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
 }
 
 static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    sqlite3 *db = sqlite3_context_db_handle(context);
-
-    int arg = 0;
-    char *db_name;
-    int free_db_name;
+    FUNCTION_START(context)
+    FUNCTION_TEXT_ARG(db_name)
+    FUNCTION_TEXT_ARG(table_name)
+    FUNCTION_TEXT_ARG(column_name);
+    FUNCTION_INT_ARG(srid)
+    FUNCTION_TEXT_ARG(geometry_type)
+    FUNCTION_INT_ARG(coord_dimension)
+    
     if (nbArgs == 6) {
-        db_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
-        free_db_name = 1;
+        FUNCTION_GET_TEXT_ARG(context, db_name);
     } else {
-        db_name = "main";
-        free_db_name = 0;
+        FUNCTION_SET_TEXT_ARG(db_name,"main");
     }
+    FUNCTION_GET_TEXT_ARG(context, table_name);
+    FUNCTION_GET_TEXT_ARG(context, column_name);
+    FUNCTION_GET_INT_ARG(srid);
+    FUNCTION_GET_TEXT_ARG(context, geometry_type);
+    FUNCTION_GET_INT_ARG(coord_dimension);
 
-    char *table_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
-    char *column_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
-    int srid = sqlite3_value_int(args[arg++]);
-    char *geometry_type = sqlite3_mprintf("%s", sqlite3_value_text(args[arg]));
-    int coord_dimension = sqlite3_value_int(args[arg++]);
+    FUNCTION_START_TRANSACTION(__add_geom_col)
+    FUNCTION_RESULT = AddGeometryColumn_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, srid, geometry_type, coord_dimension, FUNCTION_ERROR_PTR);
+    FUNCTION_END_TRANSACTION(__add_geom_col)
 
-    if (db_name == NULL || table_name == NULL || column_name == NULL || geometry_type == NULL) {
-        sqlite3_result_error_code(context, SQLITE_NOMEM);
-        goto exit;
-    }
-
-    strbuf_t errmsg;
-    if (strbuf_init(&errmsg, 256) != SQLITE_OK) {
-        sqlite3_result_error_code(context, SQLITE_NOMEM);
-        goto exit;
-    }
-
-    int errors = 0;
-    int result;
-    char *transaction_name = "__add_geom_col";
-
-    result = sql_begin(db, transaction_name);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
-
-    result = AddGeometryColumn_(db, db_name, table_name, column_name, srid, geometry_type, coord_dimension, &errors, &errmsg);
-
-    if (result == SQLITE_OK && errors == 0) {
-        result = sql_commit(db, transaction_name);
-    } else {
-        sql_rollback(db, transaction_name);
-    }
-
-    if (result == SQLITE_OK) {
-        if (errors == 0) {
-            sqlite3_result_null(context);
-        } else {
-            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-        }
-    } else {
-        sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-    }
-
-    exit:
-    if (free_db_name) {
-        sqlite3_free(db_name);
-    }
-    sqlite3_free(table_name);
-    sqlite3_free(column_name);
-    sqlite3_free(geometry_type);
-    strbuf_destroy(&errmsg);
+    FUNCTION_END(context)
+    FUNCTION_FREE_TEXT_ARG(db_name)
+    FUNCTION_FREE_TEXT_ARG(table_name)
+    FUNCTION_FREE_TEXT_ARG(column_name);
+    FUNCTION_FREE_INT_ARG(srid)
+    FUNCTION_FREE_TEXT_ARG(geometry_type)
+    FUNCTION_FREE_INT_ARG(coord_dimension)
 }
 
-static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, int *errors, strbuf_t *errmsg) {
+static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, error_t *error) {
     int result = SQLITE_OK;
 
     // Check if the target table exists
     int exists = 0;
     result= sql_check_table_exists(db, db_name, table_name, &exists);
     if (result != SQLITE_OK) {
-        (*errors)++;
+        error_append(error, "Could not check if table %s.%s exists", db_name, table_name);
         return result;
     }
 
     if (exists) {
-        (*errors)++;
-        strbuf_append(errmsg, "Table %s.%s already exists", db_name, table_name);
+        error_append(error, "Table %s.%s already exists", db_name, table_name);
         return SQLITE_OK;
     }
 
@@ -537,7 +512,7 @@ static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, int *
     };
 
     // Check if required meta tables exist
-    result = sql_init_table(db, db_name, &tile_table_info, errors, errmsg);
+    result = sql_init_table(db, db_name, &tile_table_info, error);
     if (result != SQLITE_OK) {
         return result;
     }
@@ -546,65 +521,124 @@ static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, int *
 }
 
 static void CreateTilesTable(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    sqlite3 *db = sqlite3_context_db_handle(context);
+    FUNCTION_START(context)
+    FUNCTION_TEXT_ARG(db_name)
+    FUNCTION_TEXT_ARG(table_name)
 
-    int arg = 0;
-    char *db_name;
-    int free_db_name;
     if (nbArgs == 2) {
-        db_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
-        free_db_name = 1;
+        FUNCTION_GET_TEXT_ARG(context, db_name)
     } else {
-        db_name = "main";
-        free_db_name = 0;
+        FUNCTION_SET_TEXT_ARG(db_name, "main")
     }
+    FUNCTION_GET_TEXT_ARG(context, table_name)
 
-    char *table_name = sqlite3_mprintf("%s", sqlite3_value_text(args[arg++]));
+    FUNCTION_START_TRANSACTION(__create_tiles_table)
+    FUNCTION_RESULT = CreateTilesTable_(FUNCTION_DB_HANDLE, db_name, table_name, FUNCTION_ERROR_PTR);
+    FUNCTION_END_TRANSACTION(__create_tiles_table)
 
-    if (db_name == NULL || table_name == NULL) {
-        sqlite3_result_error_code(context, SQLITE_NOMEM);
+    FUNCTION_END(context)
+    FUNCTION_FREE_TEXT_ARG(db_name)
+    FUNCTION_FREE_TEXT_ARG(table_name)
+}
+
+static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, char *column_name, error_t *error) {
+    int result = SQLITE_OK;
+    char* index_table_name = NULL;
+    int exists = 0;
+
+    index_table_name = sqlite3_mprintf("idx_%s_%s", table_name, column_name);
+    if (index_table_name == NULL) {
+        result = SQLITE_NOMEM;
         goto exit;
     }
 
-    strbuf_t errmsg;
-    if (strbuf_init(&errmsg, 256) != SQLITE_OK) {
-        sqlite3_result_error_code(context, SQLITE_NOMEM);
-        goto exit;
-    }
-
-    int errors = 0;
-    int result;
-    char *transaction_name = "__create_tiles_table";
-
-    result = sql_begin(db, transaction_name);
+    // Check if the target table exists
+    exists = 0;
+    result = sql_check_table_exists(db, db_name, index_table_name, &exists);
     if (result != SQLITE_OK) {
+        error_append(error, "Could not check if index table %s.%s exists: %s", db_name, index_table_name, sqlite3_errmsg(db));
         goto exit;
     }
 
-    result = CreateTilesTable_(db, db_name, table_name, &errors, &errmsg);
+    if (exists) {
+        result = SQLITE_OK;
+        goto exit;
+    }
 
-    if (result == SQLITE_OK && errors == 0) {
-        result = sql_commit(db, transaction_name);
+    // Check if the target table exists
+    exists = 0;
+    result = sql_check_table_exists(db, db_name, table_name, &exists);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not check if table %s.%s exists: %s", db_name, table_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    if (!exists) {
+        error_append(error, "Table %s.%s does not exist", db_name, table_name);
+        goto exit;
+    }
+
+    int geom_col_count = 0;
+    result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".geometry_columns WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q", db_name, table_name, column_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not check if column %s.%s.%s exists in %s.geometry_columns: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    if (geom_col_count == 0) {
+        error_append(error, "Column %s.%s.%s is not registered in %s.geometry_columns", db_name, table_name, column_name, db_name);
+        goto exit;
+    }
+
+    result = sql_exec(db, "CREATE VIRTUAL TABLE \"%w\".\"%w\" USING rtree(id, minx, maxx, miny, maxy)", db_name, index_table_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree table %s.%s: %s", db_name, index_table_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(db, "CREATE TRIGGER \"%w\".\"%w_%w_%w\" AFTER INSERT ON \"%w\" BEGIN INSERT INTO \"%w\" VALUES (NEW.rowid, ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"), ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")); END", db_name, table_name, column_name, "index_insert", table_name, index_table_name, column_name, column_name, column_name, column_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree insert trigger: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+    result = sql_exec(db, "CREATE TRIGGER \"%w\".\"%w_%w_%w\" AFTER UPDATE OF \"%w\" ON \"%w\" BEGIN UPDATE \"%w\" SET id = NEW.rowid, minx = ST_MinX(NEW.\"%w\"), maxx = ST_MaxX(NEW.\"%w\"), miny = ST_MinY(NEW.\"%w\"), maxy = ST_MaxY(NEW.\"%w\") WHERE id = OLD.rowid; END", db_name, table_name, column_name, "index_update", column_name, table_name, index_table_name, column_name, column_name, column_name, column_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree update trigger: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(db, "CREATE TRIGGER \"%w\".\"%w_%w_%w\" AFTER DELETE ON \"%w\" BEGIN DELETE FROM \"%w\" WHERE id = OLD.rowid; END", db_name, table_name, column_name, "index_delete", table_name, index_table_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+  exit:
+    sqlite3_free(index_table_name);
+    return SQLITE_OK;
+}
+
+static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+    FUNCTION_START(context)
+    FUNCTION_TEXT_ARG(db_name)
+    FUNCTION_TEXT_ARG(table_name)
+    FUNCTION_TEXT_ARG(column_name)
+
+    if (nbArgs == 3) {
+        FUNCTION_GET_TEXT_ARG(context, db_name)
     } else {
-        sql_rollback(db, transaction_name);
+        FUNCTION_SET_TEXT_ARG(db_name, "main")
     }
+    FUNCTION_GET_TEXT_ARG(context, table_name)
+    FUNCTION_GET_TEXT_ARG(context, column_name)
 
-    if (result == SQLITE_OK) {
-        if (errors == 0) {
-            sqlite3_result_null(context);
-        } else {
-            sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-        }
-    } else {
-        sqlite3_result_error(context, strbuf_data_pointer(&errmsg), -1);
-    }
+    FUNCTION_START_TRANSACTION(__create_spatial_index)
+    FUNCTION_RESULT = CreateSpatialIndex_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, FUNCTION_ERROR_PTR);
+    FUNCTION_END_TRANSACTION(__create_spatial_index)
 
-    exit:
-    if (free_db_name) {
-        sqlite3_free(db_name);
-    }
-    sqlite3_free(table_name);
-    strbuf_destroy(&errmsg);
+    FUNCTION_END(context)
+    FUNCTION_FREE_TEXT_ARG(db_name)
+    FUNCTION_FREE_TEXT_ARG(table_name)
 }
 
 const char *gpkg_libversion(void) {
@@ -655,6 +689,8 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_ro
     FUNC( AddGeometryColumn, 6 );
     FUNC( CreateTilesTable, 1 );
     FUNC( CreateTilesTable, 2 );
+    FUNC( CreateSpatialIndex, 2 );
+    FUNC( CreateSpatialIndex, 3 );
 
     return SQLITE_OK;
 }

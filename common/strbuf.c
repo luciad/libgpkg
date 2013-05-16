@@ -65,13 +65,18 @@ int strbuf_data(strbuf_t *buffer, char **out) {
 }
 
 int strbuf_append(strbuf_t *buffer, const char* msg, ...) {
-    int result = SQLITE_OK;
+    int result;
     va_list args;
-
     va_start(args, msg);
-    char* formatted = sqlite3_vmprintf(msg, args);
+    result = strbuf_vappend(buffer, msg, args);
     va_end(args);
-	
+    return result;
+}
+
+int strbuf_vappend(strbuf_t *buffer, const char* msg, va_list args) {
+    int result = SQLITE_OK;
+    char* formatted = sqlite3_vmprintf(msg, args);
+
 	  if (formatted == NULL) {
 	      result = SQLITE_NOMEM;
 	      goto exit;

@@ -1,6 +1,7 @@
 add_library (
   gpkgcommon STATIC
   binstream.c
+  error.c
   geomio.c
   gpb.c
   gpkg.c

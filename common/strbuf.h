@@ -17,6 +17,7 @@
 #define GPB_STRBUF_H
 
 #include <string.h>
+#include <stdarg.h>
 
 /**
  * \addtogroup strbuf Strings
@@ -83,6 +84,17 @@ int strbuf_data(strbuf_t *buffer, char **out);
  * @return SQLITE_OK on success, an error code otherwise
  */
 int strbuf_append(strbuf_t *buffer, const char* fmt, ...);
+
+/**
+ * Appends a formatted string to this string buffer.
+ *
+ * @param buffer a string buffer
+ * @param fmt the string format
+ * @param args the variable argument list to use as values for the format
+ *
+ * @return SQLITE_OK on success, an error code otherwise
+ */
+int strbuf_vappend(strbuf_t *buffer, const char* fmt, va_list args);
 
 /** @} */
 

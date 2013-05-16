@@ -17,6 +17,7 @@
 #define GPKG_SQL_H
 
 #include <sqlite3.h>
+#include "error.h"
 #include "strbuf.h"
 
 /**
@@ -271,12 +272,12 @@ int sql_check_table_exists(sqlite3 *db, const char* db_name, const char* table_n
  * @param db the SQLite database context
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
  * @param table_info the table specification
- * @param[out] errors on success, errors will be set to the number of cases where the actual table did not match the specification.
- * @param[out] errmsg if not null, newline separated descriptive messages will be written to errmsg for each encountered error.
+ * @param[out] error on successful exit, error will contain the number of cases where the actual table did not match the specification.
+ *                   and descriptive error messages
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, int *errors, strbuf_t *errmsg);
+int sql_check_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, error_t *error);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is
@@ -285,12 +286,12 @@ int sql_check_table(sqlite3 *db, const char* db_name, const table_info_t *table_
  * @param db the SQLite database context
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
  * @param table_info the table specification
- * @param[out] errors on success, errors will be set to the number of errors that was encountered while initializing the table.
- * @param[out] errmsg if not null, newline separated descriptive messages will be written to errmsg for each encountered error.
+ * @param[out] error on successful exit, error will contain the number of errors that was encountered while initializing
+                     the table and descriptive error messages.
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, int *errors, strbuf_t *errmsg);
+int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, error_t *error);
 
 /** @} */
 
