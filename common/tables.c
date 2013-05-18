@@ -47,7 +47,6 @@ static column_info_t spatial_ref_sys_columns[] = {
         {"srtext", "text", N, SQL_NOT_NULL, NULL},
         {NULL, NULL, N, 0, NULL}
 };
-
 static value_t spatial_ref_sys_data[] = {
         I(-1), T("NONE"), I(-1), T("undefined"),
         I(0), T("NONE"), I(0), T("undefined")
@@ -56,6 +55,51 @@ table_info_t spatial_ref_sys = {
         "spatial_ref_sys",
         spatial_ref_sys_columns,
         spatial_ref_sys_data, 2
+};
+
+static column_info_t data_columns_columns[] = {
+        {"table_name", "text", N, SQL_PRIMARY_KEY, NULL},
+        {"geometry_column", "text", N, SQL_PRIMARY_KEY, NULL},
+        {"name", "text", N, 0, NULL},
+        {"title", "text", N, 0, NULL},
+        {"description", "text", N, 0, NULL},
+        {"mime_type", "text", N, 0, NULL},
+        {NULL, NULL, N, 0, NULL}
+};
+table_info_t data_columns = {
+        "data_columns",
+        data_columns_columns,
+        NULL, 0
+};
+
+static column_info_t metadata_columns[] = {
+        {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
+        {"md_scope", "text", T("dataset"), SQL_NOT_NULL, NULL},
+        {"md_standard_uri", "text", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
+        {"mime_type", "text", T("text/xml"), SQL_NOT_NULL, NULL},
+        {"metadata", "text", T(""), SQL_NOT_NULL, NULL},
+        {NULL, NULL, N, 0, NULL}
+};
+table_info_t metadata = {
+        "metadata",
+        metadata_columns,
+        NULL, 0
+};
+
+static column_info_t metadata_reference_columns[] = {
+        {"reference_scope", "text", N, SQL_NOT_NULL, NULL},
+        {"table_name", "text", N, 0, NULL},
+        {"column_name", "text", N, 0, NULL},
+        {"row_id_value", "integer", N, 0, NULL},
+        {"timestamp", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
+        {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES metadata(id)"},
+        {"md_parent_id", "integer", N, 0, "REFERENCES metadata(id)"},
+        {NULL, NULL, N, 0, NULL}
+};
+table_info_t metadata_reference = {
+        "metadata_reference",
+        metadata_reference_columns,
+        NULL, 0
 };
 
 static column_info_t geometry_columns_columns[] = {
@@ -69,17 +113,6 @@ static column_info_t geometry_columns_columns[] = {
 table_info_t geometry_columns = {
         "geometry_columns",
         geometry_columns_columns,
-        NULL, 0
-};
-
-static column_info_t raster_columns_columns[] = {
-        {"r_table_name", "text", N, SQL_PRIMARY_KEY, NULL},
-        {"r_raster_column", "text", N, SQL_PRIMARY_KEY, NULL},
-        {NULL, NULL, N, 0, NULL}
-};
-table_info_t raster_columns = {
-        "raster_columns",
-        raster_columns_columns,
         NULL, 0
 };
 
@@ -120,47 +153,6 @@ static column_info_t tiles_columns[] = {
         {NULL, NULL, N, 0, NULL}
 };
 
-static column_info_t metadata_columns[] = {
-        {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
-        {"md_scope", "text", T("dataset"), SQL_NOT_NULL, NULL},
-        {"md_standard_uri", "text", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
-        {"mime_type", "text", T("text/xml"), SQL_NOT_NULL, NULL},
-        {"metadata", "text", T(""), SQL_NOT_NULL, NULL},
-        {NULL, NULL, N, 0, NULL}
-};
-table_info_t metadata = {
-        "metadata",
-        metadata_columns,
-        NULL, 0
-};
-
-static column_info_t metadata_reference_columns[] = {
-        {"reference_scope", "text", N, SQL_NOT_NULL, NULL},
-        {"table_name", "text", N, 0, NULL},
-        {"column_name", "text", N, 0, NULL},
-        {"row_id_value", "integer", N, 0, NULL},
-        {"timestamp", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
-        {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES metadata(id)"},
-        {"md_parent_id", "integer", N, 0, "REFERENCES metadata(id)"},
-        {NULL, NULL, N, 0, NULL}
-};
-table_info_t metadata_reference = {
-        "metadata_reference",
-        metadata_reference_columns,
-        NULL, 0
-};
-
-static column_info_t manifest_columns[] = {
-        {"id", "text", N, SQL_PRIMARY_KEY, NULL},
-        {"manifest", "text", N, SQL_NOT_NULL, NULL},
-        {NULL, NULL, N, 0, NULL}
-};
-table_info_t manifest = {
-        "manifest",
-        manifest_columns,
-        NULL, 0
-};
-
 const column_info_t tiles_table_columns[] = {
         {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
         {"zoom_level", "integer", I(0), SQL_UNIQUE(1), NULL},
@@ -173,12 +165,11 @@ const column_info_t tiles_table_columns[] = {
 const table_info_t * const tables[] = {
         &geopackage_contents,
         &spatial_ref_sys,
-        &geometry_columns,
-        &raster_columns,
-        &tile_table_metadata,
-        &tile_matrix_metadata,
+        &data_columns,
         &metadata,
         &metadata_reference,
-        &manifest,
+        &geometry_columns,
+        &tile_table_metadata,
+        &tile_matrix_metadata,
         NULL
 };

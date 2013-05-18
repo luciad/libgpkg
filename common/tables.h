@@ -34,14 +34,24 @@ extern table_info_t geopackage_contents;
 extern table_info_t spatial_ref_sys;
 
 /**
+ * Description of the data_columns table.
+ */
+extern table_info_t data_columns;
+
+/**
+ * Description of the xml_metadata table.
+ */
+extern table_info_t metadata;
+
+/**
+ * Description of the metadata_reference table.
+ */
+extern table_info_t metadata_reference;
+
+/**
  * Description of the geometry_columns table.
  */
 extern table_info_t geometry_columns;
-
-/**
- * Description of the raster_columns table.
- */
-extern table_info_t raster_columns;
 
 /**
  * Description of the tile_table_metadata table.
@@ -52,21 +62,6 @@ extern table_info_t tile_table_metadata;
  * Description of the tile_matrix_metadata table.
  */
 extern table_info_t tile_matrix_metadata;
-
-/**
- * Description of the xml_metadata table.
- */
-extern table_info_t xml_metadata;
-
-/**
- * Description of the metadata_reference table.
- */
-extern table_info_t metadata_reference;
-
-/**
- * Description of the manifest table.
- */
-extern table_info_t manifest;
 
 /**
  * Description of the columns for a tiles table.

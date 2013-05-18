@@ -113,7 +113,7 @@ void TestSRID() {
     }
     close_database(db);
 
-    assert_int_eql(0, value);
+    assert_int_eql(-1, value);
 }
 
 void TestIsValid() {
