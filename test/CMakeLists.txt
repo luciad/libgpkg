@@ -17,7 +17,7 @@ int main(void) {
 endmacro(create_test_runner)
 
 add_library (
-  unittest STATIC
+  unittest STATIC EXCLUDE_FROM_ALL
   unittest.c
 )
 set_target_properties( unittest PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -38,9 +38,10 @@ foreach(test_file IN LISTS test_files)
 
     set(run_test "run_${test_name}_${test_case_name}")
 
-    add_executable(${run_test} ${run_test_source} ${test_file})
+    add_executable(${run_test} EXCLUDE_FROM_ALL ${run_test_source} ${test_file})
     target_link_libraries(${run_test} unittest)
     add_test(NAME ${test_name}_${test_case_name} COMMAND ${run_test})
+    add_dependencies(check ${run_test})
   endforeach(test_case)
 endforeach(test_file)
 

@@ -18,5 +18,7 @@ add_subdirectory( common )
 add_subdirectory( extension )
 add_subdirectory( shell )
 add_subdirectory( sqlite )
+
 enable_testing()
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 add_subdirectory( test )
