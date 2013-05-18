@@ -230,7 +230,7 @@ int geom_coord_dim(const geom_header_t *header);
  * Returns the geometry type as a string.
  * @param header the geometry header containing the type information
  */
-char* geom_type_name(const geom_header_t *header);
+const char* geom_type_name(const geom_header_t *header);
 
 /**
  * Initializes a geometry envelope.

@@ -64,7 +64,7 @@ typedef struct {
  * @param srid the SRID that should be used
  * @return SQLITE_OK on success, an error code otherwise
  */
-int gpb_writer_init( gpb_writer_t *writer, uint32_t srid );
+int gpb_writer_init( gpb_writer_t *writer, int32_t srid );
 
 /**
  * Destroys a GeoPackage Binary writer.

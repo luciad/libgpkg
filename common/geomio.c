@@ -66,7 +66,7 @@ int geom_coord_dim(const geom_header_t *wkb) {
 	}
 }
 
-char* geom_type_name(const geom_header_t *wkb) {
+const char* geom_type_name(const geom_header_t *wkb) {
     switch (wkb->geom_type) {
 		case GEOM_POINT:
 			return "ST_Point"; 

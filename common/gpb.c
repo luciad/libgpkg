@@ -318,7 +318,7 @@ static int gpb_end(const geom_consumer_t *consumer) {
     return result;
 }
 
-int gpb_writer_init( gpb_writer_t *writer, uint32_t srid ) {
+int gpb_writer_init( gpb_writer_t *writer, int32_t srid ) {
     geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
     geom_envelope_init(&writer->header.envelope);
     writer->header.version = GPB_VERSION;
