@@ -548,7 +548,7 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
     char* index_table_name = NULL;
     int exists = 0;
 
-    index_table_name = sqlite3_mprintf("idx_%s_%s", table_name, column_name);
+    index_table_name = sqlite3_mprintf("rtree_%s_%s", table_name, column_name);
     if (index_table_name == NULL) {
         result = SQLITE_NOMEM;
         goto exit;
