@@ -465,7 +465,7 @@ static int wkb_begin_geometry(const geom_consumer_t *consumer, const geom_header
     writer->start[writer->offset] = binstream_position(stream);
     writer->children[writer->offset] = 0;
 
-    size_t wkb_header_size;
+    int32_t wkb_header_size;
     switch (header->geom_type) {
         case GEOM_POINT:
             wkb_header_size = 5;

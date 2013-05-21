@@ -216,7 +216,7 @@ static int gpb_begin_geometry(const geom_consumer_t *consumer, const geom_header
                     break;
             }
         }
-        result = binstream_relseek(&wkb->stream, gpb_header_size(gpb_header));
+        result = binstream_relseek(&wkb->stream, (int32_t)gpb_header_size(gpb_header));
         if (result != SQLITE_OK) {
             goto exit;
         }
@@ -283,7 +283,6 @@ static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 static int gpb_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
     gpb_writer_t *writer = (gpb_writer_t *) consumer;
     wkb_writer_t *wkb = &writer->wkb_writer;
-    binstream_t *stream = &wkb->stream;
 
     geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
     return wkb_consumer->end_geometry(wkb_consumer, header);

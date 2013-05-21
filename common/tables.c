@@ -144,15 +144,6 @@ table_info_t tile_matrix_metadata = {
         NULL, 0
 };
 
-static column_info_t tiles_columns[] = {
-        {"id", "integer", N, SQL_PRIMARY_KEY, "AUTOINCREMENT"},
-        {"zoom_level", "integer", I(0), SQL_NOT_NULL | SQL_UNIQUE(0), NULL},
-        {"tile_column", "integer", I(0), SQL_NOT_NULL | SQL_UNIQUE(0), NULL},
-        {"tile_row", "integer", I(0), SQL_NOT_NULL | SQL_UNIQUE(0), NULL},
-        {"tile_data", "blob", N, SQL_NOT_NULL, NULL},
-        {NULL, NULL, N, 0, NULL}
-};
-
 const column_info_t tiles_table_columns[] = {
         {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
         {"zoom_level", "integer", I(0), SQL_UNIQUE(1), NULL},

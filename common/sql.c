@@ -414,6 +414,7 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
     int result = SQLITE_OK;
     strbuf_t sql;
     char *query = NULL;
+    sqlite3_stmt *stmt = NULL;
 
     result = strbuf_init(&sql, 4096);
     if (result != SQLITE_OK) {
@@ -434,7 +435,6 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
         goto exit;
     }
 
-    sqlite3_stmt *stmt = NULL;
     result = sql_stmt_init(&stmt, db, query);
     if (result != SQLITE_OK) {
         goto exit;
