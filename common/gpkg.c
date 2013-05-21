@@ -327,7 +327,7 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
     arg = val;\
     free_##arg = 0;
 #define FUNCTION_FREE_TEXT_ARG(arg) \
-    if (free_##arg == 0) {\
+    if (free_##arg != 0) {\
         sqlite3_free(arg);\
         arg = NULL;\
     }
@@ -353,9 +353,9 @@ static int CheckGpkg_(sqlite3 *db, char *db_name, error_t *error) {
 }
 
 static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    FUNCTION_START(context)
     FUNCTION_TEXT_ARG(db_name)
-    
+    FUNCTION_START(context)
+
     if (nbArgs == 0) {
         FUNCTION_SET_TEXT_ARG(db_name,"main");
     } else {
@@ -384,9 +384,9 @@ static int InitGpkg_(sqlite3 *db, char *db_name, error_t *error) {
 }
 
 static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    FUNCTION_START(context)
     FUNCTION_TEXT_ARG(db_name)
-    
+    FUNCTION_START(context)
+
     if (nbArgs == 0) {
         FUNCTION_SET_TEXT_ARG(db_name,"main");
     } else {
@@ -459,24 +459,24 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
 }
 
 static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    FUNCTION_START(context)
     FUNCTION_TEXT_ARG(db_name)
     FUNCTION_TEXT_ARG(table_name)
-    FUNCTION_TEXT_ARG(column_name);
+    FUNCTION_TEXT_ARG(column_name)
     FUNCTION_INT_ARG(srid)
     FUNCTION_TEXT_ARG(geometry_type)
     FUNCTION_INT_ARG(coord_dimension)
-    
+    FUNCTION_START(context)
+
     if (nbArgs == 6) {
-        FUNCTION_GET_TEXT_ARG(context, db_name);
+        FUNCTION_GET_TEXT_ARG(context, db_name)
     } else {
-        FUNCTION_SET_TEXT_ARG(db_name,"main");
+        FUNCTION_SET_TEXT_ARG(db_name,"main")
     }
-    FUNCTION_GET_TEXT_ARG(context, table_name);
-    FUNCTION_GET_TEXT_ARG(context, column_name);
-    FUNCTION_GET_INT_ARG(srid);
-    FUNCTION_GET_TEXT_ARG(context, geometry_type);
-    FUNCTION_GET_INT_ARG(coord_dimension);
+    FUNCTION_GET_TEXT_ARG(context, table_name)
+    FUNCTION_GET_TEXT_ARG(context, column_name)
+    FUNCTION_GET_INT_ARG(srid)
+    FUNCTION_GET_TEXT_ARG(context, geometry_type)
+    FUNCTION_GET_INT_ARG(coord_dimension)
 
     FUNCTION_START_TRANSACTION(__add_geom_col)
     FUNCTION_RESULT = AddGeometryColumn_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, srid, geometry_type, coord_dimension, FUNCTION_ERROR_PTR);
@@ -485,7 +485,7 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     FUNCTION_END(context)
     FUNCTION_FREE_TEXT_ARG(db_name)
     FUNCTION_FREE_TEXT_ARG(table_name)
-    FUNCTION_FREE_TEXT_ARG(column_name);
+    FUNCTION_FREE_TEXT_ARG(column_name)
     FUNCTION_FREE_INT_ARG(srid)
     FUNCTION_FREE_TEXT_ARG(geometry_type)
     FUNCTION_FREE_INT_ARG(coord_dimension)
@@ -523,9 +523,9 @@ static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, error
 }
 
 static void CreateTilesTable(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    FUNCTION_START(context)
     FUNCTION_TEXT_ARG(db_name)
     FUNCTION_TEXT_ARG(table_name)
+    FUNCTION_START(context)
 
     if (nbArgs == 2) {
         FUNCTION_GET_TEXT_ARG(context, db_name)
@@ -621,10 +621,10 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 }
 
 static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-    FUNCTION_START(context)
     FUNCTION_TEXT_ARG(db_name)
     FUNCTION_TEXT_ARG(table_name)
     FUNCTION_TEXT_ARG(column_name)
+    FUNCTION_START(context)
 
     if (nbArgs == 3) {
         FUNCTION_GET_TEXT_ARG(context, db_name)
