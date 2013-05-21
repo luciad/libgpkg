@@ -45,4 +45,11 @@ foreach(test_file IN LISTS test_files)
   endforeach(test_case)
 endforeach(test_file)
 
+add_executable(run_script runscript.c)
+target_link_libraries(run_script unittest)
+file(GLOB test_scripts RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.sql)
+foreach(test_script IN LISTS test_scripts)
+    add_test(NAME ${test_script} COMMAND run_script ${test_script})
+endforeach(test_script)
+
 include_directories( "../common" "../sqlite" )
