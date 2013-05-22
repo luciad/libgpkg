@@ -1,6 +1,13 @@
 # Description
 A SQLite 3 extension that provides a minimal [OGC GeoPackage](http://www.ogcnetwork.net/geopackage) implementation.
 
+GeoPackage is an open, standards-based, application and platform independent, and self-describing file format for geodata based on SQLite.
+
+[Luciad](http://www.luciad.com) is actively participating in the GeoPackage Standards Working Group to define this standard. We are releasing this library under the liberal [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) to promote widespread adoption of this new format.
+
+# License
+libgpkg is distributed under the [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) version 2.0.
+
 # Usage
 libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sqlite.org/c3ref/load_extension.html) C function or using the [load\_extension](http://sqlite.org/lang_corefunc.html#load_extension) SQL function. Once loaded libgpkg extends SQLite with the function listed below. These function can be used just like any of the core functions that SQLite provides.
 
