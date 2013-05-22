@@ -368,7 +368,7 @@ static int sql_format_missing_row(const char* db_name, const table_info_t *table
     int nColumns = sql_count_columns(table_info);
     for (int cIx = 0; cIx < nColumns; cIx++) {
         if (cIx > 0) {
-            result = error_append(error, ", ");
+            result = strbuf_append(&errmsg, ", ");
             if (result != SQLITE_OK) {
                 goto exit;
             }
@@ -470,32 +470,6 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
     return result;
 }
 
-int sql_check_table(sqlite3* db, const char* db_name, const table_info_t* table_info, error_t *error) {
-    if (error == NULL) {
-        return SQLITE_MISUSE;
-    }
-
-    int exists = 0;
-    int result = sql_check_table_exists(db, db_name, table_info->name, &exists);
-    if (result == SQLITE_OK) {
-        if (exists) {
-            if (result == SQLITE_OK) {
-                result = sql_check_table_schema(db, db_name, table_info, error);
-            }
-
-            if (result == SQLITE_OK) {
-                result = sql_check_data(db, db_name, table_info, error);
-            }
-        } else {
-            if (error) {
-                error_append(error, "Table %s.%s does not exist", db_name, table_info->name);
-            }
-        }
-    }
-
-    return result;
-}
-
 static int sql_format_insert_data(const char *db_name, const table_info_t* table_info, char **query) {
     strbuf_t sql;
     int result = strbuf_init(&sql, 4096);
@@ -505,7 +479,7 @@ static int sql_format_insert_data(const char *db_name, const table_info_t* table
 
     int nColumns = sql_count_columns(table_info);
     const column_info_t *columns = table_info->columns;
-    result = strbuf_append(&sql, "INSERT OR REPLACE INTO \"%w\".\"%w\" (", db_name, table_info->name);
+    result = strbuf_append(&sql, "INSERT OR IGNORE INTO \"%w\".\"%w\" (", db_name, table_info->name);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -614,11 +588,11 @@ static void appendTableConstraint(const table_info_t *table_info, strbuf_t *sql,
             break;
         }
     }
-    
+
     if (!has_cols) {
         return;
     }
-    
+
     strbuf_append(sql, ",\n  %s (", constraint_name);
     int first = 1;
     for(int i = 0; i < nColumns; i++) {
@@ -714,30 +688,46 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
     return result;
 }
 
-int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t* table_info, error_t *error) {
+static int sql_init_check_table(sqlite3* db, const char* db_name, const table_info_t* table_info, int create, error_t *error) {
     if (error == NULL) {
         return SQLITE_MISUSE;
     }
 
-    int result;
-
     int exists = 0;
-    result = sql_check_table_exists(db, db_name, table_info->name, &exists);
-    if (result != SQLITE_OK) {
-        return result;
-    }
+    int result = sql_check_table_exists(db, db_name, table_info->name, &exists);
+    if (result == SQLITE_OK) {
+        if (exists) {
+            result = sql_check_table_schema(db, db_name, table_info, error);
 
-    if (exists) {
-        result = sql_check_table_schema(db, db_name, table_info, error);
-    } else {
-        result = sql_create_table(db, db_name, table_info, error);
-    }
+            if (result == SQLITE_OK && create != 0) {
+                result = sql_insert_data(db, db_name, table_info, error);
+            }
 
-    if (result == SQLITE_OK && error_count(error) == 0) {
-        result = sql_insert_data(db, db_name, table_info, error);
+            if (result == SQLITE_OK) {
+                result = sql_check_data(db, db_name, table_info, error);
+            }
+        } else {
+            if (create == 0) {
+                error_append(error, "Table %s.%s does not exist", db_name, table_info->name);
+            } else {
+                result = sql_create_table(db, db_name, table_info, error);
+
+                if (result == SQLITE_OK) {
+                    result = sql_insert_data(db, db_name, table_info, error);
+                }
+            }
+        }
     }
 
     return result;
+}
+
+int sql_check_table(sqlite3* db, const char* db_name, const table_info_t* table_info, error_t *error) {
+    return sql_init_check_table(db, db_name, table_info, 0, error);
+}
+
+int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t* table_info, error_t *error) {
+    return sql_init_check_table(db, db_name, table_info, 1, error);
 }
 
 int sql_begin(sqlite3 *db, char *name) {
