@@ -55,6 +55,7 @@ typedef enum {
      * Geometry collection
      */
     GEOM_GEOMETRYCOLLECTION,
+    GEOM_GEOMETRY,
     /**
      * Linear ring. Note that this is not a top level geometry type. It is present to allow linear rings to be treated
      * in the same way as other geometries.
@@ -231,6 +232,8 @@ int geom_coord_dim(const geom_header_t *header);
  * @param header the geometry header containing the type information
  */
 const char* geom_type_name(const geom_header_t *header);
+
+int geom_type_from_string(const char* type_name, geom_type_t *type);
 
 /**
  * Initializes a geometry envelope.

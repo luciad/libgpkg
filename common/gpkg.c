@@ -404,6 +404,19 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
 static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int coord_dimension, error_t *error) {
     int result;
 
+    // Check that the geometry type is valid
+    result = geom_type_from_string(geom_type, NULL);
+    if (result != SQLITE_OK) {
+        error_append(error, "Invalid geometry type: %s", geom_type);
+        return result;
+    }
+
+    // Check that the coordinate dimension is valid
+    if (coord_dimension < 2 || coord_dimension > 4) {
+        error_append(error, "Invalid coordinate dimension: %d", coord_dimension);
+        return result;
+    }
+
     // Check if the target table exists
     int exists = 0;
     result = sql_check_table_exists(db, db_name, table_name, &exists);

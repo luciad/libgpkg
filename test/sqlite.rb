@@ -121,9 +121,10 @@ module SQLite3
         raise sqlite3_errmsg(@db)
       end
 
+      all_rows = []
       while (res = sqlite3_step(stmt)) == SQLite3::ROW
         cols = sqlite3_column_count(stmt)
-        vals = Array.new(cols) do |i|
+        row = Array.new(cols) do |i|
           type = sqlite3_column_type(stmt, i)
           case type
             when SQLite3::INTEGER
@@ -136,13 +137,23 @@ module SQLite3
               nil
           end
         end
-        yield vals if block_given?
+        if block_given?
+          yield row
+        else
+          all_rows << row
+        end
       end
 
       sqlite3_finalize(stmt)
 
       if res != SQLite3::DONE
         raise sqlite3_errmsg(@db)
+      end
+
+      if block_given?
+        nil
+      else
+        all_rows
       end
     end
 

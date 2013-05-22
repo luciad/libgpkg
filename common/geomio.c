@@ -15,6 +15,7 @@
  */
 #include <string.h>
 #include <float.h>
+#include "str.h"
 #include "sqlite.h"
 #include "geomio.h"
 
@@ -82,9 +83,42 @@ const char* geom_type_name(const geom_header_t *wkb) {
 			return "ST_MultiPolygon";
 		case GEOM_GEOMETRYCOLLECTION:
 			return "ST_GeometryCollection";
+	  case GEOM_GEOMETRY:
+    	return "ST_Geometry";
 		default:
 			return NULL;
 	}
+}
+
+int geom_type_from_string(const char* type_name, geom_type_t *type) {
+  geom_type_t geom_type = GEOM_GEOMETRY;
+
+  int result = SQLITE_OK;
+  if (STRICMP(type_name, "point") == 0) {
+      geom_type = GEOM_POINT;
+  } else if (STRICMP(type_name, "polygon") == 0) {
+      geom_type = GEOM_POLYGON;
+  } else if (STRICMP(type_name, "linestring") == 0) {
+      geom_type = GEOM_LINESTRING;
+  } else if (STRICMP(type_name, "multipoint") == 0) {
+      geom_type = GEOM_MULTIPOINT;
+  } else if (STRICMP(type_name, "multipolygon") == 0) {
+      geom_type = GEOM_MULTIPOLYGON;
+  } else if (STRICMP(type_name, "multilinestring") == 0) {
+      geom_type = GEOM_MULTILINESTRING;
+  } else if (STRICMP(type_name, "geometrycollection") == 0) {
+      geom_type = GEOM_GEOMETRYCOLLECTION;
+  } else if (STRICMP(type_name, "geometry") == 0) {
+      geom_type = GEOM_GEOMETRY;
+  } else {
+      result = SQLITE_ERROR;
+  }
+
+  if (result == SQLITE_OK && type != NULL) {
+      *type = geom_type;
+  }
+
+  return result;
 }
 
 void geom_envelope_init(geom_envelope_t *envelope) {
