@@ -40,12 +40,19 @@ typedef struct {
 
 /**
  * Initializes a string buffer.
- * @param buffer the string buffer to initialize
+ * @param strbuf the string buffer to initialize
  * @param initial_size the initial buffer size to preallocate in bytes
  * @return SQLITE_OK on success, an error code otherwise
  */
 int strbuf_init(strbuf_t *strbuf, size_t initial_size);
 
+/**
+ * Initializes a fixed size string buffer using the given backing array.
+ * @param strbuf the string buffer to initialize
+ * @param buffer the data buffer to use
+ * @param length the length of buffer in bytes
+ * @return SQLITE_OK on success, an error code otherwise
+ */
 int strbuf_init_fixed(strbuf_t *strbuf, char* buffer, size_t length);
 
 /**

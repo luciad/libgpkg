@@ -100,6 +100,7 @@ size_t gpb_writer_length( gpb_writer_t *writer );
  *
  * @param stream the stream to read from
  * @param[out] header the header to populate
+ * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK if the header was successfully read\n
  *         SQLITE_IOERR if an I/O error occurred while reading the header
  */

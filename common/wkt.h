@@ -85,6 +85,7 @@ size_t wkt_writer_length( wkt_writer_t *writer );
  * @param data a character array containing WKT geometry
  * @param length the length of data in number of characters
  * @param consumer the geometry consumer that will receive the parsed geometry
+ * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
 int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, error_t *error);

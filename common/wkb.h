@@ -84,6 +84,7 @@ size_t wkb_writer_length( wkb_writer_t *writer );
  *
  * @param stream the stream containing the WKB geometry
  * @param consumer the geometry consumer that will receive the parsed geometry
+ * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
 int wkb_read_geometry(binstream_t *stream, geom_consumer_t const *consumer, error_t *error);
@@ -94,6 +95,7 @@ int wkb_read_geometry(binstream_t *stream, geom_consumer_t const *consumer, erro
  *
  * @param stream the stream containing the WKB geometry
  * @param[out] header the header to populate
+ * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
 int wkb_read_header(binstream_t *stream, geom_header_t *header, error_t *error);
@@ -104,6 +106,7 @@ int wkb_read_header(binstream_t *stream, geom_header_t *header, error_t *error);
  *
  * @param stream the stream containing the WKB geometry
  * @param[out] envelope the envelope to populate
+ * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
 int wkb_fill_envelope(binstream_t *stream, geom_envelope_t *envelope, error_t *error);
