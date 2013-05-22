@@ -16,22 +16,22 @@ require_relative 'gpkg'
 
 describe 'InitGpkg' do
   it 'should return NULL' do
-    expect(@db.get_first_value('SELECT InitGpkg()')).to eq(nil)
+    expect(result_of('SELECT InitGpkg()')).to eq(nil)
   end
 
   it 'should return NULL when called a second time' do
-    expect(@db.get_first_value('SELECT InitGpkg()')).to eq(nil)
-    expect(@db.get_first_value('SELECT InitGpkg()')).to eq(nil)
+    expect(result_of('SELECT InitGpkg()')).to eq(nil)
+    expect(result_of('SELECT InitGpkg()')).to eq(nil)
   end
 end
 
 describe 'CheckGpkg' do
   it 'should raise error when called before InitGpkg' do
-    expect { @db.get_first_value('SELECT CheckGpkg()') }.to raise_error
+    expect { result_of('SELECT CheckGpkg()') }.to raise_error
   end
 
   it 'should return NULL when called after InitGpkg' do
-    expect(@db.get_first_value('SELECT InitGpkg()')).to eq(nil)
-    expect(@db.get_first_value('SELECT CheckGpkg()')).to eq(nil)
+    expect(result_of('SELECT InitGpkg()')).to eq(nil)
+    expect(result_of('SELECT CheckGpkg()')).to eq(nil)
   end
 end

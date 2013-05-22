@@ -14,7 +14,32 @@
 
 require_relative 'sqlite'
 
+module GeoPackageHelpers
+  def execute(sql, *vars)
+    @db.execute(sql, *vars)
+  end
+
+  def result_of(sql, *vars)
+    @db.get_first_value(sql, *vars)
+  end
+
+  def table_structure_of(table)
+    @db.execute("PRAGMA table_info('#{table}')").inject({}) do |hash, row|
+      hash[row[1]] = {
+          :index => row[0],
+          :type => row[2],
+          :not_null => (row[3] != 0),
+          :default => row[4],
+          :primary_key => (row[5] != 0)
+      }
+      hash
+    end
+  end
+end
+
 RSpec.configure do |c|
+  c.include(GeoPackageHelpers)
+
   c.before(:each) do
     @db = SQLite3::Database.new(':memory:', SQLite3::OPEN_READWRITE | SQLite3::OPEN_CREATE)
     @db.load_extension ENV['GPKG_EXTENSION']
