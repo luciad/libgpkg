@@ -38,6 +38,5 @@ if ( UNIX )
   target_link_libraries( sqlite_shared "${CMAKE_DL_LIBS}" )
 endif()
 
-configure_file (
-  "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h"
-)
+configure_file ( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )

@@ -3,5 +3,5 @@ include_directories( "${PROJECT_SOURCE_DIR}/sqlite" "${PROJECT_SOURCE_DIR}/commo
 target_link_libraries ( gpkgext gpkgcommon )
 
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
-  target_link_libraries ( gpkgext "-Wl,--retain-symbols-file=gpkg_ext.sym" )
+  target_link_libraries ( gpkgext "-Wl,--retain-symbols-file=${CMAKE_CURRENT_SOURCE_DIR}/gpkg_ext.sym" )
 endif()
