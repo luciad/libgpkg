@@ -1,8 +1,12 @@
-add_library ( sqlite STATIC sqlite3.c )
-add_definitions ( -D_HAVE_SQLITE_CONFIG_H=1 )
-set_target_properties( sqlite PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+add_library ( sqlite_static STATIC sqlite3.c )
+set_target_properties( sqlite_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-set ( CMAKE_VERBOSE_MAKEFILE 1 )
+add_library ( sqlite_shared SHARED sqlite3.c )
+
+set_target_properties( sqlite_static PROPERTIES LIBRARY_OUTPUT_DIRECTORY static )
+set_target_properties( sqlite_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY shared )
+
+add_definitions ( -D_HAVE_SQLITE_CONFIG_H=1 )
 
 include(CheckIncludeFile)
 include(CheckFunctionExists)
@@ -21,7 +25,8 @@ set ( SQLITE_ENABLE_RTREE 1 )
 find_package ( Threads )
 if ( CMAKE_USE_PTHREADS_INIT )
   set( SQLITE_THREADSAFE 2 )
-  target_link_libraries( sqlite "${CMAKE_THREAD_LIBS_INIT}" )
+  target_link_libraries( sqlite_static "${CMAKE_THREAD_LIBS_INIT}" )
+  target_link_libraries( sqlite_shared "${CMAKE_THREAD_LIBS_INIT}" )
 elseif ( CMAKE_USE_WIN32_THREADS_INIT )
   set( SQLITE_THREADSAFE 2 )
 else()
@@ -29,7 +34,8 @@ else()
 endif()
 
 if ( UNIX )
-  target_link_libraries( sqlite "${CMAKE_DL_LIBS}" )
+  target_link_libraries( sqlite_static "${CMAKE_DL_LIBS}" )
+  target_link_libraries( sqlite_shared "${CMAKE_DL_LIBS}" )
 endif()
 
 configure_file (

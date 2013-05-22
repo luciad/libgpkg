@@ -5,7 +5,7 @@ set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" )
 find_package ( Readline )
 
 include_directories( "${PROJECT_SOURCE_DIR}/sqlite" "${PROJECT_SOURCE_DIR}/common" "${PROJECT_BINARY_DIR}" )
-target_link_libraries ( gpkg gpkgcommon sqlite )
+target_link_libraries ( gpkg gpkgcommon sqlite_static )
 
 if ( READLINE_FOUND )
   set ( HAVE_READLINE 1 )
