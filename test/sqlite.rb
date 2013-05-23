@@ -76,9 +76,15 @@ module SQLite3
 
   class Database
     extend FFI::Library
-
     ffi_lib SQLite3::LIBRARY
 
+    private
+    UTF8 = Encoding.find("UTF-8")
+    BINARY = Encoding.find("ASCII-8BIT")
+
+    TRANSIENT = FFI::Pointer.new(-1)
+
+    public
     def initialize(name, flags)
       db_ptr = FFI::MemoryPointer.new :pointer
       res = sqlite3_open_v2(name, db_ptr, flags, nil)
@@ -112,7 +118,14 @@ module SQLite3
           when Float
             sqlite3_bind_double(stmt, i + 1, var)
           when String
-            sqlite3_bind_text(stmt, i + 1, var, -1, nil)
+            if var.encoding == BINARY
+              blob_ptr = FFI::MemoryPointer.new(:char, var.length)
+              blob_ptr.put_bytes(0, var)
+              sqlite3_bind_blob(stmt, i + 1, blob_ptr, var.length, TRANSIENT)
+              blob_ptr.free
+            else
+              sqlite3_bind_text(stmt, i + 1, var.encode(UTF8), -1, TRANSIENT)
+            end
           else
         end
       end
@@ -132,7 +145,11 @@ module SQLite3
             when SQLite3::FLOAT
               sqlite3_column_double(stmt, i)
             when SQLite3::TEXT
-              sqlite3_column_text(stmt, i)
+              sqlite3_column_text(stmt, i).force_encoding(UTF8)
+            when SQLite3::BLOB
+              ptr = sqlite3_column_blob(stmt, i)
+              length = sqlite3_column_bytes(stmt, i)
+              ptr.get_bytes(0, length)
             else
               nil
           end
