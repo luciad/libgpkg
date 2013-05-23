@@ -33,7 +33,7 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
     }
 
     if (memcmp(head, "GPB", 3) != 0) {
-        if (error) error_append(error, "Incorrect magic number [expected: GPB, actual:%*s]", 3, head);
+        if (error) error_append(error, "Incorrect GPB magic number [expected: GPB, actual:%*s]", 3, head);
         return SQLITE_IOERR;
     }
 
@@ -47,12 +47,12 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
     uint8_t endian = flags & 0x1;
 
     if (gpb->version != GPB_VERSION) {
-        if (error) error_append(error, "Incorrect version number [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
+        if (error) error_append(error, "Incorrect GPB version [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
         return SQLITE_IOERR;
     }
 
     if (envelope > 4) {
-        if (error) error_append(error, "Incorrect envelope value: [expected: [0-4], actual:%u]", envelope);
+        if (error) error_append(error, "Incorrect GPB envelope value: [expected: [0-4], actual:%u]", envelope);
         return SQLITE_IOERR;
     }
 
