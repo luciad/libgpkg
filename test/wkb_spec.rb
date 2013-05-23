@@ -24,7 +24,7 @@ RSpec.configure do |c|
   c.include(WKBHelpers)
 end
 
-describe 'Well-Known Binary' do
+describe 'WKBFromText' do
   it 'should parse XY points correctly' do
     expect(wkb_for('Point(1 2)')).to eq('0101000000000000000000f03f0000000000000040')
   end
@@ -55,5 +55,21 @@ describe 'Well-Known Binary' do
 
   it 'should parse XYZM line strings correctly' do
     expect(wkb_for('LineString ZM(1 2 3 4, 5 6 7 8)')).to eq('01ba0b000002000000000000000000f03f000000000000004000000000000008400000000000001040000000000000144000000000000018400000000000001c400000000000002040')
+  end
+
+  it 'should raise error on unclosed WKT' do
+    expect { wkb_for('LineString ZM(1 ') }.to raise_error
+  end
+
+  it 'should raise error on unknown geometry type' do
+    expect { wkb_for('MyGeometry EMPTY') }.to raise_error
+  end
+
+  it 'should raise error on incorrect modifiers' do
+    expect { wkb_for('Point X (1 2)') }.to raise_error
+  end
+
+  it 'should raise error on incorrect empty set' do
+    expect { wkb_for('Point empt') }.to raise_error
   end
 end
