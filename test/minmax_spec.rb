@@ -22,6 +22,14 @@ describe 'ST_MinX' do
   it 'should return the X coordinate of a point' do
     expect(result_of("SELECT ST_MinX(GeomFromText('Point(1 0)'))")).to eq(1.0)
   end
+
+  it 'should return the minimum X coordinate of a line string' do
+    expect(result_of("SELECT ST_MinX(GeomFromText('LineString(-1 0, 5 0)'))")).to eq(-1.0)
+  end
+
+  it 'should return the value from the GPB header' do
+    expect(result_of("SELECT ST_MinX(x'475042030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')")).to eq(-5.00000012)
+  end
 end
 
 describe 'ST_MaxX' do
@@ -31,6 +39,14 @@ describe 'ST_MaxX' do
 
   it 'should return the X coordinate of a point' do
     expect(result_of("SELECT ST_MaxX(GeomFromText('Point(1 0)'))")).to eq(1.0)
+  end
+
+  it 'should return the maximum X coordinate of a line string' do
+    expect(result_of("SELECT ST_MaxX(GeomFromText('LineString(-1 0, 5 0)'))")).to eq(5.0)
+  end
+
+  it 'should return the value from the GPB header' do
+    expect(result_of("SELECT ST_MaxX(x'475042030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')")).to eq(7.000000120000002)
   end
 end
 
@@ -42,6 +58,14 @@ describe 'ST_MinY' do
   it 'should return the X coordinate of a point' do
     expect(result_of("SELECT ST_MinY(GeomFromText('Point(1 5)'))")).to eq(5.0)
   end
+
+  it 'should return the minimum Y coordinate of a line string' do
+    expect(result_of("SELECT ST_MinY(GeomFromText('LineString(-1 7, 5 -3)'))")).to eq(-3.0)
+  end
+
+  it 'should return the value from the GPB header' do
+    expect(result_of("SELECT ST_MinY(x'475042030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')")).to eq(-13.00000023)
+  end
 end
 
 describe 'ST_MaxY' do
@@ -51,6 +75,14 @@ describe 'ST_MaxY' do
 
   it 'should return the X coordinate of a point' do
     expect(result_of("SELECT ST_MaxY(GeomFromText('Point(1 5)'))")).to eq(5.0)
+  end
+
+  it 'should return the maximum Y coordinate of a line string' do
+    expect(result_of("SELECT ST_MaxY(GeomFromText('LineString(-1 7, 5 -3)'))")).to eq(7.0)
+  end
+
+  it 'should return the value from the GPB header' do
+    expect(result_of("SELECT ST_MaxY(x'475042030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')")).to eq(10.000000230000003)
   end
 end
 

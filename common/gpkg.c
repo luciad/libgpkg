@@ -130,7 +130,10 @@ static void ST_SRID(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
             sqlite3_result_error(context, "Error writing GPB header", -1);
             goto exit;
         }
-        gpb_write_header(&stream, &gpb);
+        if (gpb_write_header(&stream, &gpb, &error) != SQLITE_OK) {
+            sqlite3_result_error(context, error_count(&error) > 0 ? error_message(&error) : "Error writing GPB header", -1);
+            goto exit;
+        }
         binstream_seek(&stream, 0);
         sqlite3_result_blob(context, binstream_data(&stream), (int) binstream_available(&stream), SQLITE_TRANSIENT);
     }
@@ -634,7 +637,7 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
         goto exit;
     }
 
-    result = sql_exec(db, "INSERT OR REPLACE INTO \"%w\".\"%w\" SELECT rowid, st_minx(\"%w\"), st_maxx(\"%w\"), st_miny(\"%w\"), st_maxy(\"%w\") from \"%w\".\"%w\"", db_name, index_table_name, column_name, column_name, column_name, column_name, db_name, table_name);
+    result = sql_exec(db, "INSERT OR REPLACE INTO \"%w\".\"%w\" (id, minx, maxx, miny, maxy) SELECT rowid, st_minx(\"%w\"), st_maxx(\"%w\"), st_miny(\"%w\"), st_maxy(\"%w\") from \"%w\".\"%w\"", db_name, index_table_name, column_name, column_name, column_name, column_name, db_name, table_name);
     if (result != SQLITE_OK) {
         error_append(error, "Could not populate rtree index: %s", sqlite3_errmsg(db));
         goto exit;

@@ -13,11 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <stdio.h>
 #include <string.h>
 #include "gpb.h"
 #include "sqlite.h"
 
 #define GPB_VERSION 0
+#define GPB_BIG_ENDIAN 0
+#define GPB_LITTLE_ENDIAN 1
+
+#define CHECK_ENV_COMP(gpb, comp, error) \
+    if (gpb->envelope.has_env_##comp && gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
+        if (error) error_append(error, "GPB envelope min" #comp " > max" #comp ": [min: %f, max: %f]", gpb->envelope.min_##comp, gpb->envelope.max_##comp);\
+        return SQLITE_IOERR;\
+    }
+#define CHECK_ENV(gpb, error) CHECK_ENV_COMP(gpb, x, error) CHECK_ENV_COMP(gpb, y, error) CHECK_ENV_COMP(gpb, z, error) CHECK_ENV_COMP(gpb, m, error)
 
 static size_t gpb_header_size(gpb_header_t *gpb) {
     return (size_t)
@@ -28,7 +38,7 @@ static size_t gpb_header_size(gpb_header_t *gpb) {
 
 int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
     uint8_t head[3];
-    if (binstream_nread_u8(stream, head, 3)) {
+    if (binstream_nread_u8(stream, head, 3) != SQLITE_OK) {
         return SQLITE_IOERR;
     }
 
@@ -56,9 +66,8 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
         return SQLITE_IOERR;
     }
 
-    binstream_set_endianness(stream, endian == 0 ? BIG : LITTLE);
-
-    if (binstream_read_i32(stream, &gpb->srid)) {
+    binstream_set_endianness(stream, endian == GPB_BIG_ENDIAN ? BIG : LITTLE);
+    if (binstream_read_i32(stream, &gpb->srid) != SQLITE_OK) {
         return SQLITE_IOERR;
     }
 
@@ -114,10 +123,14 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
         gpb->envelope.max_m = 0.0;
     }
 
+    CHECK_ENV(gpb, error)
+
     return SQLITE_OK;
 }
 
-int gpb_write_header(binstream_t *stream, gpb_header_t *gpb) {
+int gpb_write_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
+    CHECK_ENV(gpb, error)
+
     if (binstream_write_nu8(stream, (uint8_t*)"GPB", 3)) {
         return SQLITE_IOERR;
     }
@@ -301,7 +314,7 @@ static int gpb_end(const geom_consumer_t *consumer) {
         goto exit;
     }
 
-    result = gpb_write_header(stream, &writer->header);
+    result = gpb_write_header(stream, &writer->header, NULL);
     if (result != SQLITE_OK) {
         goto exit;
     }

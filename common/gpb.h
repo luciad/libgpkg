@@ -112,10 +112,11 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *header, error_t *error);
  *
  * @param stream the stream to write to
  * @param header the header to write to the stream
+ * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK if the header was successfully written\n
  *         SQLITE_IOERR if an I/O error occurred while writing the header
  */
-int gpb_write_header(binstream_t *stream, gpb_header_t *header);
+int gpb_write_header(binstream_t *stream, gpb_header_t *header, error_t *error);
 
 /** @} */
 
