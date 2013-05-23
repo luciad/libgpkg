@@ -37,6 +37,11 @@ module GeoPackageHelpers
   end
 end
 
+##
+# Configures RSpec so that each example runs with a new, empty SQLite3 memory database with the geopackage extension
+# loaded.
+# Some extra helper functions are also added to the RSpec DSL to simplify the examples.
+#
 RSpec.configure do |c|
   c.include(GeoPackageHelpers)
 

@@ -14,6 +14,10 @@
 
 require 'ffi'
 
+##
+# Minimal SQLite3 binding based on FFI.
+# This class has been written to enable development of geopackage unit tests in Ruby.
+#
 module SQLite3
   LIBRARY = ENV['RUBY_SQLITE'] || 'sqlite3'
 
