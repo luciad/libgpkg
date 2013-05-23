@@ -15,7 +15,6 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include "str.h"
 #include "sqlite.h"
 #include "wkt.h"
 #include "error.h"
@@ -265,7 +264,7 @@ static void wkt_next_token(wkt_tokenizer_t *tok) {
             size_t token_length = tok_end - start;
             tok->start = tok_end;
 
-#define CHECK_TOKEN(token_name) if (STRNICMP( #token_name, start, token_length ) == 0) { tok->token = WKT_##token_name; }
+#define CHECK_TOKEN(token_name) if ( sqlite3_strnicmp( #token_name, start, token_length ) == 0) { tok->token = WKT_##token_name; }
 #define CHECK_TOKEN_1(tok1) CHECK_TOKEN(tok1) else { goto error; }
 #define CHECK_TOKEN_2(tok1, tok2) CHECK_TOKEN(tok1) else CHECK_TOKEN_1(tok2)
             if (token_length == 1) {
