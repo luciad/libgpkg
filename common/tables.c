@@ -59,7 +59,7 @@ table_info_t spatial_ref_sys = {
 
 static column_info_t data_columns_columns[] = {
         {"table_name", "text", N, SQL_PRIMARY_KEY, NULL},
-        {"geometry_column", "text", N, SQL_PRIMARY_KEY, NULL},
+        {"column_name", "text", N, SQL_PRIMARY_KEY, NULL},
         {"name", "text", N, 0, NULL},
         {"title", "text", N, 0, NULL},
         {"description", "text", N, 0, NULL},
