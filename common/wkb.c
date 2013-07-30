@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "wkb.h"
@@ -173,11 +174,17 @@ static int read_point(binstream_t *stream, const geom_consumer_t *consumer, cons
     int result;
     uint32_t coord_size = header->coord_size;
     double coord[coord_size];
+    int allnan = 1;
     for (int i = 0; i < coord_size; i++) {
         result = binstream_read_double(stream, &coord[i]);
         if (result != SQLITE_OK) {
             return result;
         }
+        allnan &= isnan(coord[i]);
+    }
+
+    if (allnan) {
+        return SQLITE_OK;
     }
 
     return consumer->coordinates(consumer, header, 1, coord);
@@ -578,7 +585,17 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
             if (result != SQLITE_OK) {
                 goto exit;
             }
-        }        
+        } else {
+            if (children == 0) {
+                for (int i = 0; i < header->coord_size; i++) {
+                    result = binstream_write_u64(stream, 0x7ff8000000000000);
+                    if (result != SQLITE_OK) {
+                        goto exit;
+                    }
+                }
+                current_pos = binstream_position(stream);
+            }
+        }
     }
 
     writer->offset--;

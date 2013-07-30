@@ -34,6 +34,12 @@ typedef struct {
      * The GeoPacakge Binary version number.
      */
     uint8_t version;
+
+    /**
+     * Indicates if the geometry is empty or not.
+     */
+    uint8_t empty;
+
     /**
      * The SRID of the geometry.
      */

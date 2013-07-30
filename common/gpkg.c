@@ -141,6 +141,16 @@ static void ST_SRID(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
     GPB_FUNC_END
 }
 
+static void ST_IsEmpty(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+    GPB_FUNC_START(context, args, gpb, stream, error)
+
+    if (nbArgs == 1) {
+        sqlite3_result_int(context, gpb.empty);
+    }
+
+    GPB_FUNC_END
+}
+
 static void ST_IsMeasured(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     WKB_FUNC_START(context, args, gpb, wkb, stream, error)
 
@@ -383,7 +393,11 @@ static int InitGpkg_(sqlite3 *db, char *db_name, error_t *error) {
         table++;
     }
 
-    return result;
+    if (result == SQLITE_OK && error_count(error) > 0) {
+      return SQLITE_ERROR;
+    } else {
+      return result;
+    }
 }
 
 static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
@@ -404,19 +418,22 @@ static void InitGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args)
     FUNCTION_FREE_TEXT_ARG(db_name)
 }
 
-static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, int srid, char *geom_type, int coord_dimension, error_t *error) {
+static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char *column_name, char *geom_type, int srs_id, int z, int m, error_t *error) {
     int result;
 
-    // Check that the geometry type is valid
     result = geom_type_from_string(geom_type, NULL);
     if (result != SQLITE_OK) {
         error_append(error, "Invalid geometry type: %s", geom_type);
         return result;
     }
 
-    // Check that the coordinate dimension is valid
-    if (coord_dimension < 2 || coord_dimension > 4) {
-        error_append(error, "Invalid coordinate dimension: %d", coord_dimension);
+    if (z < 0 || z > 2) {
+        error_append(error, "Invalid Z flag value: %d", z);
+        return result;
+    }
+
+    if (m < 0 || m > 2) {
+        error_append(error, "Invalid M flag value: %d", z);
         return result;
     }
 
@@ -434,11 +451,11 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
     }
 
     // Check if required meta tables exist
-    result = sql_check_table(db, db_name, &spatial_ref_sys, error);
+    result = sql_check_table(db, db_name, &gpkg_spatial_ref_sys, error);
     if (result != SQLITE_OK) {
         return result;
     }
-    result = sql_check_table(db, db_name, &geometry_columns, error);
+    result = sql_check_table(db, db_name, &gpkg_geometry_columns, error);
     if (result != SQLITE_OK) {
         return result;
     }
@@ -449,13 +466,13 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
 
     // Check if the SRID is defined
     int count = 0;
-    result = sql_exec_for_int(db, &count, "SELECT count(*) FROM spatial_ref_sys WHERE srid = %d", srid);
+    result = sql_exec_for_int(db, &count, "SELECT count(*) FROM gpkg_spatial_ref_sys WHERE srs_id = %d", srs_id);
     if (result != SQLITE_OK) {
         return result;
     }
 
     if (count == 0) {
-        error_append(error, "SRID %d does not exist", srid);
+        error_append(error, "SRS %d does not exist", srs_id);
         return SQLITE_OK;
     }
 
@@ -465,7 +482,7 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
         return result;
     }
 
-    result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, geometry_type, coord_dimension, srid) VALUES (%Q, %Q, %Q, %d, %d)", db_name, "geometry_columns", table_name, column_name, geom_type, coord_dimension, srid);
+    result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (table_name, column_name, geometry_type, srs_id, z, m) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name, "gpkg_geometry_columns", table_name, column_name, geom_type, srs_id, z, m);
     if (result != SQLITE_OK) {
         error_append(error, sqlite3_errmsg(db));
         return result;
@@ -478,9 +495,8 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     FUNCTION_TEXT_ARG(db_name)
     FUNCTION_TEXT_ARG(table_name)
     FUNCTION_TEXT_ARG(column_name)
-    FUNCTION_INT_ARG(srid)
     FUNCTION_TEXT_ARG(geometry_type)
-    FUNCTION_INT_ARG(coord_dimension)
+    FUNCTION_INT_ARG(srs_id)
     FUNCTION_START(context)
 
     if (nbArgs == 6) {
@@ -490,14 +506,13 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     }
     FUNCTION_GET_TEXT_ARG(context, table_name)
     FUNCTION_GET_TEXT_ARG(context, column_name)
-    FUNCTION_GET_INT_ARG(srid)
     FUNCTION_GET_TEXT_ARG(context, geometry_type)
-    FUNCTION_GET_INT_ARG(coord_dimension)
+    FUNCTION_GET_INT_ARG(srs_id)
 
     FUNCTION_START_TRANSACTION(__add_geom_col)
     FUNCTION_RESULT = InitGpkg_(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
     if (FUNCTION_RESULT == SQLITE_OK) {
-      FUNCTION_RESULT = AddGeometryColumn_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, srid, geometry_type, coord_dimension, FUNCTION_ERROR_PTR);
+      FUNCTION_RESULT = AddGeometryColumn_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, geometry_type, srs_id, 2, 2, FUNCTION_ERROR_PTR);
     }
     FUNCTION_END_TRANSACTION(__add_geom_col)
 
@@ -505,9 +520,8 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     FUNCTION_FREE_TEXT_ARG(db_name)
     FUNCTION_FREE_TEXT_ARG(table_name)
     FUNCTION_FREE_TEXT_ARG(column_name)
-    FUNCTION_FREE_INT_ARG(srid)
     FUNCTION_FREE_TEXT_ARG(geometry_type)
-    FUNCTION_FREE_INT_ARG(coord_dimension)
+    FUNCTION_FREE_INT_ARG(srid)
 }
 
 static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, error_t *error) {
@@ -603,14 +617,14 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
     }
 
     int geom_col_count = 0;
-    result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".geometry_columns WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q", db_name, table_name, column_name);
+    result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".gpkg_geometry_columns WHERE table_name LIKE %Q AND column_name LIKE %Q", db_name, table_name, column_name);
     if (result != SQLITE_OK) {
-        error_append(error, "Could not check if column %s.%s.%s exists in %s.geometry_columns: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+        error_append(error, "Could not check if column %s.%s.%s exists in %s.gpkg_geometry_columns: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
         goto exit;
     }
 
     if (geom_col_count == 0) {
-        error_append(error, "Column %s.%s.%s is not registered in %s.geometry_columns", db_name, table_name, column_name, db_name);
+        error_append(error, "Column %s.%s.%s is not registered in %s.gpkg_geometry_columns", db_name, table_name, column_name, db_name);
         goto exit;
     }
 
@@ -620,26 +634,96 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
         goto exit;
     }
 
-    result = sql_exec(db, "CREATE TRIGGER \"%w\".\"rtree_%w_%w_insert\" AFTER INSERT ON \"%w\" BEGIN INSERT INTO \"%w\" VALUES (NEW.rowid, ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"), ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")); END", db_name, table_name, column_name, table_name, index_table_name, column_name, column_name, column_name, column_name);
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_insert\" AFTER INSERT ON \"%w\" WHEN (NEW.\"%w\" NOT NULL AND ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
+        "  INSERT INTO \"%w\" VALUES ("
+        "    NEW.rowid,"
+        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),"
+        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")"
+        "  );"
+        "END;",
+        db_name, table_name, column_name, table_name, column_name, column_name,
+        index_table_name,
+        column_name, column_name,
+        column_name, column_name
+    );
     if (result != SQLITE_OK) {
         error_append(error, "Could not create rtree insert trigger: %s", sqlite3_errmsg(db));
         goto exit;
     }
-    result = sql_exec(db, "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update\" AFTER UPDATE OF \"%w\" ON \"%w\" BEGIN UPDATE \"%w\" SET id = NEW.rowid, minx = ST_MinX(NEW.\"%w\"), maxx = ST_MaxX(NEW.\"%w\"), miny = ST_MinY(NEW.\"%w\"), maxy = ST_MaxY(NEW.\"%w\") WHERE id = OLD.rowid; END", db_name, table_name, column_name, column_name, table_name, index_table_name, column_name, column_name, column_name, column_name);
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update1\" AFTER UPDATE OF \"%w\" ON \"%w\" WHEN (OLD.\"%w\" NOT NULL AND ST_IsEmpty(OLD.\"%w\") = 0) AND (NEW.\"%w\" NOT NULL AND ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
+        "  UPDATE \"%w\" SET"
+        "    id = NEW.rowid,"
+        "    minx = ST_MinX(NEW.\"%w\"), maxx = ST_MaxX(NEW.\"%w\"),"
+        "    miny = ST_MinY(NEW.\"%w\"), maxy = ST_MaxY(NEW.\"%w\")"
+        "  WHERE id = OLD.rowid;"
+        "END;",
+        db_name, table_name, column_name, column_name, table_name, column_name, column_name, column_name, column_name,
+        index_table_name,
+        column_name, column_name,
+        column_name, column_name
+    );
     if (result != SQLITE_OK) {
-        error_append(error, "Could not create rtree update trigger: %s", sqlite3_errmsg(db));
+        error_append(error, "Could not create rtree update trigger 1: %s", sqlite3_errmsg(db));
         goto exit;
     }
 
-    result = sql_exec(db, "CREATE TRIGGER \"%w\".\"rtree_%w_%w_delete\" AFTER DELETE ON \"%w\" BEGIN DELETE FROM \"%w\" WHERE id = OLD.rowid; END", db_name, table_name, column_name, table_name, index_table_name);
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update2\" AFTER UPDATE OF \"%w\" ON \"%w\" WHEN (OLD.\"%w\" ISNULL OR ST_IsEmpty(OLD.\"%w\") = 0) AND (NEW.\"%w\" NOT NULL AND ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
+        "  INSERT INTO \"%w\" VALUES ("
+        "    NEW.rowid,"
+        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),"
+        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")"
+        "  );"
+        "END;",
+        db_name, table_name, column_name, column_name, table_name, column_name, column_name, column_name, column_name,
+        index_table_name,
+        column_name, column_name,
+        column_name, column_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree update trigger 2: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update3\" AFTER UPDATE OF \"%w\" ON \"%w\" WHEN (OLD.\"%w\" NOT NULL AND ST_IsEmpty(OLD.\"%w\") = 0) AND (NEW.\"%w\" ISNULL OR ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
+        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;"
+        "END;",
+        db_name, table_name, column_name, column_name, table_name, column_name, column_name, column_name, column_name,
+        index_table_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree update trigger 3: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_delete\" AFTER DELETE ON \"%w\" WHEN (OLD.\"%w\" NOT NULL AND ST_IsEmpty(OLD.\"%w\") = 0) BEGIN"
+        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;"
+        "END;",
+        db_name, table_name, column_name, table_name, column_name, column_name,
+        index_table_name
+    );
     if (result != SQLITE_OK) {
         error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
         goto exit;
     }
 
-    result = sql_exec(db, "INSERT OR REPLACE INTO \"%w\".\"%w\" (id, minx, maxx, miny, maxy) SELECT rowid, st_minx(\"%w\"), st_maxx(\"%w\"), st_miny(\"%w\"), st_maxy(\"%w\") from \"%w\".\"%w\"", db_name, index_table_name, column_name, column_name, column_name, column_name, db_name, table_name);
+    result = sql_exec(
+        db,
+        "INSERT OR IGNORE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name) VALUES (\"%w\", \"%w\", \"%w\")",
+        db_name, table_name, column_name, "gpkg_rtree_index"
+    );
     if (result != SQLITE_OK) {
-        error_append(error, "Could not populate rtree index: %s", sqlite3_errmsg(db));
+        error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
         goto exit;
     }
 
@@ -700,9 +784,10 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_ro
     ST_FUNC( MaxM, 1 );
     ST_FUNC( SRID, 1 );
     ST_FUNC( SRID, 2 );
-    ST_FUNC( IsValid, 1 );
-    ST_FUNC( IsMeasured, 1 );
     ST_FUNC( Is3d, 1 );
+    ST_FUNC( IsEmpty, 1 );
+    ST_FUNC( IsMeasured, 1 );
+    ST_FUNC( IsValid, 1 );
     ST_FUNC( CoordDim, 1 );
     ST_FUNC( GeometryType, 1 );
     ST_FUNC( AsBinary, 1 );
@@ -718,8 +803,8 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_ro
     FUNC( CheckGpkg, 1 );
     FUNC( InitGpkg, 0 );
     FUNC( InitGpkg, 1 );
+    FUNC( AddGeometryColumn, 4 );
     FUNC( AddGeometryColumn, 5 );
-    FUNC( AddGeometryColumn, 6 );
     FUNC( CreateTilesTable, 1 );
     FUNC( CreateTilesTable, 2 );
     FUNC( CreateSpatialIndex, 2 );

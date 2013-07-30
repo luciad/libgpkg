@@ -97,7 +97,7 @@ typedef struct {
 /**
  * Macro to initialize a value_t containing a NULL value.
  */
-#define NULL_VALUE {{NULL}, VALUE_NULL}
+#define NULL_VALUE {{.integer = 0}, VALUE_NULL}
 
 /**
  * Macro to initialize a value_t containing a string value.

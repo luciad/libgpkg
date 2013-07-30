@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "gpb.h"
@@ -37,13 +38,22 @@ static size_t gpb_header_size(gpb_header_t *gpb) {
 }
 
 int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
-    uint8_t head[3];
-    if (binstream_nread_u8(stream, head, 3) != SQLITE_OK) {
+    uint8_t head[2];
+    if (binstream_nread_u8(stream, head, 2) != SQLITE_OK) {
         return SQLITE_IOERR;
     }
 
-    if (memcmp(head, "GPB", 3) != 0) {
-        if (error) error_append(error, "Incorrect GPB magic number [expected: GPB, actual:%*s]", 3, head);
+    if (memcmp(head, "GP", 2) != 0) {
+        if (error) error_append(error, "Incorrect GPB magic number [expected: GP, actual:%*s]", 2, head);
+        return SQLITE_IOERR;
+    }
+
+    if (binstream_read_u8(stream, &gpb->version)) {
+        return SQLITE_IOERR;
+    }
+
+    if (gpb->version != GPB_VERSION) {
+        if (error) error_append(error, "Incorrect GPB version [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
         return SQLITE_IOERR;
     }
 
@@ -52,14 +62,9 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
         return SQLITE_IOERR;
     }
 
-    gpb->version = (flags & 0xF0) >> 4;
-    uint8_t envelope = (flags & 0xE) >> 1;
+    gpb->empty = (flags >> 4) & 0x1;
+    uint8_t envelope = (flags >> 1) & 0x7;
     uint8_t endian = flags & 0x1;
-
-    if (gpb->version != GPB_VERSION) {
-        if (error) error_append(error, "Incorrect GPB version [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
-        return SQLITE_IOERR;
-    }
 
     if (envelope > 4) {
         if (error) error_append(error, "Incorrect GPB envelope value: [expected: [0-4], actual:%u]", envelope);
@@ -131,11 +136,14 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
 int gpb_write_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
     CHECK_ENV(gpb, error)
 
-    if (binstream_write_nu8(stream, (uint8_t*)"GPB", 3)) {
+    if (binstream_write_nu8(stream, (uint8_t*)"GP", 2)) {
         return SQLITE_IOERR;
     }
 
-    uint8_t version = gpb->version;
+    if (binstream_write_u8(stream, gpb->version)) {
+        return SQLITE_IOERR;
+    }
+
     uint8_t envelope = 0;
     if (gpb->envelope.has_env_x && gpb->envelope.has_env_y) {
         envelope = 1;
@@ -148,8 +156,9 @@ int gpb_write_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
         }
     }
     uint8_t endian = binstream_get_endianness(stream) == LITTLE ? 1 : 0;
+    uint8_t empty = gpb->empty == 0 ? 0 : 1;
 
-    uint8_t flags = (version << 4) | (envelope << 1) | endian;
+    uint8_t flags = (empty << 4) | (envelope << 1) | endian;
     if (binstream_write_u8(stream, flags)) {
         return SQLITE_IOERR;
     }
@@ -244,6 +253,10 @@ static int gpb_begin_geometry(const geom_consumer_t *consumer, const geom_header
 static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords) {
     int result = SQLITE_OK;
 
+    if (point_count <= 0) {
+        goto exit;
+    }
+
     gpb_writer_t *writer = (gpb_writer_t *) consumer;
     wkb_writer_t *wkb = &writer->wkb_writer;
     geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
@@ -252,7 +265,18 @@ static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
         goto exit;
     }
 
+    if (header->geom_type == GEOM_POINT) {
+      int allnan = 1;
+      for (int i = 0; i < header->coord_size; i++) {
+          allnan &= isnan(coords[i]);
+      }
+      if (allnan) {
+          goto exit;
+      }
+    }
+
     gpb_header_t *gpb = &writer->header;
+    gpb->empty = 0;
     int offset = 0;
     switch(header->coord_type) {
         #define MIN_MAX(coord) double coord = coords[offset++]; \
@@ -335,6 +359,7 @@ int gpb_writer_init( gpb_writer_t *writer, int32_t srid ) {
     geom_envelope_init(&writer->header.envelope);
     writer->header.version = GPB_VERSION;
     writer->header.srid = srid;
+    writer->header.empty = 1;
     return wkb_writer_init(&writer->wkb_writer);
 }
 

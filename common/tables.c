@@ -21,7 +21,7 @@
 #define T(v) TEXT_VALUE(v)
 #define F(v) FUNC_VALUE(v)
 
-static column_info_t geopackage_contents_columns[] = {
+static column_info_t gpkg_contents_columns[] = {
         {"table_name", "text", N, SQL_PRIMARY_KEY | SQL_NOT_NULL, NULL},
         {"data_type", "text", N, SQL_NOT_NULL, NULL},
         {"identifier", "text", N, SQL_NOT_NULL, NULL},
@@ -31,33 +31,47 @@ static column_info_t geopackage_contents_columns[] = {
         {"min_y", "double", N, SQL_NOT_NULL, NULL},
         {"max_x", "double", N, SQL_NOT_NULL, NULL},
         {"max_y", "double", N, SQL_NOT_NULL, NULL},
-        {"srid", "integer", N, SQL_NOT_NULL, "REFERENCES spatial_ref_sys(srid)"},
+        {"srid", "integer", N, SQL_NOT_NULL, "REFERENCES gpkg_spatial_ref_sys(srs_id)"},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t geopackage_contents = {
-        "geopackage_contents",
-        geopackage_contents_columns,
+table_info_t gpkg_contents = {
+        "gpkg_contents",
+        gpkg_contents_columns,
         NULL, 0
 };
 
-static column_info_t spatial_ref_sys_columns[] = {
-        {"srid", "integer", N, SQL_PRIMARY_KEY, NULL},
-        {"auth_name", "text", N, SQL_NOT_NULL, NULL},
-        {"auth_srid", "integer", N, SQL_NOT_NULL, NULL},
-        {"srtext", "text", N, SQL_NOT_NULL, NULL},
+static column_info_t gpkg_extensions_columns[] = {
+        {"table_name", "text", N, SQL_UNIQUE(1), NULL},
+        {"column_name", "text", N, SQL_UNIQUE(1), NULL},
+        {"extension_name", "text", N, SQL_UNIQUE(1), NULL},
         {NULL, NULL, N, 0, NULL}
 };
-static value_t spatial_ref_sys_data[] = {
-        I(-1), T("NONE"), I(-1), T("undefined"),
-        I(0), T("NONE"), I(0), T("undefined")
-};
-table_info_t spatial_ref_sys = {
-        "spatial_ref_sys",
-        spatial_ref_sys_columns,
-        spatial_ref_sys_data, 2
+table_info_t gpkg_extensions = {
+        "gpkg_extensions",
+        gpkg_extensions_columns,
+        NULL, 0
 };
 
-static column_info_t data_columns_columns[] = {
+static column_info_t gpkg_spatial_ref_sys_columns[] = {
+        {"srs_name", "text", N, SQL_NOT_NULL, NULL},
+        {"srs_id", "integer", N, SQL_PRIMARY_KEY, NULL},
+        {"organization", "text", N, SQL_NOT_NULL, NULL},
+        {"organization_coordsys_id", "integer", N, SQL_NOT_NULL, NULL},
+        {"definition", "text", N, SQL_NOT_NULL, NULL},
+        {"description", "text", N, 0, NULL},
+        {NULL, NULL, N, 0, NULL}
+};
+static value_t gpkg_spatial_ref_sys_data[] = {
+        T("Undefined Cartesian"), I(-1), T("NONE"), I(-1), T("undefined"), N,
+        T("Undefined Geographic"), I(0), T("NONE"), I(-1), T("undefined"), N
+};
+table_info_t gpkg_spatial_ref_sys = {
+        "gpkg_spatial_ref_sys",
+        gpkg_spatial_ref_sys_columns,
+        gpkg_spatial_ref_sys_data, 2
+};
+
+static column_info_t gpkg_data_columns_columns[] = {
         {"table_name", "text", N, SQL_PRIMARY_KEY, NULL},
         {"column_name", "text", N, SQL_PRIMARY_KEY, NULL},
         {"name", "text", N, 0, NULL},
@@ -66,13 +80,13 @@ static column_info_t data_columns_columns[] = {
         {"mime_type", "text", N, 0, NULL},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t data_columns = {
-        "data_columns",
-        data_columns_columns,
+table_info_t gpkg_data_columns = {
+        "gpkg_data_columns",
+        gpkg_data_columns_columns,
         NULL, 0
 };
 
-static column_info_t metadata_columns[] = {
+static column_info_t gpkg_metadata_columns[] = {
         {"id", "integer", N, SQL_PRIMARY_KEY, NULL},
         {"md_scope", "text", T("dataset"), SQL_NOT_NULL, NULL},
         {"md_standard_uri", "text", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
@@ -80,55 +94,45 @@ static column_info_t metadata_columns[] = {
         {"metadata", "text", T(""), SQL_NOT_NULL, NULL},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t metadata = {
-        "metadata",
-        metadata_columns,
+table_info_t gpkg_metadata = {
+        "gpkg_metadata",
+        gpkg_metadata_columns,
         NULL, 0
 };
 
-static column_info_t metadata_reference_columns[] = {
+static column_info_t gpkg_metadata_reference_columns[] = {
         {"reference_scope", "text", N, SQL_NOT_NULL, NULL},
         {"table_name", "text", N, 0, NULL},
         {"column_name", "text", N, 0, NULL},
         {"row_id_value", "integer", N, 0, NULL},
         {"timestamp", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
-        {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES metadata(id)"},
-        {"md_parent_id", "integer", N, 0, "REFERENCES metadata(id)"},
+        {"md_file_id", "integer", N, SQL_NOT_NULL, "REFERENCES gpkg_metadata(id)"},
+        {"md_parent_id", "integer", N, 0, "REFERENCES gpkg_metadata(id)"},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t metadata_reference = {
-        "metadata_reference",
-        metadata_reference_columns,
+table_info_t gpkg_metadata_reference = {
+        "gpkg_metadata_reference",
+        gpkg_metadata_reference_columns,
         NULL, 0
 };
 
-static column_info_t geometry_columns_columns[] = {
-        {"f_table_name", "text", N, SQL_PRIMARY_KEY, NULL},
-        {"f_geometry_column", "text", N, SQL_PRIMARY_KEY, NULL},
+static column_info_t gpkg_geometry_columns_columns[] = {
+        {"table_name", "text", N, SQL_PRIMARY_KEY,  "REFERENCES gpkg_contents(table_name)"},
+        {"column_name", "text", N, SQL_PRIMARY_KEY, NULL},
         {"geometry_type", "integer", N, SQL_NOT_NULL, NULL},
-        {"coord_dimension", "integer", N, SQL_NOT_NULL, NULL},
-        {"srid", "integer", N, SQL_NOT_NULL, "REFERENCES spatial_ref_sys(srid)"},
+        {"srs_id", "integer", N, SQL_NOT_NULL, "REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+        {"z", "integer", N, SQL_NOT_NULL, NULL},
+        {"m", "integer", N, SQL_NOT_NULL, NULL},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t geometry_columns = {
-        "geometry_columns",
-        geometry_columns_columns,
+table_info_t gpkg_geometry_columns = {
+        "gpkg_geometry_columns",
+        gpkg_geometry_columns_columns,
         NULL, 0
 };
 
-static column_info_t tile_table_metadata_columns[] = {
-        {"t_table_name", "text", N, SQL_PRIMARY_KEY, "REFERENCES geopackage_contents(table_name)"},
-        {"is_times_two_zoom", "integer", I(1), SQL_NOT_NULL, NULL},
-        {NULL, NULL, N, 0, NULL}
-};
-table_info_t tile_table_metadata = {
-        "tile_table_metadata",
-        tile_table_metadata_columns,
-        NULL, 0
-};
-
-static column_info_t tile_matrix_metadata_columns[] = {
-        {"t_table_name", "text", N, SQL_PRIMARY_KEY, "REFERENCES tile_table_metadata(t_table_name)"},
+static column_info_t gpkg_tile_matrix_metadata_columns[] = {
+        {"table_name", "text", N, SQL_PRIMARY_KEY, "REFERENCES gpkg_contents(table_name)"},
         {"zoom_level", "integer", I(0), SQL_PRIMARY_KEY, NULL},
         {"matrix_width", "integer", I(1), SQL_NOT_NULL, NULL},
         {"matrix_height", "integer", I(1), SQL_NOT_NULL, NULL},
@@ -138,9 +142,9 @@ static column_info_t tile_matrix_metadata_columns[] = {
         {"pixel_y_size", "double", D(1.0), SQL_NOT_NULL, NULL},
         {NULL, NULL, N, 0, NULL}
 };
-table_info_t tile_matrix_metadata = {
-        "tile_matrix_metadata",
-        tile_matrix_metadata_columns,
+table_info_t gpkg_tile_matrix_metadata = {
+        "gpkg_tile_matrix_metadata",
+        gpkg_tile_matrix_metadata_columns,
         NULL, 0
 };
 
@@ -154,13 +158,13 @@ const column_info_t tiles_table_columns[] = {
 };
 
 const table_info_t * const tables[] = {
-        &geopackage_contents,
-        &spatial_ref_sys,
-        &data_columns,
-        &metadata,
-        &metadata_reference,
-        &geometry_columns,
-        &tile_table_metadata,
-        &tile_matrix_metadata,
+        &gpkg_contents,
+        &gpkg_extensions,
+        &gpkg_spatial_ref_sys,
+        &gpkg_data_columns,
+        &gpkg_metadata,
+        &gpkg_metadata_reference,
+        &gpkg_geometry_columns,
+        &gpkg_tile_matrix_metadata,
         NULL
 };

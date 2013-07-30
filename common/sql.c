@@ -52,6 +52,9 @@ static int sql_stmt_bind(sqlite3_stmt *stmt, const value_t *values, const int nV
         switch (values[cIx].type) {
             default:
                 break;
+            case VALUE_NULL:
+                result = sqlite3_bind_null(stmt, cIx + 1);
+                break;
             case VALUE_FUNC:
             case VALUE_TEXT:
                 result = sqlite3_bind_text(stmt, cIx + 1, VALUE_AS_TEXT(values[cIx]), -1, SQLITE_STATIC);
@@ -376,6 +379,9 @@ static int sql_format_missing_row(const char* db_name, const table_info_t *table
         switch (row[cIx].type) {
             default:
                 break;
+            case VALUE_NULL:
+                result = strbuf_append(&errmsg, "%s: NULL", table_info->columns[cIx].name);
+                break;
             case VALUE_FUNC:
             case VALUE_TEXT:
                 result = strbuf_append(&errmsg, "%s: '%s'", table_info->columns[cIx].name, VALUE_AS_TEXT(row[cIx]));
@@ -426,7 +432,7 @@ static int sql_check_data(sqlite3 *db, const char* db_name, const table_info_t* 
         if (i > 0) {
             strbuf_append(&sql, " AND");
         }
-        strbuf_append(&sql, " \"%w\" = ?", columns[i].name);
+        strbuf_append(&sql, " \"%w\" IS ?", columns[i].name);
     }
     result = strbuf_data(&sql, &query);
 

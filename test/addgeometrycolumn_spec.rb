@@ -18,25 +18,25 @@ describe 'AddGeometryColumn' do
   it 'should return NULL on success' do
     expect(result_of('SELECT InitGpkg()')).to eq(nil)
     expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom', 0, 'point', 2)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom', 'point', 0)")).to eq(nil)
   end
 
   it 'should succeed even if InitGpkg was not called' do
     expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom', 0, 'point', 2)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom', 'point', 0)")).to eq(nil)
   end
 
   it 'should support all geometry types' do
     expect(result_of('SELECT InitGpkg()')).to eq(nil)
     expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom1', 0, 'point', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom2', 0, 'polygon', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom3', 0, 'linestring', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom4', 0, 'multipoint', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom5', 0, 'multipolygon', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom6', 0, 'multilinestring', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom7', 0, 'geometrycollection', 2)")).to eq(nil)
-    expect(result_of("SELECT AddGeometryColumn('test', 'geom8', 0, 'geometry', 2)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom1', 'point', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom2', 'polygon', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom3', 'linestring', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom4', 'multipoint', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom5', 'multipolygon', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom6', 'multilinestring', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom7', 'geometrycollection', 0)")).to eq(nil)
+    expect(result_of("SELECT AddGeometryColumn('test', 'geom8', 'geometry', 0)")).to eq(nil)
 
     expect(table_structure_of('test')).to eq({
                                                  'id' => {:index => 0, :type => 'int', :not_null => false, :default => nil, :primary_key => false},
@@ -54,30 +54,20 @@ describe 'AddGeometryColumn' do
   it 'should raise error on unsupported geometry type' do
     expect(result_of('SELECT InitGpkg()')).to eq(nil)
     expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect { execute("SELECT AddGeometryColumn('test', 'geom', 0, 'circularstring', 2)") }.to raise_error
+    expect { execute("SELECT AddGeometryColumn('test', 'geom', 'circularstring', 0)") }.to raise_error
   end
 
   it 'should raise error if table does not exist' do
-    expect { execute("SELECT AddGeometryColumn('test', 'geom', 0, 'point', 2)") }.to raise_error
+    expect { execute("SELECT AddGeometryColumn('test', 'geom', 'point', 0)") }.to raise_error
   end
 
   it 'should raise error if column already exists' do
     expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect { execute("SELECT AddGeometryColumn('test', 'id', 0, 'point', 2)") }.to raise_error
+    expect { execute("SELECT AddGeometryColumn('test', 'id', 'point', 0)") }.to raise_error
   end
 
   it 'should raise error if srid does not exists' do
     expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect { execute("SELECT AddGeometryColumn('test', 'geom', 20, 'point', 2)") }.to raise_error
-  end
-
-  it 'should raise error if dimension is less than 2' do
-    expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect { execute("SELECT AddGeometryColumn('test', 'geom', 0, 'point', 1)") }.to raise_error
-  end
-
-  it 'should raise error if dimension is greater than 4' do
-    expect(result_of('CREATE TABLE test (id int)')).to eq(nil)
-    expect { execute("SELECT AddGeometryColumn('test', 'geom', 0, 'point', 5)") }.to raise_error
+    expect { execute("SELECT AddGeometryColumn('test', 'geom', 'point', 20)") }.to raise_error
   end
 end

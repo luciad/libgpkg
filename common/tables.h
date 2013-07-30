@@ -24,44 +24,44 @@
  */
 
 /**
- * Description of the geopackage_contents table.
+ * Description of the gpkg_contents table.
  */
-extern table_info_t geopackage_contents;
+extern table_info_t gpkg_contents;
 
 /**
- * Description of the spatial_ref_sys table.
+ * Description of the gpkg_extensions table.
  */
-extern table_info_t spatial_ref_sys;
+extern table_info_t gpkg_extensions;
 
 /**
- * Description of the data_columns table.
+ * Description of the gpkg_spatial_ref_sys table.
  */
-extern table_info_t data_columns;
+extern table_info_t gpkg_spatial_ref_sys;
 
 /**
- * Description of the xml_metadata table.
+ * Description of the gpkg_data_columns table.
  */
-extern table_info_t metadata;
+extern table_info_t gpkg_data_columns;
 
 /**
- * Description of the metadata_reference table.
+ * Description of the gpkg_metadata table.
  */
-extern table_info_t metadata_reference;
+extern table_info_t gpkg_metadata;
 
 /**
- * Description of the geometry_columns table.
+ * Description of the gpkg_metadata_reference table.
  */
-extern table_info_t geometry_columns;
+extern table_info_t gpkg_metadata_reference;
 
 /**
- * Description of the tile_table_metadata table.
+ * Description of the gpkg_geometry_columns table.
  */
-extern table_info_t tile_table_metadata;
+extern table_info_t gpkg_geometry_columns;
 
 /**
  * Description of the tile_matrix_metadata table.
  */
-extern table_info_t tile_matrix_metadata;
+extern table_info_t gpkg_tile_matrix_metadata;
 
 /**
  * Description of the columns for a tiles table.
