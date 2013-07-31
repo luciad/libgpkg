@@ -144,9 +144,7 @@ static void ST_SRID(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
 static void ST_IsEmpty(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     GPB_FUNC_START(context, args, gpb, stream, error)
 
-    if (nbArgs == 1) {
-        sqlite3_result_int(context, gpb.empty);
-    }
+    sqlite3_result_int(context, gpb.empty);
 
     GPB_FUNC_END
 }
@@ -636,14 +634,17 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 
     result = sql_exec(
         db,
-        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_insert\" AFTER INSERT ON \"%w\" WHEN (NEW.\"%w\" NOT NULL AND ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
-        "  INSERT INTO \"%w\" VALUES ("
-        "    NEW.rowid,"
-        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),"
-        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")"
-        "  );"
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_insert\" AFTER INSERT ON \"%w\"\n"
+        "    WHEN (NEW.\"%w\" NOTNULL AND NOT ST_IsEmpty(NEW.\"%w\"))\n"
+        "BEGIN\n"
+        "  INSERT OR REPLACE INTO \"%w\" VALUES (\n"
+        "    NEW.rowid,\n"
+        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),\n"
+        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")\n"
+        "  );\n"
         "END;",
-        db_name, table_name, column_name, table_name, column_name, column_name,
+        db_name, table_name, column_name, table_name,
+        column_name, column_name,
         index_table_name,
         column_name, column_name,
         column_name, column_name
@@ -655,14 +656,18 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 
     result = sql_exec(
         db,
-        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update1\" AFTER UPDATE OF \"%w\" ON \"%w\" WHEN (OLD.\"%w\" NOT NULL AND ST_IsEmpty(OLD.\"%w\") = 0) AND (NEW.\"%w\" NOT NULL AND ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
-        "  UPDATE \"%w\" SET"
-        "    id = NEW.rowid,"
-        "    minx = ST_MinX(NEW.\"%w\"), maxx = ST_MaxX(NEW.\"%w\"),"
-        "    miny = ST_MinY(NEW.\"%w\"), maxy = ST_MaxY(NEW.\"%w\")"
-        "  WHERE id = OLD.rowid;"
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update1\" AFTER UPDATE OF \"%w\" ON \"%w\"\n"
+        "    WHEN OLD.rowid = NEW.rowid AND\n"
+        "         (NEW.\"%w\" NOTNULL AND NOT ST_IsEmpty(NEW.\"%w\"))\n"
+        "BEGIN\n"
+        "  INSERT OR REPLACE INTO \"%w\" VALUES (\n"
+        "    NEW.rowid,\n"
+        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),\n"
+        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")\n"
+        "  );\n"
         "END;",
-        db_name, table_name, column_name, column_name, table_name, column_name, column_name, column_name, column_name,
+        db_name, table_name, column_name, column_name, table_name,
+        column_name, column_name,
         index_table_name,
         column_name, column_name,
         column_name, column_name
@@ -674,17 +679,15 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 
     result = sql_exec(
         db,
-        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update2\" AFTER UPDATE OF \"%w\" ON \"%w\" WHEN (OLD.\"%w\" ISNULL OR ST_IsEmpty(OLD.\"%w\") = 0) AND (NEW.\"%w\" NOT NULL AND ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
-        "  INSERT INTO \"%w\" VALUES ("
-        "    NEW.rowid,"
-        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),"
-        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")"
-        "  );"
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update2\" AFTER UPDATE OF \"%w\" ON \"%w\"\n"
+        "    WHEN OLD.rowid = NEW.rowid AND\n"
+        "         (NEW.\"%w\" ISNULL OR ST_IsEmpty(NEW.\"%w\"))\n"
+        "BEGIN\n"
+        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
         "END;",
-        db_name, table_name, column_name, column_name, table_name, column_name, column_name, column_name, column_name,
-        index_table_name,
+        db_name, table_name, column_name, column_name, table_name,
         column_name, column_name,
-        column_name, column_name
+        index_table_name
     );
     if (result != SQLITE_OK) {
         error_append(error, "Could not create rtree update trigger 2: %s", sqlite3_errmsg(db));
@@ -693,11 +696,23 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 
     result = sql_exec(
         db,
-        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update3\" AFTER UPDATE OF \"%w\" ON \"%w\" WHEN (OLD.\"%w\" NOT NULL AND ST_IsEmpty(OLD.\"%w\") = 0) AND (NEW.\"%w\" ISNULL OR ST_IsEmpty(NEW.\"%w\") = 0) BEGIN"
-        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;"
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update3\" AFTER UPDATE ON \"%w\"\n"
+        "    WHEN OLD.rowid != NEW.rowid AND\n"
+        "         (NEW.\"%w\" NOTNULL AND NOT ST_IsEmpty(NEW.\"%w\"))\n"
+        "BEGIN\n"
+        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
+        "  INSERT OR REPLACE INTO \"%w\" VALUES (\n"
+        "    NEW.rowid,\n"
+        "    ST_MinX(NEW.\"%w\"), ST_MaxX(NEW.\"%w\"),\n"
+        "    ST_MinY(NEW.\"%w\"), ST_MaxY(NEW.\"%w\")\n"
+        "  );\n"
         "END;",
-        db_name, table_name, column_name, column_name, table_name, column_name, column_name, column_name, column_name,
-        index_table_name
+        db_name, table_name, column_name, table_name,
+        column_name, column_name,
+        index_table_name,
+        index_table_name,
+        column_name, column_name,
+        column_name, column_name
     );
     if (result != SQLITE_OK) {
         error_append(error, "Could not create rtree update trigger 3: %s", sqlite3_errmsg(db));
@@ -706,8 +721,26 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 
     result = sql_exec(
         db,
-        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_delete\" AFTER DELETE ON \"%w\" WHEN (OLD.\"%w\" NOT NULL AND ST_IsEmpty(OLD.\"%w\") = 0) BEGIN"
-        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;"
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update4\" AFTER UPDATE ON \"%w\"\n"
+        "    WHEN OLD.rowid != NEW.rowid AND\n"
+        "         (NEW.\"%w\" ISNULL OR ST_IsEmpty(NEW.\"%w\"))\n"
+        "BEGIN\n"
+        "  DELETE FROM \"%w\" WHERE id IN (OLD.rowid, NEW.rowid);\n"
+        "END;",
+        db_name, table_name, column_name, table_name,
+        column_name, column_name,
+        index_table_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree update trigger 4: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_delete\" AFTER DELETE ON \"%w\"\n"
+        "BEGIN\n"
+        "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
         "END;",
         db_name, table_name, column_name, table_name, column_name, column_name,
         index_table_name
@@ -719,11 +752,25 @@ static int CreateSpatialIndex_(sqlite3 *db, char *db_name, char *table_name, cha
 
     result = sql_exec(
         db,
-        "INSERT OR IGNORE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name) VALUES (\"%w\", \"%w\", \"%w\")",
+        "INSERT OR REPLACE INTO \"%w\".\"%w\" (id, minx, maxx, miny, maxy) "
+        "  SELECT rowid, ST_MinX(\"%w\"), ST_MaxX(\"%w\"), ST_MinY(\"%w\"), ST_MaxY(\"%w\") FROM \"%w\".\"%w\""
+        "  WHERE \"%w\" NOTNULL AND NOT ST_IsEmpty(\"%w\")",
+        db_name, index_table_name,
+        column_name, column_name, column_name, column_name, db_name, table_name,
+        column_name, column_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not populate rtree: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name) VALUES (\"%w\", \"%w\", \"%w\")",
         db_name, table_name, column_name, "gpkg_rtree_index"
     );
     if (result != SQLITE_OK) {
-        error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
+        error_append(error, "Could not register rtree usage in gpkg_extensions: %s", sqlite3_errmsg(db));
         goto exit;
     }
 
@@ -756,6 +803,208 @@ static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_val
     FUNCTION_END(context)
     FUNCTION_FREE_TEXT_ARG(db_name)
     FUNCTION_FREE_TEXT_ARG(table_name)
+}
+
+static int CreateSpatialIndexAlt_(sqlite3 *db, char *db_name, char *table_name, char *column_name, error_t *error) {
+    int result = SQLITE_OK;
+    char* index_table_name = NULL;
+    int exists = 0;
+
+    index_table_name = sqlite3_mprintf("rtree_%s_%s", table_name, column_name);
+    if (index_table_name == NULL) {
+        result = SQLITE_NOMEM;
+        goto exit;
+    }
+
+    // Check if the target table exists
+    exists = 0;
+    result = sql_check_table_exists(db, db_name, index_table_name, &exists);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not check if index table %s.%s exists: %s", db_name, index_table_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    if (exists) {
+        result = SQLITE_OK;
+        goto exit;
+    }
+
+    // Check if the target table exists
+    exists = 0;
+    result = sql_check_table_exists(db, db_name, table_name, &exists);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not check if table %s.%s exists: %s", db_name, table_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    if (!exists) {
+        error_append(error, "Table %s.%s does not exist", db_name, table_name);
+        goto exit;
+    }
+
+    int geom_col_count = 0;
+    result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".gpkg_geometry_columns WHERE table_name LIKE %Q AND column_name LIKE %Q", db_name, table_name, column_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not check if column %s.%s.%s exists in %s.gpkg_geometry_columns: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    if (geom_col_count == 0) {
+        error_append(error, "Column %s.%s.%s is not registered in %s.gpkg_geometry_columns", db_name, table_name, column_name, db_name);
+        goto exit;
+    }
+
+    result = sql_exec(db, "CREATE VIRTUAL TABLE \"%w\".\"%w\" USING rtree(id, minx, maxx, miny, maxy)", db_name, index_table_name);
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree table %s.%s: %s", db_name, index_table_name, sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_insert\" AFTER INSERT ON \"%w\" BEGIN"
+        "  SELECT RTreeAlign(\"%w\", NULL, NEW.rowid, NEW.\"%w\");"
+        "END;",
+        db_name, table_name, column_name, table_name,
+        index_table_name, column_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree insert trigger: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_update\" AFTER UPDATE OF \"%w\" ON \"%w\" BEGIN"
+        "  SELECT RTreeAlign(\"%w\", OLD.rowid, NEW.rowid, NEW.\"%w\");"
+        "END;",
+        db_name, table_name, column_name, column_name, table_name,
+        index_table_name, column_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree update trigger: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "CREATE TRIGGER \"%w\".\"rtree_%w_%w_delete\" AFTER DELETE ON \"%w\" BEGIN"
+        "  SELECT RTreeAlign(\"%w\", OLD.rowid, NULL, NULL);"
+        "END;",
+        db_name, table_name, column_name, table_name, column_name, column_name,
+        index_table_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec_all(
+        db,
+        "SELECT RTreeAlign(\"%w\", NULL, rowid, \"%w\") FROM \"%w\".\"%w\";",
+        index_table_name, column_name, db_name, table_name
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not populate rtree: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+    result = sql_exec(
+        db,
+        "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name) VALUES (\"%w\", \"%w\", \"%w\")",
+        db_name, table_name, column_name, "gpkg_rtree_index"
+    );
+    if (result != SQLITE_OK) {
+        error_append(error, "Could not register rtree usage in gpkg_extensions: %s", sqlite3_errmsg(db));
+        goto exit;
+    }
+
+  exit:
+    sqlite3_free(index_table_name);
+    return result;
+}
+
+static void CreateSpatialIndexAlt(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+    FUNCTION_TEXT_ARG(db_name)
+    FUNCTION_TEXT_ARG(table_name)
+    FUNCTION_TEXT_ARG(column_name)
+    FUNCTION_START(context)
+
+    if (nbArgs == 3) {
+        FUNCTION_GET_TEXT_ARG(context, db_name)
+    } else {
+        FUNCTION_SET_TEXT_ARG(db_name, "main")
+    }
+    FUNCTION_GET_TEXT_ARG(context, table_name)
+    FUNCTION_GET_TEXT_ARG(context, column_name)
+
+    FUNCTION_START_TRANSACTION(__create_spatial_index)
+    FUNCTION_RESULT = InitGpkg_(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
+    if (FUNCTION_RESULT == SQLITE_OK) {
+        FUNCTION_RESULT = CreateSpatialIndexAlt_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, FUNCTION_ERROR_PTR);
+    }
+    FUNCTION_END_TRANSACTION(__create_spatial_index)
+
+    FUNCTION_END(context)
+    FUNCTION_FREE_TEXT_ARG(db_name)
+    FUNCTION_FREE_TEXT_ARG(table_name)
+}
+
+static void RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  error_t error;
+  char error_buffer[256];
+
+  if (error_init_fixed(&error, error_buffer, 256) != SQLITE_OK) {
+    sqlite3_result_error(context, "Could not init error buffer", -1);
+    return;
+  }
+
+  sqlite3 *db = sqlite3_context_db_handle(context);
+  const unsigned char *rtree_table = sqlite3_value_text(args[0]);
+  int oldidok = sqlite3_value_type(args[1]) != SQLITE_NULL;
+  int oldid = oldidok ? sqlite3_value_int(args[1]) : 0;
+  int newidok = sqlite3_value_type(args[2]) != SQLITE_NULL;
+  int newid = newidok ? sqlite3_value_int(args[2]) : 0;
+
+  if (newidok == 0) {
+    if( oldidok != 0 ) {
+      sql_exec(db, "DELETE FROM %s WHERE id = %d", rtree_table, oldid);
+    }
+  } else {
+    if( oldidok != 0 && newid != oldid) {
+      sql_exec(db, "DELETE FROM %s WHERE id = %d", rtree_table, oldid);
+    }
+
+    if (sqlite3_value_type(args[3]) == SQLITE_NULL) {
+      sql_exec(db, "DELETE FROM %s WHERE id = %d", rtree_table, newid);
+    } else {
+      binstream_t stream;
+      uint8_t *blob = (uint8_t *) sqlite3_value_blob(args[3]);\
+      size_t length = (size_t) sqlite3_value_bytes(args[3]);\
+      binstream_init(&stream, blob, length);
+
+      gpb_header_t gpb;
+      if ( gpb_read_header(&stream, &gpb, &error) == SQLITE_OK ) {
+        if (gpb.empty != 0) {
+          sql_exec(db, "DELETE FROM %s WHERE id = %d", rtree_table, newid);
+          sqlite3_result_null(context);
+        } else {
+          if (gpb.envelope.has_env_x == 0 || gpb.envelope.has_env_y == 0) {
+            wkb_fill_envelope(&stream, &gpb.envelope, NULL);
+          }
+
+          sql_exec(db, "INSERT OR REPLACE INTO %s (id, minx, maxx, miny, maxy) VALUES (%d, %g, %g, %g, %g)", rtree_table, newid, gpb.envelope.min_x, gpb.envelope.max_x, gpb.envelope.min_y, gpb.envelope.max_y);
+        }
+      } else {
+        sqlite3_result_error(context, error_count(&error) > 0 ? error_message(&error) : "Invalid GPB header", -1);
+        return;
+      }
+
+      binstream_destroy(&stream);
+    }
+  }
+
+  sqlite3_result_null(context);
 }
 
 const char *gpkg_libversion(void) {
@@ -809,6 +1058,9 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_ro
     FUNC( CreateTilesTable, 2 );
     FUNC( CreateSpatialIndex, 2 );
     FUNC( CreateSpatialIndex, 3 );
+    FUNC( CreateSpatialIndexAlt, 2 );
+    FUNC( CreateSpatialIndexAlt, 3 );
+    FUNC( RTreeAlign, 4 );
 
     return SQLITE_OK;
 }

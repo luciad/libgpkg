@@ -232,6 +232,32 @@ int sql_exec(sqlite3 *db, char *sql, ...) {
     return result;
 }
 
+int sql_exec_all(sqlite3 *db, char *sql, ...) {
+    int result;
+    sqlite3_stmt *stmt;
+
+    va_list args;
+    va_start(args, sql);
+    result = sql_stmt_vinit(&stmt, db, sql, args);
+    va_end(args);
+
+    if (result != SQLITE_OK) {
+        return result;
+    }
+
+    int stmt_res;
+    do {
+      stmt_res = sqlite3_step(stmt);
+    } while (stmt_res == SQLITE_ROW);
+
+    if (stmt_res != SQLITE_DONE) {
+      result = stmt_res;
+    }
+
+    sql_stmt_destroy(stmt);
+    return result;
+}
+
 int sql_check_table_exists(sqlite3 *db, const char* db_name, const char* table_name, int *exists) {
     sqlite3_stmt *stmt = NULL;
     int result = SQLITE_OK;

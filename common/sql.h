@@ -235,6 +235,15 @@ int sql_rollback(sqlite3 *db, char *name);
 int sql_exec(sqlite3 *db, char *sql, ...);
 
 /**
+ * Executes a SQL statement. The SQL statement can be a printf style format pattern.
+ * @param db the SQLite database context
+ * @param sql the SQL statement to execute
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
+int sql_exec_all(sqlite3 *db, char *sql, ...);
+
+/**
  * Executes a SQL statement that is expected to return a single string value. The SQL statement can be a printf style
  * format pattern.
  * @param db the SQLite database context
