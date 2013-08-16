@@ -5,6 +5,11 @@ GeoPackage is an open, standards-based, application and platform independent, an
 
 [Luciad](http://www.luciad.com) is actively participating in the GeoPackage Standards Working Group to define this standard. We are releasing this library under the liberal [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) to promote widespread adoption of this new format.
 
+Luciad is using this library in its LuciadLightspeed and LuciadMobile products to handle GeoPackage data. Both products provide
+a rich set of components for geospatial situational awareness. See [www.luciad.com](http://www.luciad.com) for more information. 
+
+A free GeoPackage viewer on Android, based on LuciadMobile, is available at [demo.luciad.com/GeoPackage](http://demo.luciad.com/GeoPackage/).
+
 # License
 libgpkg is distributed under the [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) version 2.0.
 
