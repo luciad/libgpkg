@@ -15,8 +15,8 @@ add_library (
 set_target_properties( gpkgcommon PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 set ( gpkg_VERSION_MAJOR 0 )
-set ( gpkg_VERSION_MINOR 7 )
-set ( gpkg_VERSION_PATCH 3 )
+set ( gpkg_VERSION_MINOR 8 )
+set ( gpkg_VERSION_PATCH 0 )
 
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99" )

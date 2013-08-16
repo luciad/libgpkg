@@ -33,11 +33,17 @@
  * Column flag that indicates the column is part of the primary key of the table.
  */
 #define SQL_PRIMARY_KEY 0x2
+
+/**
+ * Column flag that indicates the column is part of the primary key of the table.
+ */
+#define SQL_AUTOINCREMENT 0x4
+
 /**
  * Macro to generate a column flag that indicates the column is part of a unique constraint. The index value
  * indicates which unique constraint the column is part of. Index must be greater than 0.
  */
-#define SQL_UNIQUE(i) (0x4 | (i << 4))
+#define SQL_UNIQUE(i) (0x8 | ((i & 0xF) << 4))
 
 /**
  * Enumeration of value types.
@@ -159,6 +165,7 @@ typedef struct {
      * Bitwise OR of any flags that apply to this column. This field may contain a combination of:
      * \li SQL_NOT_NULL
      * \li SQL_PRIMARY_KEY
+     * \li SQL_AUTOINCREMENT
      * \li SQL_UNIQUE
      */
     const int flags;

@@ -19,6 +19,7 @@
 #include "sql.h"
 
 #define SQL_NOT_NULL_MASK SQL_NOT_NULL
+#define SQL_AUTOINCREMENT_MASK SQL_AUTOINCREMENT
 #define SQL_PRIMARY_KEY_MASK SQL_PRIMARY_KEY
 #define SQL_UNIQUE_MASK SQL_UNIQUE(0)
 
@@ -596,7 +597,7 @@ static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t*
     return result;
 }
 
-#define SQL_CONSTRAINT_IX(flags) (flags >> 4)
+#define SQL_CONSTRAINT_IX(flags) ( (flags >> 4) & 0xF)
 #define SQL_IS_CONSTRAINT(flags, mask, ix) ((flags & mask) && (SQL_CONSTRAINT_IX(flags) == ix))
 
 static void appendTableConstraint(const table_info_t *table_info, strbuf_t *sql, int constraint_mask, int constraint_idx) {
@@ -648,12 +649,18 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
         return result;
     }
 
-    int has_pk = 0;
+    int pk_count = 0;
     int max_uk = -1;
     int nColumns = sql_count_columns(table_info);
 
-    strbuf_append(&sql, "CREATE TABLE IF NOT EXISTS \"%w\".\"%w\" (", db_name, table_info->name);
     const column_info_t *columns = table_info->columns;
+    for(int i = 0; i < nColumns; i++) {
+        if (columns[i].flags & SQL_PRIMARY_KEY_MASK) {
+            pk_count++;
+        }
+    }
+
+    strbuf_append(&sql, "CREATE TABLE IF NOT EXISTS \"%w\".\"%w\" (", db_name, table_info->name);
     for(int i = 0; i < nColumns; i++) {
         if (i > 0) {
             strbuf_append(&sql, ",\n  \"%w\" %s", columns[i].name, columns[i].type);
@@ -664,6 +671,13 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
         if (flags & SQL_NOT_NULL_MASK) {
             strbuf_append(&sql, " NOT NULL");
         }
+        if ((flags & SQL_PRIMARY_KEY_MASK) && pk_count == 1) {
+            strbuf_append(&sql, " PRIMARY KEY");
+            if (flags & SQL_AUTOINCREMENT) {
+                strbuf_append(&sql, " AUTOINCREMENT");
+            }
+        }
+
         switch (columns[i].default_value.type) {
             default:
                 break;
@@ -685,10 +699,6 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
             strbuf_append(&sql, " %s", columns[i].column_constraints);
         }
 
-        if (flags & SQL_PRIMARY_KEY_MASK) {
-            has_pk = 1;
-        }
-
         if (flags & SQL_UNIQUE_MASK) {
             int ix = SQL_CONSTRAINT_IX(flags);
             if (ix > max_uk) {
@@ -697,7 +707,7 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
         }
     }
 
-    if (has_pk) {
+    if (pk_count > 1) {
         appendTableConstraint(table_info, &sql, SQL_PRIMARY_KEY_MASK, 0);
     }
 
