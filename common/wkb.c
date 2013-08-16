@@ -113,6 +113,7 @@ static int read_wkb_geometry_header(binstream_t *stream, geom_header_t *header, 
 
     uint32_t type;
     if (binstream_read_u32(stream, &type) != SQLITE_OK) {
+        if (error) error_append(error, "Error reading geometry type");
         return SQLITE_IOERR;
     }
     uint32_t modifier = (type / 1000) * 1000;
@@ -170,7 +171,7 @@ static int read_wkb_geometry_header(binstream_t *stream, geom_header_t *header, 
     return SQLITE_OK;
 }
 
-static int read_point(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_point(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     int result;
     uint32_t coord_size = header->coord_size;
     double coord[coord_size];
@@ -178,6 +179,7 @@ static int read_point(binstream_t *stream, const geom_consumer_t *consumer, cons
     for (int i = 0; i < coord_size; i++) {
         result = binstream_read_double(stream, &coord[i]);
         if (result != SQLITE_OK) {
+            if (error) error_append(error,"Error reading point coordinates");
             return result;
         }
         allnan &= isnan(coord[i]);
@@ -192,7 +194,7 @@ static int read_point(binstream_t *stream, const geom_consumer_t *consumer, cons
 
 #define COORD_BATCH_SIZE 10
 
-static int read_points(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, uint32_t point_count) {
+static int read_points(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, uint32_t point_count, error_t *error) {
     int result;
     double coord[header->coord_size * COORD_BATCH_SIZE];
 
@@ -203,6 +205,7 @@ static int read_points(binstream_t *stream, const geom_consumer_t *consumer, con
         for (int i = 0; i < coords_to_read; i++) {
             result = binstream_read_double(stream, &coord[i]);
             if (result != SQLITE_OK) {
+                if (error) error_append(error,"Error reading point coordinates");
                 return result;
             }
         }
@@ -218,12 +221,13 @@ static int read_points(binstream_t *stream, const geom_consumer_t *consumer, con
     return SQLITE_OK;
 }
 
-static int read_linearring(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_linearring(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     int result = SQLITE_OK;
 
     uint32_t point_count;
     result = binstream_read_u32(stream, &point_count);
     if (result != SQLITE_OK) {
+        if (error) error_append(error,"Error reading linear ring point count");
         goto exit;
     }
 
@@ -236,7 +240,7 @@ static int read_linearring(binstream_t *stream, const geom_consumer_t *consumer,
         goto exit;
     }
 
-    result = read_points(stream, consumer, &ring_header, point_count);
+    result = read_points(stream, consumer, &ring_header, point_count, error);
     if (result != SQLITE_OK) {
         goto exit;
     }
@@ -247,9 +251,10 @@ static int read_linearring(binstream_t *stream, const geom_consumer_t *consumer,
     return result;
 }
 
-static int read_linestring(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_linestring(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     uint32_t point_count;
     if (binstream_read_u32(stream, &point_count) != SQLITE_OK) {
+        if (error) error_append(error,"Error reading line string point count");
         return SQLITE_IOERR;
     }
 
@@ -263,31 +268,33 @@ static int read_linestring(binstream_t *stream, const geom_consumer_t *consumer,
     return consumer->coordinates(consumer, header, point_count, coord);
 }
 
-static int read_polygon(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_polygon(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     uint32_t ring_count;
     if (binstream_read_u32(stream, &ring_count) != SQLITE_OK) {
+        if (error) error_append(error,"Error reading polygon ring count");
         return SQLITE_IOERR;
     }
 
     for (int i = 0; i < ring_count; i++) {
-        if (read_linearring(stream, consumer, header) != SQLITE_OK) {
+        if (read_linearring(stream, consumer, header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
     }
     return SQLITE_OK;
 }
 
-static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, geom_header_t *header, error_t *pT);
+static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, geom_header_t *header, error_t *error);
 
-static int read_multipoint(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_multipoint(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     uint32_t point_count;
     if (binstream_read_u32(stream, &point_count) != SQLITE_OK) {
+        if (error) error_append(error,"Error reading multipoint element count");
         return SQLITE_IOERR;
     }
 
     geom_header_t point_header;
     for (int i = 0; i < point_count; i++) {
-        if (read_wkb_geometry_header(stream, &point_header, NULL) != SQLITE_OK) {
+        if (read_wkb_geometry_header(stream, &point_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
 
@@ -295,22 +302,23 @@ static int read_multipoint(binstream_t *stream, const geom_consumer_t *consumer,
             return SQLITE_IOERR;
         }
 
-        if (read_geometry(stream, consumer, &point_header, NULL) != SQLITE_OK) {
+        if (read_geometry(stream, consumer, &point_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
     }
     return SQLITE_OK;
 }
 
-static int read_multilinestring(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_multilinestring(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     uint32_t linestring_count;
     if (binstream_read_u32(stream, &linestring_count) != SQLITE_OK) {
+        if (error) error_append(error,"Error reading multilinestring element count");
         return SQLITE_IOERR;
     }
 
     geom_header_t linestring_header;
     for (int i = 0; i < linestring_count; i++) {
-        if (read_wkb_geometry_header(stream, &linestring_header, NULL) != SQLITE_OK) {
+        if (read_wkb_geometry_header(stream, &linestring_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
 
@@ -318,22 +326,23 @@ static int read_multilinestring(binstream_t *stream, const geom_consumer_t *cons
             return SQLITE_IOERR;
         }
 
-        if (read_geometry(stream, consumer, &linestring_header, NULL) != SQLITE_OK) {
+        if (read_geometry(stream, consumer, &linestring_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
     }
     return SQLITE_OK;
 }
 
-static int read_multipolygon(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_multipolygon(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     uint32_t polygon_count;
     if (binstream_read_u32(stream, &polygon_count) != SQLITE_OK) {
+        if (error) error_append(error,"Error reading multipolygon element count");
         return SQLITE_IOERR;
     }
 
     geom_header_t polygon_header;
     for (int i = 0; i < polygon_count; i++) {
-        if (read_wkb_geometry_header(stream, &polygon_header, NULL) != SQLITE_OK) {
+        if (read_wkb_geometry_header(stream, &polygon_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
 
@@ -341,22 +350,23 @@ static int read_multipolygon(binstream_t *stream, const geom_consumer_t *consume
             return SQLITE_IOERR;
         }
 
-        if (read_geometry(stream, consumer, &polygon_header, NULL) != SQLITE_OK) {
+        if (read_geometry(stream, consumer, &polygon_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
     }
     return SQLITE_OK;
 }
 
-static int read_geometrycollection(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header) {
+static int read_geometrycollection(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     uint32_t geometry_count;
     if (binstream_read_u32(stream, &geometry_count) != SQLITE_OK) {
+        if (error) error_append(error,"Error reading geometrycollection element count");
         return SQLITE_IOERR;
     }
 
     geom_header_t geometry_header;
     for (int i = 0; i < geometry_count; i++) {
-        if (read_wkb_geometry_header(stream, &geometry_header, NULL) != SQLITE_OK) {
+        if (read_wkb_geometry_header(stream, &geometry_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
 
@@ -364,7 +374,7 @@ static int read_geometrycollection(binstream_t *stream, const geom_consumer_t *c
             return SQLITE_IOERR;
         }
 
-        if (read_geometry(stream, consumer, &geometry_header, NULL) != SQLITE_OK) {
+        if (read_geometry(stream, consumer, &geometry_header, error) != SQLITE_OK) {
             return SQLITE_IOERR;
         }
     }
@@ -374,7 +384,7 @@ static int read_geometrycollection(binstream_t *stream, const geom_consumer_t *c
 static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, geom_header_t *header, error_t *error) {
     int result;
 
-    int (*read_body)(binstream_t *, const geom_consumer_t *, const geom_header_t *);
+    int (*read_body)(binstream_t *, const geom_consumer_t *, const geom_header_t *, error_t *);
     switch (header->geom_type) {
         case GEOM_POINT:
             read_body = read_point;
@@ -408,7 +418,7 @@ static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, g
         goto exit;
     }
 
-    result = (*read_body)(stream, consumer, header);
+    result = (*read_body)(stream, consumer, header, error);
     if (result != SQLITE_OK) {
         goto exit;
     }
