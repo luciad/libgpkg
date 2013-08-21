@@ -50,7 +50,7 @@ static column_info_t gpkg_contents_columns[] = {
         {"min_y", "double", N, 0, NULL},
         {"max_x", "double", N, 0, NULL},
         {"max_y", "double", N, 0, NULL},
-        {"srid", "integer", N, 0, "CONSTRAINT fk_srid__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+        {"srs_id", "integer", N, 0, "CONSTRAINT fk_srid__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
         {NULL, NULL, N, 0, NULL}
 };
 table_info_t gpkg_contents = {
