@@ -13,6 +13,9 @@ add_library (
 )
 
 set_target_properties( gpkgcommon PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+if ( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
+  set_target_properties ( gpkgcommon PROPERTIES PREFIX "" )
+endif()
 
 set ( gpkg_VERSION_MAJOR 0 )
 set ( gpkg_VERSION_MINOR 8 )
