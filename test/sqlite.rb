@@ -178,14 +178,14 @@ module SQLite3
       end
     end
 
-    def load_extension(file)
+    def load_extension(file, entry_point)
       res = sqlite3_enable_load_extension(@db, 1)
       if res != SQLite3::OK
         raise sqlite3_errmsg(@db)
       end
 
       err_ptr = FFI::MemoryPointer.new :pointer
-      res = sqlite3_load_extension(@db, file, nil, err_ptr)
+      res = sqlite3_load_extension(@db, file, entry_point, err_ptr)
       err_msg_ptr = err_ptr.get_pointer(0)
       err_ptr.free
 

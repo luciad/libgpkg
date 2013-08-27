@@ -30,14 +30,9 @@
 const char *gpkg_libversion(void);
 
 /**
- * Entry point for the GeoPackage library.
- */
-void gpkg_init(const void *);
-
-/**
  * Entry point for the GeoPackage SQLite extension.
  */
-int gpkg_extension_init(sqlite3*, const char **, const void *);
+int sqlite3_gpkg_init(sqlite3*, const char **, const void *);
 
 /** @} */
 

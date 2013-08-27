@@ -251,6 +251,28 @@ int sql_exec(sqlite3 *db, char *sql, ...);
 int sql_exec_all(sqlite3 *db, char *sql, ...);
 
 /**
+ * Callback function for sql_exec_stmt.
+ * @param stmt the currently executing statement
+ * @param data the user defined data that was passed to sql_exec_stmt
+ * @return SQLITE_OK to continue iterating
+ *         SQLITE_DONE to abort iterating; sql_exec_stmt returns with SQLITE_OK
+ *         A SQLite error code to abort iterating; sql_exec_stmt returns with the return value of this function
+ */
+typedef int(*sql_callback)(sqlite3_stmt *stmt, void *data);
+
+/**
+ * Executes a SQL statement. The SQL statement can be a printf style format pattern.
+ * @param db the SQLite database context
+ * @param row optional callback that is called for each row in the result set
+ * @param nodata optional callback that is called when the result set is empty
+ * @param data optional user data that is passed to the row and/or nodata callbacks
+ * @param sql the SQL statement to execute
+ * @return SQLITE_OK if the transaction was successfully comitted\n
+ *         A SQLite error code otherwise
+ */
+int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void* data, char *sql, ...);
+
+/**
  * Executes a SQL statement that is expected to return a single string value. The SQL statement can be a printf style
  * format pattern.
  * @param db the SQLite database context

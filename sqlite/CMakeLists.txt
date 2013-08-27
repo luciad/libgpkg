@@ -1,7 +1,8 @@
 add_library ( sqlite_static STATIC sqlite3.c )
-set_target_properties( sqlite_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+set_target_properties( sqlite_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE OUTPUT_NAME "sqlite3" )
 
 add_library ( sqlite_shared SHARED sqlite3.c )
+set_target_properties( sqlite_shared PROPERTIES OUTPUT_NAME "sqlite3" )
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
   set_target_properties ( sqlite_static PROPERTIES PREFIX "" )

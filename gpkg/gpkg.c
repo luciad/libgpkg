@@ -15,6 +15,7 @@
  */
 #include <stdio.h>
 #include <stdint.h>
+#include "check.h"
 #include "config.h"
 #include "sqlite.h"
 #include "binstream.h"
@@ -348,21 +349,6 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
 #define FUNCTION_SET_INT_ARG(arg, val) arg = val;
 #define FUNCTION_FREE_INT_ARG(arg)
 
-static int CheckGpkg_(sqlite3 *db, char *db_name, error_t *error) {
-    int result = SQLITE_OK;
-    const table_info_t * const *table = tables;
-
-    while (*table != NULL) {
-        result = sql_check_table(db, db_name, *table, error);
-        if (result != SQLITE_OK) {
-            break;
-        }
-        table++;
-    }
-
-    return result;
-}
-
 static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
     FUNCTION_TEXT_ARG(db_name)
     FUNCTION_START(context)
@@ -373,7 +359,7 @@ static void CheckGpkg(sqlite3_context *context, int nbArgs, sqlite3_value **args
         FUNCTION_GET_TEXT_ARG(context, db_name);
     }
 
-    FUNCTION_RESULT = CheckGpkg_(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
+    FUNCTION_RESULT = check_gpkg(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
 
     FUNCTION_END(context)
     FUNCTION_FREE_TEXT_ARG(db_name)
@@ -1008,7 +994,7 @@ static void RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value **arg
 }
 
 const char *gpkg_libversion(void) {
-    return VERSION;
+    return LIBGPKG_VERSION;
 }
 
 #define REGISTER_FUNC(name, function, args) if (sqlite3_create_function_v2( db, #name, args, SQLITE_UTF8, NULL, function, NULL, NULL, NULL ) != SQLITE_OK) return SQLITE_ERROR;
@@ -1016,12 +1002,8 @@ const char *gpkg_libversion(void) {
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
 
-void gpkg_init(const sqlite3_api_routines *pThunk) {
+int sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
-}
-
-int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
-    gpkg_init(pThunk);
 
     ST_FUNC( MinX, 1 );
     ST_FUNC( MaxX, 1 );

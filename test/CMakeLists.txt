@@ -1,7 +1,7 @@
 find_package(Ruby REQUIRED)
 
 get_target_property( sqlite_location sqlite_shared LOCATION )
-get_target_property( gpkgext_location gpkgext LOCATION )
+get_target_property( gpkgext_location gpkg_ext LOCATION )
 
 if(NOT(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR))
     configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/Gemfile ${CMAKE_CURRENT_BINARY_DIR}/Gemfile COPYONLY )

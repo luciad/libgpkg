@@ -14,8 +14,7 @@ if(DOXYGEN_FOUND)
   )
 endif(DOXYGEN_FOUND)
 
-add_subdirectory( common )
-add_subdirectory( extension )
+add_subdirectory( gpkg )
 add_subdirectory( shell )
 add_subdirectory( sqlite )
 

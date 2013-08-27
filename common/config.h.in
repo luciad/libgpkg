@@ -1,1 +1,0 @@
-#define VERSION "@gpkg_VERSION_MAJOR@.@gpkg_VERSION_MINOR@.@gpkg_VERSION_PATCH@"

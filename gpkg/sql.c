@@ -81,151 +81,37 @@ static void sql_stmt_destroy(sqlite3_stmt *stmt) {
     }
 }
 
-static int sql_step_for_string(sqlite3_stmt *stmt, char **out) {
-    int result = SQLITE_OK;
+static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, void* data, char *sql, va_list args) {
+    sqlite3_stmt *stmt = NULL;
+    int result = sql_stmt_vinit(&stmt, db, sql, args);
+
+    if (result != SQLITE_OK) {
+        return result;
+    }
 
     int stmt_res = sqlite3_step(stmt);
-    if (stmt_res == SQLITE_ROW) {
-        int col_count = sqlite3_column_count(stmt);
-        if (col_count > 0) {
-            int length = sqlite3_column_bytes(stmt, 0);
-            if (length <= 0) {
-                *out = NULL;
-            } else {
-                const unsigned char *text = sqlite3_column_text(stmt, 0);
-                *out = sqlite3_malloc(length + 1);
-                if (*out == NULL) {
-                    result = SQLITE_NOMEM;
-                    goto exit;
-                }
-                memmove(*out, text, (size_t)length + 1);
+    if ( stmt_res == SQLITE_DONE ) {
+        if ( nodata != NULL ) {
+            result = nodata(stmt, data);
+        }
+    } else {
+        if ( row ) {
+            while( stmt_res == SQLITE_ROW ) {
+                stmt_res = sqlite3_step(stmt);
             }
-
         } else {
-            *out = NULL;
+            while( stmt_res == SQLITE_ROW ) {
+                int callback_res = row(stmt, data);
+                if ( callback_res != SQLITE_OK ) {
+                    stmt_res = callback_res;
+                } else {
+                    stmt_res = sqlite3_step(stmt);
+                }
+            }
         }
-    } else if (stmt_res == SQLITE_DONE) {
-        *out = NULL;
-    } else {
-        result = SQLITE_IOERR;
     }
 
-    exit:
-    return result;
-}
-
-static int sql_step_for_int(sqlite3_stmt *stmt, int *out) {
-    int result = SQLITE_OK;
-
-    int stmt_res = sqlite3_step(stmt);
-    if (stmt_res == SQLITE_ROW) {
-        int col_count = sqlite3_column_count(stmt);
-        if (col_count > 0) {
-            *out = sqlite3_column_int(stmt, 0);
-        } else {
-            *out = 0;
-        }
-    } else if (stmt_res == SQLITE_DONE) {
-        *out = 0;
-    } else {
-        result = SQLITE_IOERR;
-    }
-
-    return result;
-}
-
-static int sql_step_for_double(sqlite3_stmt *stmt, double *out) {
-    int result = SQLITE_OK;
-
-    int stmt_res = sqlite3_step(stmt);
-    if (stmt_res == SQLITE_ROW) {
-        int col_count = sqlite3_column_count(stmt);
-        if (col_count > 0) {
-            *out = sqlite3_column_double(stmt, 0);
-        } else {
-            *out = 0;
-        }
-    } else if (stmt_res == SQLITE_DONE) {
-        *out = 0;
-    } else {
-        result = SQLITE_IOERR;
-    }
-
-    return result;
-}
-
-int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
-    int result;
-    sqlite3_stmt *stmt;
-
-    va_list args;
-    va_start(args, sql);
-    result = sql_stmt_vinit(&stmt, db, sql, args);
-    va_end(args);
-
-    if (result != SQLITE_OK) {
-        return result;
-    }
-
-    result = sql_step_for_string(stmt, out);
-
-    sql_stmt_destroy(stmt);
-    return result;
-}
-
-int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...) {
-    int result;
-    sqlite3_stmt *stmt;
-
-    va_list args;
-    va_start(args, sql);
-    result = sql_stmt_vinit(&stmt, db, sql, args);
-    va_end(args);
-
-    if (result != SQLITE_OK) {
-        return result;
-    }
-
-    result = sql_step_for_int(stmt, out);
-
-    sql_stmt_destroy(stmt);
-    return result;
-}
-
-int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...) {
-    int result;
-    sqlite3_stmt *stmt;
-
-    va_list args;
-    va_start(args, sql);
-    result = sql_stmt_vinit(&stmt, db, sql, args);
-    va_end(args);
-
-    if (result != SQLITE_OK) {
-        return result;
-    }
-
-    result = sql_step_for_double(stmt, out);
-
-    sql_stmt_destroy(stmt);
-    return result;
-}
-
-int sql_exec(sqlite3 *db, char *sql, ...) {
-    int result;
-    sqlite3_stmt *stmt;
-
-    va_list args;
-    va_start(args, sql);
-    result = sql_stmt_vinit(&stmt, db, sql, args);
-    va_end(args);
-
-    if (result != SQLITE_OK) {
-        return result;
-    }
-
-    int stmt_res = sqlite3_step(stmt);
-    if (stmt_res != SQLITE_ROW && stmt_res != SQLITE_DONE) {
+    if ( stmt_res != SQLITE_DONE ) {
         result = stmt_res;
     }
 
@@ -233,29 +119,111 @@ int sql_exec(sqlite3 *db, char *sql, ...) {
     return result;
 }
 
-int sql_exec_all(sqlite3 *db, char *sql, ...) {
-    int result;
-    sqlite3_stmt *stmt;
+static int row_string(sqlite3_stmt *stmt, void* data) {
+    char **out = (char**)data;
+    int col_count = sqlite3_column_count(stmt);
+    if (col_count > 0) {
+        int length = sqlite3_column_bytes(stmt, 0);
+        if (length <= 0) {
+            *out = NULL;
+        } else {
+            const unsigned char *text = sqlite3_column_text(stmt, 0);
+            *out = sqlite3_malloc(length + 1);
+            if (*out == NULL) {
+                return SQLITE_NOMEM;
+            }
+            memmove(*out, text, (size_t)length + 1);
+        }
+        return SQLITE_DONE;
+    } else {
+        return SQLITE_MISUSE;
+    }
+}
 
+static int nodata_string(sqlite3_stmt *stmt, void* out) {
+    *((char**)out) = NULL;
+    return SQLITE_DONE;
+}
+
+int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
     va_list args;
     va_start(args, sql);
-    result = sql_stmt_vinit(&stmt, db, sql, args);
+    int result = sql_stmt_exec(db, row_string, nodata_string, out, sql, args);
     va_end(args);
+    return result;
+}
 
-    if (result != SQLITE_OK) {
-        return result;
+static int row_int(sqlite3_stmt *stmt, void *data) {
+    int col_count = sqlite3_column_count(stmt);
+    if (col_count > 0) {
+        *((int*)data) = sqlite3_column_int(stmt, 0);
+        return SQLITE_DONE;
+    } else {
+        return SQLITE_MISUSE;
     }
+}
 
-    int stmt_res;
-    do {
-      stmt_res = sqlite3_step(stmt);
-    } while (stmt_res == SQLITE_ROW);
+static int nodata_int(sqlite3_stmt *stmt, void *data) {
+    *((int*)data) = 0;
+    return SQLITE_DONE;
+}
 
-    if (stmt_res != SQLITE_DONE) {
-      result = stmt_res;
+int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...) {
+    va_list args;
+    va_start(args, sql);
+    int result = sql_stmt_exec(db, row_int, nodata_int, out, sql, args);
+    va_end(args);
+    return result;
+}
+
+static int row_double(sqlite3_stmt *stmt, void *data) {
+    int col_count = sqlite3_column_count(stmt);
+    if (col_count > 0) {
+        *((double*)data) = sqlite3_column_double(stmt, 0);
+        return SQLITE_DONE;
+    } else {
+        return SQLITE_MISUSE;
     }
+}
 
-    sql_stmt_destroy(stmt);
+static int nodata_double(sqlite3_stmt *stmt, void *data) {
+    *((double*)data) = 0.0;
+    return SQLITE_DONE;
+}
+
+int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...) {
+    va_list args;
+    va_start(args, sql);
+    int result = sql_stmt_exec(db, row_double, nodata_double, out, sql, args);
+    va_end(args);
+    return result;
+}
+
+static int abort_after_first_row(sqlite3_stmt *stmt, void *data) {
+    return SQLITE_DONE;
+}
+
+int sql_exec(sqlite3 *db, char *sql, ...) {
+    va_list args;
+    va_start(args, sql);
+    int result = sql_stmt_exec(db, abort_after_first_row, NULL, NULL, sql, args);
+    va_end(args);
+    return result;
+}
+
+int sql_exec_all(sqlite3 *db, char *sql, ...) {
+    va_list args;
+    va_start(args, sql);
+    int result = sql_stmt_exec(db, NULL, NULL, NULL, sql, args);
+    va_end(args);
+    return result;
+}
+
+int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void* data, char *sql, ...) {
+    va_list args;
+    va_start(args, sql);
+    int result = sql_stmt_exec(db, row, nodata, data, sql, args);
+    va_end(args);
     return result;
 }
 
