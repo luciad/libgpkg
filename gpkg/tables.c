@@ -32,7 +32,7 @@ static column_info_t gpkg_spatial_ref_sys_columns[] = {
 };
 static value_t gpkg_spatial_ref_sys_data[] = {
         T("Undefined Cartesian"), I(-1), T("NONE"), I(-1), T("undefined"), N,
-        T("Undefined Geographic"), I(0), T("NONE"), I(-1), T("undefined"), N
+        T("Undefined Geographic"), I(0), T("NONE"), I(0), T("undefined"), N
 };
 table_info_t gpkg_spatial_ref_sys = {
         "gpkg_spatial_ref_sys",
@@ -74,7 +74,7 @@ table_info_t gpkg_extensions = {
 static column_info_t gpkg_geometry_columns_columns[] = {
         {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY,  "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
         {"column_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-        {"geometry_type", "integer", N, SQL_NOT_NULL, NULL},
+        {"geometry_type", "text", N, SQL_NOT_NULL, NULL},
         {"srs_id", "integer", N, SQL_NOT_NULL, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
         {"z", "integer", N, SQL_NOT_NULL, NULL},
         {"m", "integer", N, SQL_NOT_NULL, NULL},
