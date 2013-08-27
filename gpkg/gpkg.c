@@ -856,9 +856,6 @@ int sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_rout
     FUNC( CreateTilesTable, 2 );
     FUNC( CreateSpatialIndex, 2 );
     FUNC( CreateSpatialIndex, 3 );
-    FUNC( CreateSpatialIndexAlt, 2 );
-    FUNC( CreateSpatialIndexAlt, 3 );
-    FUNC( RTreeAlign, 4 );
 
     return SQLITE_OK;
 }
