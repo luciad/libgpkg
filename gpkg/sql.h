@@ -75,24 +75,18 @@ typedef enum {
  * A SQL value.
  */
 typedef struct {
-    union {
-        /**
-         * The value as a string. This field is valid if type is VALUE_TEXT or VALUE_FUNC.
-         */
-        char *text;
-        /**
-         * The value as a double. This field is valid if type is VALUE_DOUBLE.
-         */
-        double dbl;
-        /**
-         * The value as an integer. This field is valid if type is VALUE_INTEGER.
-         */
-        int integer;
-    }
     /**
-     * The value union.
+     * The value as a string. This field is valid if type is VALUE_TEXT or VALUE_FUNC.
      */
-    value;
+    char *text;
+    /**
+     * The value as a double. This field is valid if type is VALUE_DOUBLE.
+     */
+    double dbl;
+    /**
+     * The value as an integer. This field is valid if type is VALUE_INTEGER.
+     */
+    int integer;
 
     /**
      * The type of this value.
@@ -103,26 +97,26 @@ typedef struct {
 /**
  * Macro to initialize a value_t containing a NULL value.
  */
-#define NULL_VALUE {{.integer = 0}, VALUE_NULL}
+#define NULL_VALUE {NULL, 0.0, 0, VALUE_NULL}
 
 /**
  * Macro to initialize a value_t containing a string value.
  */
-#define TEXT_VALUE(t) {{.text = t}, VALUE_TEXT}
+#define TEXT_VALUE(t) {t, 0.0, 0, VALUE_TEXT}
 /**
  * Macro to initialize a value_t containing a function name value.
  */
-#define FUNC_VALUE(t) {{.text = t}, VALUE_FUNC}
+#define FUNC_VALUE(t) {t, 0.0, 0, VALUE_FUNC}
 
 /**
  * Macro to initialize a value_t containing a double value.
  */
-#define DOUBLE_VALUE(t) {{.dbl = t}, VALUE_DOUBLE}
+#define DOUBLE_VALUE(t) {NULL, t, 0, VALUE_DOUBLE}
 
 /**
  * Macro to initialize a value_t containing an integer value.
  */
-#define INT_VALUE(t) {{.integer = t}, VALUE_INTEGER}
+#define INT_VALUE(t) {NULL, 0.0, t, VALUE_INTEGER}
 
 /**
  * Macro to retrieve the NULL value contained in a value_t.
@@ -131,19 +125,19 @@ typedef struct {
 /**
  * Macro to retrieve the string value contained in a value_t.
  */
-#define VALUE_AS_TEXT(v) (v.value.text)
+#define VALUE_AS_TEXT(v) (v.text)
 /**
  * Macro to retrieve the function name value contained in a value_t.
  */
-#define VALUE_AS_FUNC(v) (v.value.text)
+#define VALUE_AS_FUNC(v) (v.text)
 /**
  * Macro to retrieve the double value contained in a value_t.
  */
-#define VALUE_AS_DOUBLE(v) (v.value.dbl)
+#define VALUE_AS_DOUBLE(v) (v.dbl)
 /**
  * Macro to retrieve the integer value contained in a value_t.
  */
-#define VALUE_AS_INT(v) (v.value.integer)
+#define VALUE_AS_INT(v) (v.integer)
 
 /**
  * Description of a column in a SQL table.

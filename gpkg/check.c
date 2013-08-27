@@ -2,10 +2,11 @@
 #include "tables.h"
 
 static int integrity_check_row(sqlite3_stmt *stmt, void *data) {
-    const unsigned char* row = sqlite3_column_text(stmt, 0);
+    const char* row = (const char*)sqlite3_column_text(stmt, 0);
     if ( sqlite3_strnicmp(row, "ok", 3) != 0 ) {
         error_append( (error_t*)data, "integrity: %s", row );
     }
+    return SQLITE_OK;
 }
 
 static int integrity_check(sqlite3 *db, char *db_name, error_t *error) {

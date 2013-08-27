@@ -103,7 +103,7 @@ int strbuf_vappend(strbuf_t *buffer, const char *msg, va_list args) {
                 new_capacity = needed_capacity;
             }
 
-            void *data = sqlite3_realloc(buffer->buffer, (int)new_capacity);
+            char *data = sqlite3_realloc(buffer->buffer, (int)new_capacity);
             if (data == NULL) {
                 result = SQLITE_NOMEM;
                 goto exit;

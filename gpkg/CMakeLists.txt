@@ -26,8 +26,13 @@ set ( gpkg_VERSION_MAJOR 0 )
 set ( gpkg_VERSION_MINOR 8 )
 set ( gpkg_VERSION_PATCH 0 )
 
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
-  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99" )
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
+  add_definitions(-DGPKG_API=__attribute__\(\(visibility\("default"\)\)\))
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
+endif()
+
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "MSVC" )
+  add_definitions(-DGPKG_API=__declspec\(dllexport\))
 endif()
 
 include(CheckFunctionExists)
@@ -44,8 +49,4 @@ set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
   set_target_properties ( gpkg_ext PROPERTIES PREFIX "" )
-endif()
-
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" )
-  target_link_libraries ( gpkg_ext "-Wl,--retain-symbols-file=${CMAKE_CURRENT_SOURCE_DIR}/gpkg.sym" )
 endif()

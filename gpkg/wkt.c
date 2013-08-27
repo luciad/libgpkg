@@ -64,9 +64,8 @@ static int wkt_begin_geometry(const geom_consumer_t *consumer, const geom_header
             case GEOM_GEOMETRYCOLLECTION:
                 result = strbuf_append(&writer->strbuf, "GeometryCollection ");
                 break;
-            case GEOM_LINEARRING:
-                // Should never happen, since linear ring is not a top level geometry type.
-                result = strbuf_append(&writer->strbuf, "LinearRing ");
+            default:
+                result = SQLITE_ERROR;
                 break;
         }
 
