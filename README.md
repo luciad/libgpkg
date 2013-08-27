@@ -28,10 +28,12 @@ libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sq
 - ST\_AsText, ST\_GeomFromText, ST\_WKBFromText, ST\_WKTToSQL
 
 ## Non-Standard Functions
+
 - CheckGpkg
 - InitGpkg
 - AddGeometryColumn
 - CreateTilesTable
+- CreateSpatialIndex
 
 # Compilation
 
@@ -41,4 +43,8 @@ libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sq
 - Build the project using the generated build scripts.
 - The build scripts will generate a number of binaries
     - shell/gpkg: a modified version of the SQLite 3 command-line shell that autoloads the GeoPackage extension. This is a standalone binary that has been statically linked with SQLite 3 and the GeoPackage extension.
-    - extension/libgpkgext.so: a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
+    - gpkg/libgpkg.so: a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
+
+# Dependencies
+
+- libgpkg requires SQLite 3.7.0 or higher.

@@ -1005,6 +1005,13 @@ const char *gpkg_libversion(void) {
 int sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
 
+    if ( sqlite3_libversion_number() < 3007000 ) {
+        if (pzErrMsg) {
+            *pzErrMsg = sqlite3_mprintf( "libgpkg requires SQLite 3.7.0 or higher; detected %s", sqlite3_libversion() );
+        }
+        return SQLITE_ERROR;
+    }
+
     ST_FUNC( MinX, 1 );
     ST_FUNC( MaxX, 1 );
     ST_FUNC( MinY, 1 );
