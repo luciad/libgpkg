@@ -96,7 +96,7 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
             result = nodata(stmt, data);
         }
     } else {
-        if ( row ) {
+        if ( row == NULL ) {
             while( stmt_res == SQLITE_ROW ) {
                 stmt_res = sqlite3_step(stmt);
             }
