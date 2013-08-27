@@ -3,7 +3,7 @@
 
 static int integrity_check_row(sqlite3_stmt *stmt, void *data) {
     const unsigned char* row = sqlite3_column_text(stmt, 0);
-    if ( sqlite3_strnicmp(row, "ok", 2) != 0 ) {
+    if ( sqlite3_strnicmp(row, "ok", 3) != 0 ) {
         error_append( (error_t*)data, "integrity: %s", row );
     }
 }

@@ -93,21 +93,21 @@ int geom_type_from_string(const char* type_name, geom_type_t *type) {
   geom_type_t geom_type = GEOM_GEOMETRY;
 
   int result = SQLITE_OK;
-  if (sqlite3_stricmp(type_name, "point") == 0) {
+  if (sqlite3_strnicmp(type_name, "point", 6) == 0) {
       geom_type = GEOM_POINT;
-  } else if (sqlite3_stricmp(type_name, "polygon") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "polygon", 8) == 0) {
       geom_type = GEOM_POLYGON;
-  } else if (sqlite3_stricmp(type_name, "linestring") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "linestring", 11) == 0) {
       geom_type = GEOM_LINESTRING;
-  } else if (sqlite3_stricmp(type_name, "multipoint") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "multipoint", 11) == 0) {
       geom_type = GEOM_MULTIPOINT;
-  } else if (sqlite3_stricmp(type_name, "multipolygon") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "multipolygon", 13) == 0) {
       geom_type = GEOM_MULTIPOLYGON;
-  } else if (sqlite3_stricmp(type_name, "multilinestring") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "multilinestring", 16) == 0) {
       geom_type = GEOM_MULTILINESTRING;
-  } else if (sqlite3_stricmp(type_name, "geometrycollection") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "geometrycollection", 19) == 0) {
       geom_type = GEOM_GEOMETRYCOLLECTION;
-  } else if (sqlite3_stricmp(type_name, "geometry") == 0) {
+  } else if (sqlite3_strnicmp(type_name, "geometry", 9) == 0) {
       geom_type = GEOM_GEOMETRY;
   } else {
       result = SQLITE_ERROR;
