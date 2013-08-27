@@ -481,9 +481,11 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     FUNCTION_TEXT_ARG(column_name)
     FUNCTION_TEXT_ARG(geometry_type)
     FUNCTION_INT_ARG(srs_id)
+    FUNCTION_INT_ARG(z)
+    FUNCTION_INT_ARG(m)
     FUNCTION_START(context)
 
-    if (nbArgs == 6) {
+    if (nbArgs == 7) {
         FUNCTION_GET_TEXT_ARG(context, db_name)
     } else {
         FUNCTION_SET_TEXT_ARG(db_name,"main")
@@ -492,11 +494,16 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     FUNCTION_GET_TEXT_ARG(context, column_name)
     FUNCTION_GET_TEXT_ARG(context, geometry_type)
     FUNCTION_GET_INT_ARG(srs_id)
+    FUNCTION_GET_INT_ARG(z)
+    FUNCTION_GET_INT_ARG(m)
+
 
     FUNCTION_START_TRANSACTION(__add_geom_col)
+
     FUNCTION_RESULT = InitGpkg_(FUNCTION_DB_HANDLE, db_name, FUNCTION_ERROR_PTR);
+
     if (FUNCTION_RESULT == SQLITE_OK) {
-      FUNCTION_RESULT = AddGeometryColumn_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, geometry_type, srs_id, 2, 2, FUNCTION_ERROR_PTR);
+      FUNCTION_RESULT = AddGeometryColumn_(FUNCTION_DB_HANDLE, db_name, table_name, column_name, geometry_type, srs_id, z, m, FUNCTION_ERROR_PTR);
     }
     FUNCTION_END_TRANSACTION(__add_geom_col)
 
@@ -506,6 +513,8 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
     FUNCTION_FREE_TEXT_ARG(column_name)
     FUNCTION_FREE_TEXT_ARG(geometry_type)
     FUNCTION_FREE_INT_ARG(srid)
+    FUNCTION_FREE_INT_ARG(z)
+    FUNCTION_FREE_INT_ARG(m)
 }
 
 static int CreateTilesTable_(sqlite3 *db, char *db_name, char *table_name, error_t *error) {
@@ -1041,8 +1050,8 @@ int sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_rout
     FUNC( CheckGpkg, 1 );
     FUNC( InitGpkg, 0 );
     FUNC( InitGpkg, 1 );
-    FUNC( AddGeometryColumn, 4 );
-    FUNC( AddGeometryColumn, 5 );
+    FUNC( AddGeometryColumn, 6 );
+    FUNC( AddGeometryColumn, 7 );
     FUNC( CreateTilesTable, 1 );
     FUNC( CreateTilesTable, 2 );
     FUNC( CreateSpatialIndex, 2 );
