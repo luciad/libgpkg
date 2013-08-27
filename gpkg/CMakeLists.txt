@@ -35,6 +35,7 @@ include(CheckFunctionExists)
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h"
 )
+add_definitions(-DGPKG_HAVE_CONFIG_H)
 
 include_directories( "${PROJECT_SOURCE_DIR}/sqlite" ${CMAKE_CURRENT_BINARY_DIR} )
 

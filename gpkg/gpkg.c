@@ -15,17 +15,19 @@
  */
 #include <stdio.h>
 #include <stdint.h>
-#include "check.h"
-#include "config.h"
-#include "sqlite.h"
 #include "binstream.h"
+#include "check.h"
 #include "geomio.h"
-#include "wkb.h"
 #include "gpb.h"
 #include "sql.h"
+#include "sqlite.h"
+#include "tables.h"
+#include "wkb.h"
 #include "wkt.h"
 
-#include "tables.h"
+#ifdef GPKG_HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 SQLITE_EXTENSION_INIT1
 
