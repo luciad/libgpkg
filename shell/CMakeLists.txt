@@ -17,7 +17,7 @@ endif()
 configure_file ( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
-if ( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+if ( UNIX )
   install(
     TARGETS gpkg_shell
     RUNTIME DESTINATION "bin"
