@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include "sqlite.h"
 #include "sql.h"
+#include "vla.h"
 
 #define SQL_NOT_NULL_MASK SQL_NOT_NULL
 #define SQL_AUTOINCREMENT_MASK SQL_AUTOINCREMENT
@@ -129,7 +130,7 @@ static int row_string(sqlite3_stmt *stmt, void* data) {
             *out = NULL;
         } else {
             const unsigned char *text = sqlite3_column_text(stmt, 0);
-            *out = sqlite3_malloc(length + 1);
+            *out = (char*)sqlite3_malloc(length + 1);
             if (*out == NULL) {
                 return SQLITE_NOMEM;
             }
@@ -264,7 +265,7 @@ static int sql_count_columns(const table_info_t *table_info) {
 
 static int sql_check_cols(sqlite3_stmt *stmt, const table_info_t *table_info, error_t *error) {
     int nColumns = sql_count_columns(table_info);
-    int found[nColumns];
+    VLA(int, found, nColumns);
     memset(found, 0, nColumns * sizeof(int));
     int result;
 

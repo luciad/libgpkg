@@ -19,7 +19,7 @@
 #include "strbuf.h"
 
 int strbuf_init(strbuf_t *strbuf, size_t initial_size) {
-    void *data = sqlite3_malloc((int)initial_size);
+    char *data = (char*)sqlite3_malloc((int)initial_size);
     if (data == NULL) {
         return SQLITE_NOMEM;
     }
@@ -66,7 +66,7 @@ char *strbuf_data_pointer(strbuf_t *buffer) {
 
 int strbuf_data(strbuf_t *buffer, char **out) {
     size_t length = strbuf_length(buffer);
-    *out = sqlite3_malloc((int)(length + 1));
+    *out = (char*)sqlite3_malloc((int)(length + 1));
     if (*out == NULL) {
         return SQLITE_NOMEM;
     } else {
@@ -103,7 +103,7 @@ int strbuf_vappend(strbuf_t *buffer, const char *msg, va_list args) {
                 new_capacity = needed_capacity;
             }
 
-            char *data = sqlite3_realloc(buffer->buffer, (int)new_capacity);
+            char *data = (char*)sqlite3_realloc(buffer->buffer, (int)new_capacity);
             if (data == NULL) {
                 result = SQLITE_NOMEM;
                 goto exit;

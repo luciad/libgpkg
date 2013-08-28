@@ -53,9 +53,10 @@ if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Cla
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
 endif()
 
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "MSVC" )
-  add_definitions(-DGPKG_CALL=__cdecl)
+if ( MSVC )
+  add_definitions(-DGPKG_CALL=__cdecl -DGPKG_MSVC)
   set_target_properties( gpkg_ext PROPERTIES COMPILE_DEFINITIONS "$<TARGET_PROPERTY:gpkg_ext,COMPILE_DEFINITIONS> -DGPKG_API=__declspec\(dllexport\)" )
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TP" )
 endif()
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )

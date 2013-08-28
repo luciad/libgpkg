@@ -18,6 +18,7 @@
 #include <string.h>
 #include "gpb.h"
 #include "sqlite.h"
+#include "nan.h"
 
 #define GPB_VERSION 0
 #define GPB_BIG_ENDIAN 0

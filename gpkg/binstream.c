@@ -29,7 +29,7 @@ int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
 }
 
 int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
-    void *data = sqlite3_malloc((int)(initial_cap * sizeof(uint8_t)));
+    uint8_t *data = (uint8_t*)sqlite3_malloc((int)(initial_cap * sizeof(uint8_t)));
     if (data == NULL) {
         return SQLITE_NOMEM;
     }
@@ -71,7 +71,7 @@ static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
         if (needed > newcapacity) {
             newcapacity = needed;
         }
-        void *newdata = sqlite3_realloc(stream->data, (int)newcapacity);
+        uint8_t *newdata = (uint8_t*)sqlite3_realloc(stream->data, (int)newcapacity);
         if (newdata == NULL) {
             return SQLITE_NOMEM;
         }
