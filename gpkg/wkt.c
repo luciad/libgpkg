@@ -17,8 +17,6 @@
 #include <stdio.h>
 #include "sqlite.h"
 #include "wkt.h"
-#include "error.h"
-#include "vla.h"
 
 static int wkt_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
     int result = SQLITE_OK;
@@ -326,7 +324,7 @@ static void wkt_next_token(wkt_tokenizer_t *tok) {
 }
 
 static int wkt_read_point(wkt_tokenizer_t *tok, const geom_header_t *header, const geom_consumer_t *consumer) {
-    VLA(double, coords, header->coord_size);
+    double coords[GEOM_MAX_COORD_SIZE];
 
     for (int i = 0; i < header->coord_size; i++) {
         if (tok->token != WKT_NUMBER) {
@@ -347,7 +345,7 @@ static int wkt_read_point(wkt_tokenizer_t *tok, const geom_header_t *header, con
 #define COORD_BATCH_SIZE 10
 
 static int wkt_read_points(wkt_tokenizer_t *tok, const geom_header_t *header, const geom_consumer_t *consumer) {
-    VLA(double, coords, header->coord_size * COORD_BATCH_SIZE);
+    double coords[GEOM_MAX_COORD_SIZE * COORD_BATCH_SIZE];
 
     size_t coord_count = 0;
     int coord_offset = 0;

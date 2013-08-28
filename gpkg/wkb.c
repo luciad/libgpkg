@@ -21,7 +21,6 @@
 #include "error.h"
 #include "geomio.h"
 #include "nan.h"
-#include "vla.h"
 
 #define WKB_BE 0
 #define WKB_LE 1
@@ -176,7 +175,7 @@ static int read_wkb_geometry_header(binstream_t *stream, geom_header_t *header, 
 static int read_point(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
     int result;
     uint32_t coord_size = header->coord_size;
-    VLA(double, coord, coord_size);
+    double coord[GEOM_MAX_COORD_SIZE];
     int allnan = 1;
     for (int i = 0; i < coord_size; i++) {
         result = binstream_read_double(stream, &coord[i]);
@@ -198,7 +197,7 @@ static int read_point(binstream_t *stream, const geom_consumer_t *consumer, cons
 
 static int read_points(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, uint32_t point_count, error_t *error) {
     int result;
-    VLA(double, coord, header->coord_size * COORD_BATCH_SIZE);
+    double coord[GEOM_MAX_COORD_SIZE * COORD_BATCH_SIZE];
 
     uint32_t remaining = point_count;
     while(remaining > 0) {
@@ -260,14 +259,7 @@ static int read_linestring(binstream_t *stream, const geom_consumer_t *consumer,
         return SQLITE_IOERR;
     }
 
-    uint32_t coord_count = header->coord_size * point_count;
-    VLA(double, coord, coord_count);
-    for (int i = 0; i < coord_count; i++) {
-        if (binstream_read_double(stream, &coord[i]) != SQLITE_OK) {
-            return SQLITE_IOERR;
-        }
-    }
-    return consumer->coordinates(consumer, header, point_count, coord);
+    return read_points(stream, consumer, header, point_count, error);
 }
 
 static int read_polygon(binstream_t *stream, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {

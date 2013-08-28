@@ -90,6 +90,8 @@ typedef enum {
     GEOM_XYZM
 } coord_type_t;
 
+#define GEOM_MAX_COORD_SIZE 4
+
 /**
  * The header of a geometry.
  */

@@ -18,7 +18,6 @@
 #include <stdio.h>
 #include "sqlite.h"
 #include "sql.h"
-#include "vla.h"
 
 #define SQL_NOT_NULL_MASK SQL_NOT_NULL
 #define SQL_AUTOINCREMENT_MASK SQL_AUTOINCREMENT
@@ -264,13 +263,15 @@ static int sql_count_columns(const table_info_t *table_info) {
 }
 
 static int sql_check_cols(sqlite3_stmt *stmt, const table_info_t *table_info, error_t *error) {
-    int nColumns = sql_count_columns(table_info);
-    VLA(int, found, nColumns);
-    memset(found, 0, nColumns * sizeof(int));
     int result;
+    int nColumns = sql_count_columns(table_info);
+    int *found = (int*)sqlite3_malloc(nColumns * sizeof(int));
+    if (found == NULL) {
+        return SQLITE_NOMEM;
+    }
+    memset(found, 0, nColumns * sizeof(int));
 
     result = sqlite3_step(stmt);
-
     while( result == SQLITE_ROW ) {
         // 0 index
         // 1 name
@@ -327,18 +328,19 @@ static int sql_check_cols(sqlite3_stmt *stmt, const table_info_t *table_info, er
         result = sqlite3_step(stmt);
     }
 
-    if (result != SQLITE_DONE) {
-        return result;
-    }
-
-    for (int i = 0; i < nColumns; i++) {
-        if (found[i] == 0) {
-            if (error) {
-                error_append(error, "Column %s.%s is missing\n", table_info->name, table_info->columns[i].name);
+    if (result == SQLITE_DONE) {
+        for (int i = 0; i < nColumns; i++) {
+            if (found[i] == 0) {
+                if (error) {
+                    error_append(error, "Column %s.%s is missing\n", table_info->name, table_info->columns[i].name);
+                }
             }
         }
     }
-    return SQLITE_OK;
+
+    sqlite3_free(found);
+
+    return result;
 }
 
 static int sql_check_table_schema(sqlite3 *db, const char* db_name, const table_info_t* table_info, error_t *error) {
