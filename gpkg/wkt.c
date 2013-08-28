@@ -99,7 +99,8 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 
     wkt_writer_t *writer = (wkt_writer_t *) consumer;
 
-    if (writer->children[writer->offset] == 0) {
+    int first = writer->children[writer->offset] == 0;
+    if (first) {
         result = strbuf_append(&writer->strbuf, "(");
     }
     writer->children[writer->offset]++;
@@ -114,8 +115,9 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 			      double x = coords[offset++];
 			      double y = coords[offset++];
 
-            if (i == 0) {
+            if (first) {
                 result = strbuf_append(&writer->strbuf, WKT_COORD_2, x, y);
+                first = 0;
             } else {
                 result = strbuf_append(&writer->strbuf, ", "WKT_COORD_2, x, y);
             }
@@ -129,8 +131,9 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 			      double x = coords[offset++];
 			      double y = coords[offset++];
 			      double zm = coords[offset++];
-            if (i == 0) {
+            if (first) {
                 result = strbuf_append(&writer->strbuf, WKT_COORD_3, x, y, zm);
+                first = 0;
             } else {
                 result = strbuf_append(&writer->strbuf, ", "WKT_COORD_3, x, y, zm);
             }
@@ -145,8 +148,9 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 			      double y = coords[offset++];
 			      double z = coords[offset++];
 			      double m = coords[offset++];
-            if (i == 0) {
+            if (first) {
                 result = strbuf_append(&writer->strbuf, WKT_COORD_4, x, y, z, m);
+                first = 0;
             } else {
                 result = strbuf_append(&writer->strbuf, ", "WKT_COORD_4, x, y, z, m);
             }
