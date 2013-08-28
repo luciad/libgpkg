@@ -16,23 +16,39 @@
 #ifndef GPKG_H
 #define GPKG_H
 
-#include <sqlite3.h>
+#include <sqlite3ext.h>
 
 /**
  * \addtogroup gpkg Library initialization and metadata
  * @{
  */
 
+#ifndef GPKG_EXPORT
+#define GPKG_EXPORT
+#endif
+
+#ifndef GPKG_CALL
+#define GPKG_CALL
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Returns the version number of libgpkg as a string.
  * @return a version number
  */
-const char *gpkg_libversion(void);
+GPKG_EXPORT const char * GPKG_CALL gpkg_libversion(void);
 
 /**
  * Entry point for the GeoPackage SQLite extension.
  */
-int sqlite3_gpkg_init(sqlite3*, const char **, const void *);
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3*, const char **, const sqlite3_api_routines *);
+
+#ifdef __cplusplus
+}
+#endif
 
 /** @} */
 

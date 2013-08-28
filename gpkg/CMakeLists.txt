@@ -26,15 +26,6 @@ set ( gpkg_VERSION_MAJOR 0 )
 set ( gpkg_VERSION_MINOR 8 )
 set ( gpkg_VERSION_PATCH 0 )
 
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
-  add_definitions(-DGPKG_API=__attribute__\(\(visibility\("default"\)\)\))
-  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
-endif()
-
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "MSVC" )
-  add_definitions(-DGPKG_API=__declspec\(dllexport\))
-endif()
-
 include(CheckFunctionExists)
 
 configure_file (
@@ -49,4 +40,14 @@ set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
   set_target_properties ( gpkg_ext PROPERTIES PREFIX "" )
+endif()
+
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
+  add_definitions(-DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\))
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
+endif()
+
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "MSVC" )
+  add_definitions(-DGPKG_CALL=__cdecl)
+  set_target_properties( gpkg_ext PROPERTIES COMPILE_DEFINITIONS "$<TARGET_PROPERTY:gpkg_ext,COMPILE_DEFINITIONS> -DGPKG_API=__declspec\(dllexport\)" )
 endif()

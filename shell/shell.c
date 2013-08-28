@@ -33,7 +33,19 @@
 #include <stdio.h>
 #include <assert.h>
 #include "sqlite3.h"
+
+#ifndef SQLITE_CORE
+#define SQLITE_CORE_DEFINED
+#define SQLITE_CORE
+#endif
+
 #include "gpkg.h"
+
+#ifdef SQLITE_CORE_DEFINED
+#undef SQLITE_CORE_DEFINED
+#undef SQLITE_CORE
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

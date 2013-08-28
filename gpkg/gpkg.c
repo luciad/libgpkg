@@ -18,6 +18,7 @@
 #include "binstream.h"
 #include "check.h"
 #include "geomio.h"
+#include "gpkg.h"
 #include "gpb.h"
 #include "sql.h"
 #include "sqlite.h"
@@ -802,7 +803,11 @@ static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_val
     FUNCTION_FREE_TEXT_ARG(table_name)
 }
 
-const char *gpkg_libversion(void) {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+GPKG_EXPORT const char * GPKG_CALL gpkg_libversion(void) {
     return LIBGPKG_VERSION;
 }
 
@@ -811,11 +816,7 @@ const char *gpkg_libversion(void) {
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
 
-#ifndef GPKG_API
-#define GPKG_API
-#endif
-
-GPKG_API int sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
 
     if ( sqlite3_libversion_number() < 3007000 ) {
@@ -863,3 +864,7 @@ GPKG_API int sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3
 
     return SQLITE_OK;
 }
+
+#ifdef __cplusplus
+}
+#endif
