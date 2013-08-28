@@ -14,6 +14,12 @@ if(DOXYGEN_FOUND)
   )
 endif(DOXYGEN_FOUND)
 
+set ( gpkg_VERSION_MAJOR 0 )
+set ( gpkg_VERSION_MINOR 8 )
+set ( gpkg_VERSION_PATCH 0 )
+set ( gpkg_BUILD_VERSION "${gpkg_VERSION_MAJOR}.${gpkg_VERSION_MINOR}.${gpkg_VERSION_PATCH}" )
+set ( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
+
 add_subdirectory( gpkg )
 add_subdirectory( shell )
 add_subdirectory( sqlite )
