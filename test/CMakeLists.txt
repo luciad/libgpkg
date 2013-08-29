@@ -22,4 +22,3 @@ foreach(test_script IN LISTS test_scripts)
     )
     set_property( TEST ${test_script} PROPERTY ENVIRONMENT RUBY_SQLITE=${sqlite_location} GPKG_EXTENSION=${gpkgext_location} )
 endforeach(test_script)
-
