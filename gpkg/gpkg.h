@@ -31,12 +31,12 @@ extern "C" {
  * Returns the version number of libgpkg as a string.
  * @return a version number
  */
-const char * gpkg_libversion(void);
+const char *gpkg_libversion(void);
 
 /**
  * Entry point for the GeoPackage SQLite extension.
  */
-int gpkg_extension_init(sqlite3*, const char **, const sqlite3_api_routines *);
+int gpkg_extension_init(sqlite3 *, const char **, const sqlite3_api_routines *);
 
 #ifdef __cplusplus
 }

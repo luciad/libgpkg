@@ -43,16 +43,16 @@ typedef enum {
  */
 typedef struct {
   /** @private */
-	uint8_t *data;
-	/** @private */
-	size_t limit;
-	/** @private */
-	size_t position;
-	/** @private */
-    size_t capacity;
-    /** @private */
-	binstream_endianness end;
-	/** @private */
+  uint8_t *data;
+  /** @private */
+  size_t limit;
+  /** @private */
+  size_t position;
+  /** @private */
+  size_t capacity;
+  /** @private */
+  binstream_endianness end;
+  /** @private */
   int growable;
 } binstream_t;
 
@@ -94,7 +94,7 @@ void binstream_destroy(binstream_t *stream);
  * @return the number of bytes that can be read
  * @see binstream_available
  */
-uint8_t* binstream_data(binstream_t *stream);
+uint8_t *binstream_data(binstream_t *stream);
 
 /**
  * Rewinds the stream, setting the limit to the current position and the position to 0. This function can be used

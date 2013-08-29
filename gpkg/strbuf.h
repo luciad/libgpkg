@@ -28,14 +28,14 @@
  * A string buffer.
  */
 typedef struct {
-    /** @private */
-    char *buffer;
-    /** @private */
-    size_t capacity;
-    /** @private */
-    size_t length;
-    /** @private */
-    int growable;
+  /** @private */
+  char *buffer;
+  /** @private */
+  size_t capacity;
+  /** @private */
+  size_t length;
+  /** @private */
+  int growable;
 } strbuf_t;
 
 /**
@@ -53,7 +53,7 @@ int strbuf_init(strbuf_t *strbuf, size_t initial_size);
  * @param length the length of buffer in bytes
  * @return SQLITE_OK on success, an error code otherwise
  */
-int strbuf_init_fixed(strbuf_t *strbuf, char* buffer, size_t length);
+int strbuf_init_fixed(strbuf_t *strbuf, char *buffer, size_t length);
 
 /**
  * Destroys a string buffer, freeing any internal data structures that have been allocated.
@@ -94,7 +94,7 @@ int strbuf_data(strbuf_t *buffer, char **out);
  *
  * @return SQLITE_OK on success, an error code otherwise
  */
-int strbuf_append(strbuf_t *buffer, const char* fmt, ...);
+int strbuf_append(strbuf_t *buffer, const char *fmt, ...);
 
 /**
  * Appends a formatted string to this string buffer.
@@ -105,7 +105,7 @@ int strbuf_append(strbuf_t *buffer, const char* fmt, ...);
  *
  * @return SQLITE_OK on success, an error code otherwise
  */
-int strbuf_vappend(strbuf_t *buffer, const char* fmt, va_list args);
+int strbuf_vappend(strbuf_t *buffer, const char *fmt, va_list args);
 
 /** @} */
 

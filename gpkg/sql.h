@@ -49,49 +49,49 @@
  * Enumeration of value types.
  */
 typedef enum {
-    /**
-     * Indicates the value of a value_t struct contains a text value.
-     */
-    VALUE_TEXT,
-    /**
-     * Indicates the value of a value_t struct contains a function name value.
-     */
-    VALUE_FUNC,
-    /**
-     * Indicates the value of a value_t struct contains an integer value.
-     */
-    VALUE_INTEGER,
-    /**
-     * Indicates the value of a value_t struct contains a double value.
-     */
-    VALUE_DOUBLE,
-    /**
-     * Indicates the value of a value_t struct contains a NULL value.
-     */
-    VALUE_NULL
+  /**
+   * Indicates the value of a value_t struct contains a text value.
+   */
+  VALUE_TEXT,
+  /**
+   * Indicates the value of a value_t struct contains a function name value.
+   */
+  VALUE_FUNC,
+  /**
+   * Indicates the value of a value_t struct contains an integer value.
+   */
+  VALUE_INTEGER,
+  /**
+   * Indicates the value of a value_t struct contains a double value.
+   */
+  VALUE_DOUBLE,
+  /**
+   * Indicates the value of a value_t struct contains a NULL value.
+   */
+  VALUE_NULL
 } value_type_t;
 
 /**
  * A SQL value.
  */
 typedef struct {
-    /**
-     * The value as a string. This field is valid if type is VALUE_TEXT or VALUE_FUNC.
-     */
-    char *text;
-    /**
-     * The value as a double. This field is valid if type is VALUE_DOUBLE.
-     */
-    double dbl;
-    /**
-     * The value as an integer. This field is valid if type is VALUE_INTEGER.
-     */
-    int integer;
+  /**
+   * The value as a string. This field is valid if type is VALUE_TEXT or VALUE_FUNC.
+   */
+  char *text;
+  /**
+   * The value as a double. This field is valid if type is VALUE_DOUBLE.
+   */
+  double dbl;
+  /**
+   * The value as an integer. This field is valid if type is VALUE_INTEGER.
+   */
+  int integer;
 
-    /**
-     * The type of this value.
-     */
-    value_type_t type;
+  /**
+   * The type of this value.
+   */
+  value_type_t type;
 } value_t;
 
 /**
@@ -143,54 +143,54 @@ typedef struct {
  * Description of a column in a SQL table.
  */
 typedef struct {
-    /**
-     * The name of the column.
-     */
-    const char *name;
-    /**
-     * The SQL type of the column.
-     */
-    const char *type;
-    /**
-     * The default value of the column. This field may be set to NULL.
-     */
-    const value_t default_value;
-    /**
-     * Bitwise OR of any flags that apply to this column. This field may contain a combination of:
-     * \li SQL_NOT_NULL
-     * \li SQL_PRIMARY_KEY
-     * \li SQL_AUTOINCREMENT
-     * \li SQL_UNIQUE
-     */
-    const int flags;
-    /**
-     * The column constraints that should be applied to the column as a SQL expression.
-     */
-    const char *column_constraints;
+  /**
+   * The name of the column.
+   */
+  const char *name;
+  /**
+   * The SQL type of the column.
+   */
+  const char *type;
+  /**
+   * The default value of the column. This field may be set to NULL.
+   */
+  const value_t default_value;
+  /**
+   * Bitwise OR of any flags that apply to this column. This field may contain a combination of:
+   * \li SQL_NOT_NULL
+   * \li SQL_PRIMARY_KEY
+   * \li SQL_AUTOINCREMENT
+   * \li SQL_UNIQUE
+   */
+  const int flags;
+  /**
+   * The column constraints that should be applied to the column as a SQL expression.
+   */
+  const char *column_constraints;
 } column_info_t;
 
 /**
  * Description of a SQL table.
  */
 typedef struct {
-    /**
-     * The name of the table.
-     */
-    const char *name;
-    /**
-     * An array of column information. The array is terminated by a column_info_t instance that has all fields set
-     * to NULL or zero.
-     */
-    const column_info_t *columns;
-    /**
-     * An array of rows that should be present in the table. Each row is an array of value_t and should contain
-     * nColumns elements.
-     */
-    const value_t *rows;
-    /**
-     * The number of elements in rows.
-     */
-    const size_t nRows;
+  /**
+   * The name of the table.
+   */
+  const char *name;
+  /**
+   * An array of column information. The array is terminated by a column_info_t instance that has all fields set
+   * to NULL or zero.
+   */
+  const column_info_t *columns;
+  /**
+   * An array of rows that should be present in the table. Each row is an array of value_t and should contain
+   * nColumns elements.
+   */
+  const value_t *rows;
+  /**
+   * The number of elements in rows.
+   */
+  const size_t nRows;
 } table_info_t;
 
 /**
@@ -264,7 +264,7 @@ typedef int(*sql_callback)(sqlite3_stmt *stmt, void *data);
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void* data, char *sql, ...);
+int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data, char *sql, ...);
 
 /**
  * Executes a SQL statement that is expected to return a single string value. The SQL statement can be a printf style
@@ -308,7 +308,7 @@ int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...);
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_check_table_exists(sqlite3 *db, const char* db_name, const char* table_name, int *exists);
+int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_name, int *exists);
 
 /**
  * Checks if a table matches the given table specification.
@@ -320,7 +320,7 @@ int sql_check_table_exists(sqlite3 *db, const char* db_name, const char* table_n
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, error_t *error);
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is
@@ -334,7 +334,7 @@ int sql_check_table(sqlite3 *db, const char* db_name, const table_info_t *table_
  * @return SQLITE_OK if the transaction was successfully comitted\n
  *         A SQLite error code otherwise
  */
-int sql_init_table(sqlite3 *db, const char* db_name, const table_info_t *table_info, error_t *error);
+int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
 
 /** @} */
 

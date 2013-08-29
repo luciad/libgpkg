@@ -32,350 +32,354 @@
 #define CHECK_ENV(gpb, error) CHECK_ENV_COMP(gpb, x, error) CHECK_ENV_COMP(gpb, y, error) CHECK_ENV_COMP(gpb, z, error) CHECK_ENV_COMP(gpb, m, error)
 
 static size_t gpb_header_size(gpb_header_t *gpb) {
-    return (size_t)
-            4 // Magic number
-            + 4 // SRID
-            + 8 * ((gpb->envelope.has_env_x ? 2 : 0) + (gpb->envelope.has_env_y ? 2 : 0) + (gpb->envelope.has_env_z ? 2 : 0) + (gpb->envelope.has_env_m ? 2 : 0)); // Envelope
+  int coord_count = ((gpb->envelope.has_env_x ? 2 : 0) + (gpb->envelope.has_env_y ? 2 : 0) + (gpb->envelope.has_env_z ? 2 : 0) + (gpb->envelope.has_env_m ? 2 : 0));
+  return (size_t) 4 /* Magic number */  + 4 /* SRID */ + 8 * coord_count /* Envelope */;
 }
 
 int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
-    uint8_t head[2];
-    if (binstream_nread_u8(stream, head, 2) != SQLITE_OK) {
-        return SQLITE_IOERR;
+  uint8_t head[2];
+  if (binstream_nread_u8(stream, head, 2) != SQLITE_OK) {
+    return SQLITE_IOERR;
+  }
+
+  if (memcmp(head, "GP", 2) != 0) {
+    if (error) {
+      error_append(error, "Incorrect GPB magic number [expected: GP, actual:%*s]", 2, head);
     }
+    return SQLITE_IOERR;
+  }
 
-    if (memcmp(head, "GP", 2) != 0) {
-        if (error) error_append(error, "Incorrect GPB magic number [expected: GP, actual:%*s]", 2, head);
-        return SQLITE_IOERR;
+  if (binstream_read_u8(stream, &gpb->version)) {
+    return SQLITE_IOERR;
+  }
+
+  if (gpb->version != GPB_VERSION) {
+    if (error) {
+      error_append(error, "Incorrect GPB version [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
     }
+    return SQLITE_IOERR;
+  }
 
-    if (binstream_read_u8(stream, &gpb->version)) {
-        return SQLITE_IOERR;
+  uint8_t flags;
+  if (binstream_read_u8(stream, &flags)) {
+    return SQLITE_IOERR;
+  }
+
+  gpb->empty = (flags >> 4) & 0x1;
+  uint8_t envelope = (flags >> 1) & 0x7;
+  uint8_t endian = flags & 0x1;
+
+  if (envelope > 4) {
+    if (error) {
+      error_append(error, "Incorrect GPB envelope value: [expected: [0-4], actual:%u]", envelope);
     }
+    return SQLITE_IOERR;
+  }
 
-    if (gpb->version != GPB_VERSION) {
-        if (error) error_append(error, "Incorrect GPB version [expected: %d, actual:%d]", GPB_VERSION, gpb->version);
-        return SQLITE_IOERR;
+  binstream_set_endianness(stream, endian == GPB_BIG_ENDIAN ? BIG : LITTLE);
+  if (binstream_read_i32(stream, &gpb->srid) != SQLITE_OK) {
+    return SQLITE_IOERR;
+  }
+
+  if (envelope > 0) {
+    gpb->envelope.has_env_x = 1;
+    if (binstream_read_double(stream, &gpb->envelope.min_x)) {
+      return SQLITE_IOERR;
     }
-
-    uint8_t flags;
-    if (binstream_read_u8(stream, &flags)) {
-        return SQLITE_IOERR;
+    if (binstream_read_double(stream, &gpb->envelope.max_x)) {
+      return SQLITE_IOERR;
     }
-
-    gpb->empty = (flags >> 4) & 0x1;
-    uint8_t envelope = (flags >> 1) & 0x7;
-    uint8_t endian = flags & 0x1;
-
-    if (envelope > 4) {
-        if (error) error_append(error, "Incorrect GPB envelope value: [expected: [0-4], actual:%u]", envelope);
-        return SQLITE_IOERR;
+    gpb->envelope.has_env_y = 1;
+    if (binstream_read_double(stream, &gpb->envelope.min_y)) {
+      return SQLITE_IOERR;
     }
-
-    binstream_set_endianness(stream, endian == GPB_BIG_ENDIAN ? BIG : LITTLE);
-    if (binstream_read_i32(stream, &gpb->srid) != SQLITE_OK) {
-        return SQLITE_IOERR;
+    if (binstream_read_double(stream, &gpb->envelope.max_y)) {
+      return SQLITE_IOERR;
     }
+  } else {
+    gpb->envelope.has_env_x = 0;
+    gpb->envelope.min_x = 0.0;
+    gpb->envelope.max_x = 0.0;
+    gpb->envelope.has_env_y = 0;
+    gpb->envelope.min_y = 0.0;
+    gpb->envelope.max_y = 0.0;
+  }
 
-    if (envelope > 0) {
-        gpb->envelope.has_env_x = 1;
-        if (binstream_read_double(stream, &gpb->envelope.min_x)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_read_double(stream, &gpb->envelope.max_x)) {
-            return SQLITE_IOERR;
-        }
-        gpb->envelope.has_env_y = 1;
-        if (binstream_read_double(stream, &gpb->envelope.min_y)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_read_double(stream, &gpb->envelope.max_y)) {
-            return SQLITE_IOERR;
-        }
-    } else {
-        gpb->envelope.has_env_x = 0;
-        gpb->envelope.min_x = 0.0;
-        gpb->envelope.max_x = 0.0;
-        gpb->envelope.has_env_y = 0;
-        gpb->envelope.min_y = 0.0;
-        gpb->envelope.max_y = 0.0;
+  if (envelope == 2 || envelope == 4) {
+    gpb->envelope.has_env_z = 1;
+    if (binstream_read_double(stream, &gpb->envelope.min_z)) {
+      return SQLITE_IOERR;
     }
-
-    if (envelope == 2 || envelope == 4) {
-        gpb->envelope.has_env_z = 1;
-        if (binstream_read_double(stream, &gpb->envelope.min_z)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_read_double(stream, &gpb->envelope.max_z)) {
-            return SQLITE_IOERR;
-        }
-    } else {
-        gpb->envelope.has_env_z = 0;
-        gpb->envelope.min_z = 0.0;
-        gpb->envelope.max_z = 0.0;
+    if (binstream_read_double(stream, &gpb->envelope.max_z)) {
+      return SQLITE_IOERR;
     }
+  } else {
+    gpb->envelope.has_env_z = 0;
+    gpb->envelope.min_z = 0.0;
+    gpb->envelope.max_z = 0.0;
+  }
 
-    if (envelope == 3 || envelope == 4) {
-        gpb->envelope.has_env_m = 1;
-        if (binstream_read_double(stream, &gpb->envelope.min_m)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_read_double(stream, &gpb->envelope.max_m)) {
-            return SQLITE_IOERR;
-        }
-    } else {
-        gpb->envelope.has_env_m = 0;
-        gpb->envelope.min_m = 0.0;
-        gpb->envelope.max_m = 0.0;
+  if (envelope == 3 || envelope == 4) {
+    gpb->envelope.has_env_m = 1;
+    if (binstream_read_double(stream, &gpb->envelope.min_m)) {
+      return SQLITE_IOERR;
     }
+    if (binstream_read_double(stream, &gpb->envelope.max_m)) {
+      return SQLITE_IOERR;
+    }
+  } else {
+    gpb->envelope.has_env_m = 0;
+    gpb->envelope.min_m = 0.0;
+    gpb->envelope.max_m = 0.0;
+  }
 
-    CHECK_ENV(gpb, error)
+  CHECK_ENV(gpb, error)
 
-    return SQLITE_OK;
+  return SQLITE_OK;
 }
 
 int gpb_write_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
-    CHECK_ENV(gpb, error)
+  CHECK_ENV(gpb, error)
 
-    if (binstream_write_nu8(stream, (uint8_t*)"GP", 2)) {
-        return SQLITE_IOERR;
+  if (binstream_write_nu8(stream, (uint8_t *)"GP", 2)) {
+    return SQLITE_IOERR;
+  }
+
+  if (binstream_write_u8(stream, gpb->version)) {
+    return SQLITE_IOERR;
+  }
+
+  uint8_t envelope = 0;
+  if (gpb->envelope.has_env_x && gpb->envelope.has_env_y) {
+    envelope = 1;
+    if (gpb->envelope.has_env_z && gpb->envelope.has_env_m) {
+      envelope = 4;
+    } else if (gpb->envelope.has_env_z) {
+      envelope = 2;
+    } else if (gpb->envelope.has_env_m) {
+      envelope = 3;
     }
+  }
+  uint8_t endian = binstream_get_endianness(stream) == LITTLE ? 1 : 0;
+  uint8_t empty = gpb->empty == 0 ? 0 : 1;
 
-    if (binstream_write_u8(stream, gpb->version)) {
-        return SQLITE_IOERR;
+  uint8_t flags = (empty << 4) | (envelope << 1) | endian;
+  if (binstream_write_u8(stream, flags)) {
+    return SQLITE_IOERR;
+  }
+
+  if (binstream_write_i32(stream, gpb->srid)) {
+    return SQLITE_IOERR;
+  }
+
+  if (gpb->envelope.has_env_x) {
+    if (binstream_write_double(stream, gpb->envelope.min_x)) {
+      return SQLITE_IOERR;
     }
-
-    uint8_t envelope = 0;
-    if (gpb->envelope.has_env_x && gpb->envelope.has_env_y) {
-        envelope = 1;
-        if (gpb->envelope.has_env_z && gpb->envelope.has_env_m) {
-            envelope = 4;
-        } else if (gpb->envelope.has_env_z) {
-            envelope = 2;
-        } else if (gpb->envelope.has_env_m) {
-            envelope = 3;
-        }
+    if (binstream_write_double(stream, gpb->envelope.max_x)) {
+      return SQLITE_IOERR;
     }
-    uint8_t endian = binstream_get_endianness(stream) == LITTLE ? 1 : 0;
-    uint8_t empty = gpb->empty == 0 ? 0 : 1;
+  }
 
-    uint8_t flags = (empty << 4) | (envelope << 1) | endian;
-    if (binstream_write_u8(stream, flags)) {
-        return SQLITE_IOERR;
+  if (gpb->envelope.has_env_y) {
+    if (binstream_write_double(stream, gpb->envelope.min_y)) {
+      return SQLITE_IOERR;
     }
-
-    if (binstream_write_i32(stream, gpb->srid)) {
-        return SQLITE_IOERR;
+    if (binstream_write_double(stream, gpb->envelope.max_y)) {
+      return SQLITE_IOERR;
     }
+  }
 
-    if (gpb->envelope.has_env_x) {
-        if (binstream_write_double(stream, gpb->envelope.min_x)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_write_double(stream, gpb->envelope.max_x)) {
-            return SQLITE_IOERR;
-        }
+  if (gpb->envelope.has_env_z) {
+    if (binstream_write_double(stream, gpb->envelope.min_z)) {
+      return SQLITE_IOERR;
     }
-
-    if (gpb->envelope.has_env_y) {
-        if (binstream_write_double(stream, gpb->envelope.min_y)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_write_double(stream, gpb->envelope.max_y)) {
-            return SQLITE_IOERR;
-        }
+    if (binstream_write_double(stream, gpb->envelope.max_z)) {
+      return SQLITE_IOERR;
     }
+  }
 
-    if (gpb->envelope.has_env_z) {
-        if (binstream_write_double(stream, gpb->envelope.min_z)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_write_double(stream, gpb->envelope.max_z)) {
-            return SQLITE_IOERR;
-        }
+  if (gpb->envelope.has_env_m) {
+    if (binstream_write_double(stream, gpb->envelope.min_m)) {
+      return SQLITE_IOERR;
     }
-
-    if (gpb->envelope.has_env_m) {
-        if (binstream_write_double(stream, gpb->envelope.min_m)) {
-            return SQLITE_IOERR;
-        }
-        if (binstream_write_double(stream, gpb->envelope.max_m)) {
-            return SQLITE_IOERR;
-        }
+    if (binstream_write_double(stream, gpb->envelope.max_m)) {
+      return SQLITE_IOERR;
     }
+  }
 
-    return SQLITE_OK;
+  return SQLITE_OK;
 }
 
 static int gpb_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
-    int result = SQLITE_OK;
+  int result = SQLITE_OK;
 
-    gpb_writer_t *writer = (gpb_writer_t *) consumer;
-    wkb_writer_t *wkb = &writer->wkb_writer;
+  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  wkb_writer_t *wkb = &writer->wkb_writer;
 
-    if (wkb->offset < 0) {
-        gpb_header_t *gpb_header = &writer->header;
-        if (header->geom_type != GEOM_POINT) {
-            switch(header->coord_type) {
-                case GEOM_XYZ:
-                    gpb_header->envelope.has_env_x = 1;
-                    gpb_header->envelope.has_env_y = 1;
-                    gpb_header->envelope.has_env_z = 1;
-                    break;
-                case GEOM_XYM:
-                    gpb_header->envelope.has_env_x = 1;
-                    gpb_header->envelope.has_env_y = 1;
-                    gpb_header->envelope.has_env_m = 1;
-                    break;
-                case GEOM_XYZM:
-                    gpb_header->envelope.has_env_x = 1;
-                    gpb_header->envelope.has_env_y = 1;
-                    gpb_header->envelope.has_env_z = 1;
-                    gpb_header->envelope.has_env_m = 1;
-                    break;
-                default:
-                    gpb_header->envelope.has_env_x = 1;
-                    gpb_header->envelope.has_env_y = 1;
-                    break;
-            }
-        }
-        result = binstream_relseek(&wkb->stream, (int32_t)gpb_header_size(gpb_header));
-        if (result != SQLITE_OK) {
-            goto exit;
-        }
+  if (wkb->offset < 0) {
+    gpb_header_t *gpb_header = &writer->header;
+    if (header->geom_type != GEOM_POINT) {
+      switch (header->coord_type) {
+        case GEOM_XYZ:
+          gpb_header->envelope.has_env_x = 1;
+          gpb_header->envelope.has_env_y = 1;
+          gpb_header->envelope.has_env_z = 1;
+          break;
+        case GEOM_XYM:
+          gpb_header->envelope.has_env_x = 1;
+          gpb_header->envelope.has_env_y = 1;
+          gpb_header->envelope.has_env_m = 1;
+          break;
+        case GEOM_XYZM:
+          gpb_header->envelope.has_env_x = 1;
+          gpb_header->envelope.has_env_y = 1;
+          gpb_header->envelope.has_env_z = 1;
+          gpb_header->envelope.has_env_m = 1;
+          break;
+        default:
+          gpb_header->envelope.has_env_x = 1;
+          gpb_header->envelope.has_env_y = 1;
+          break;
+      }
     }
+    result = binstream_relseek(&wkb->stream, (int32_t)gpb_header_size(gpb_header));
+    if (result != SQLITE_OK) {
+      goto exit;
+    }
+  }
 
-    geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
-    result = wkb_consumer->begin_geometry(wkb_consumer, header);
-  exit:
-    return result;
+  geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
+  result = wkb_consumer->begin_geometry(wkb_consumer, header);
+exit:
+  return result;
 }
 
 static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords) {
-    int result = SQLITE_OK;
+  int result = SQLITE_OK;
 
-    if (point_count <= 0) {
-        goto exit;
+  if (point_count <= 0) {
+    goto exit;
+  }
+
+  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  wkb_writer_t *wkb = &writer->wkb_writer;
+  geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
+  result = wkb_consumer->coordinates(wkb_consumer, header, point_count, coords);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  if (header->geom_type == GEOM_POINT) {
+    int allnan = 1;
+    for (int i = 0; i < header->coord_size; i++) {
+      allnan &= isnan(coords[i]);
     }
-
-    gpb_writer_t *writer = (gpb_writer_t *) consumer;
-    wkb_writer_t *wkb = &writer->wkb_writer;
-    geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
-    result = wkb_consumer->coordinates(wkb_consumer, header, point_count, coords);
-    if (result != SQLITE_OK) {
-        goto exit;
+    if (allnan) {
+      goto exit;
     }
+  }
 
-    if (header->geom_type == GEOM_POINT) {
-      int allnan = 1;
-      for (int i = 0; i < header->coord_size; i++) {
-          allnan &= isnan(coords[i]);
-      }
-      if (allnan) {
-          goto exit;
-      }
-    }
-
-    gpb_header_t *gpb = &writer->header;
-    gpb->empty = 0;
-    int offset = 0;
-    switch(header->coord_type) {
-        #define MIN_MAX(coord) double coord = coords[offset++]; \
+  gpb_header_t *gpb = &writer->header;
+  gpb->empty = 0;
+  int offset = 0;
+  switch (header->coord_type) {
+#define MIN_MAX(coord) double coord = coords[offset++]; \
         if (coord < gpb->envelope.min_##coord) gpb->envelope.min_##coord = coord; \
         if (coord > gpb->envelope.max_##coord) gpb->envelope.max_##coord = coord;
-        case GEOM_XYZ:
-            for(int i = 0; i < point_count; i++) {
-                MIN_MAX(x)
-                MIN_MAX(y)
-                MIN_MAX(z)
-            }
-            break;
-        case GEOM_XYM:
-            for(int i = 0; i < point_count; i++) {
-                MIN_MAX(x)
-                MIN_MAX(y)
-                MIN_MAX(m)
-            }
-            break;
-        case GEOM_XYZM:
-            for(int i = 0; i < point_count; i++) {
-                MIN_MAX(x)
-                MIN_MAX(y)
-                MIN_MAX(z)
-                MIN_MAX(m)
-            }
-            break;
-        default:
-            for(int i = 0; i < point_count; i++) {
-                MIN_MAX(x)
-                MIN_MAX(y)
-            }
-            break;
-        #undef MIN_MAX
-    }
+    case GEOM_XYZ:
+      for (int i = 0; i < point_count; i++) {
+        MIN_MAX(x)
+        MIN_MAX(y)
+        MIN_MAX(z)
+      }
+      break;
+    case GEOM_XYM:
+      for (int i = 0; i < point_count; i++) {
+        MIN_MAX(x)
+        MIN_MAX(y)
+        MIN_MAX(m)
+      }
+      break;
+    case GEOM_XYZM:
+      for (int i = 0; i < point_count; i++) {
+        MIN_MAX(x)
+        MIN_MAX(y)
+        MIN_MAX(z)
+        MIN_MAX(m)
+      }
+      break;
+    default:
+      for (int i = 0; i < point_count; i++) {
+        MIN_MAX(x)
+        MIN_MAX(y)
+      }
+      break;
+#undef MIN_MAX
+  }
 
-  exit:
-    return result;
+exit:
+  return result;
 }
 
 static int gpb_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
-    gpb_writer_t *writer = (gpb_writer_t *) consumer;
-    wkb_writer_t *wkb = &writer->wkb_writer;
+  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  wkb_writer_t *wkb = &writer->wkb_writer;
 
-    geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
-    return wkb_consumer->end_geometry(wkb_consumer, header);
+  geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
+  return wkb_consumer->end_geometry(wkb_consumer, header);
 }
 
 static int gpb_end(const geom_consumer_t *consumer) {
-    int result = SQLITE_OK;
+  int result = SQLITE_OK;
 
-    gpb_writer_t *writer = (gpb_writer_t *) consumer;
-    wkb_writer_t *wkb = &writer->wkb_writer;
-    binstream_t *stream = &wkb->stream;
+  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  wkb_writer_t *wkb = &writer->wkb_writer;
+  binstream_t *stream = &wkb->stream;
 
-    size_t pos = binstream_position(stream);
-    result = binstream_seek(stream, 0);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
+  size_t pos = binstream_position(stream);
+  result = binstream_seek(stream, 0);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
 
-    result = gpb_write_header(stream, &writer->header, NULL);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
+  result = gpb_write_header(stream, &writer->header, NULL);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
 
-    result = binstream_seek(stream, pos);
-    if (result != SQLITE_OK) {
-        goto exit;
-    }
+  result = binstream_seek(stream, pos);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
 
-    binstream_flip(stream);
+  binstream_flip(stream);
 
-  exit:
-    return result;
+exit:
+  return result;
 }
 
-int gpb_writer_init( gpb_writer_t *writer, int32_t srid ) {
-    geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
-    geom_envelope_init(&writer->header.envelope);
-    writer->header.version = GPB_VERSION;
-    writer->header.srid = srid;
-    writer->header.empty = 1;
-    return wkb_writer_init(&writer->wkb_writer);
+int gpb_writer_init(gpb_writer_t *writer, int32_t srid) {
+  geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
+  geom_envelope_init(&writer->header.envelope);
+  writer->header.version = GPB_VERSION;
+  writer->header.srid = srid;
+  writer->header.empty = 1;
+  return wkb_writer_init(&writer->wkb_writer);
 }
 
-geom_consumer_t * gpb_writer_geom_consumer(gpb_writer_t *writer) {
-    return &writer->geom_consumer;
+geom_consumer_t *gpb_writer_geom_consumer(gpb_writer_t *writer) {
+  return &writer->geom_consumer;
 }
 
-void gpb_writer_destroy( gpb_writer_t *writer ) {
-    wkb_writer_destroy(&writer->wkb_writer);
+void gpb_writer_destroy(gpb_writer_t *writer) {
+  wkb_writer_destroy(&writer->wkb_writer);
 }
 
-uint8_t* gpb_writer_getgpb( gpb_writer_t *writer ) {
-    return binstream_data(&writer->wkb_writer.stream);
+uint8_t *gpb_writer_getgpb(gpb_writer_t *writer) {
+  return binstream_data(&writer->wkb_writer.stream);
 }
 
-size_t gpb_writer_length( gpb_writer_t *writer ) {
-    return binstream_available(&writer->wkb_writer.stream);
+size_t gpb_writer_length(gpb_writer_t *writer) {
+  return binstream_available(&writer->wkb_writer.stream);
 }

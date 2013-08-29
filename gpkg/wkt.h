@@ -32,16 +32,16 @@
  * geomtery sources.
  */
 typedef struct {
-    /** @private */
-    geom_consumer_t geom_consumer;
-    /** @private */
-    strbuf_t strbuf;
-    /** @private */
-    int type[GEOM_MAX_DEPTH];
-    /** @private */
-    int children[GEOM_MAX_DEPTH];
-    /** @private */
-    int offset;
+  /** @private */
+  geom_consumer_t geom_consumer;
+  /** @private */
+  strbuf_t strbuf;
+  /** @private */
+  int type[GEOM_MAX_DEPTH];
+  /** @private */
+  int children[GEOM_MAX_DEPTH];
+  /** @private */
+  int offset;
 } wkt_writer_t;
 
 /**
@@ -49,20 +49,20 @@ typedef struct {
  * @param writer the writer to initialize
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkt_writer_init( wkt_writer_t *writer );
+int wkt_writer_init(wkt_writer_t *writer);
 
 /**
  * Destroys a Well-Known Text writer.
  * @param writer the writer to destroy
  */
-void wkt_writer_destroy( wkt_writer_t *writer );
+void wkt_writer_destroy(wkt_writer_t *writer);
 
 /**
  * Returns a Well-Known Text writer as a geometry consumer. This function should be used
  * to pass the writer to another function that takes a geom_consumer_t as input.
  * @param writer the writer
  */
-geom_consumer_t* wkt_writer_geom_consumer(wkt_writer_t *writer);
+geom_consumer_t *wkt_writer_geom_consumer(wkt_writer_t *writer);
 
 /**
  * Returns a pointer to the Well-Known Text data that was written by the given writer. The length of the returned
@@ -70,14 +70,14 @@ geom_consumer_t* wkt_writer_geom_consumer(wkt_writer_t *writer);
  * @param writer the writer
  * @return a pointer to the Well-Known Text data
  */
-char* wkt_writer_getwkt( wkt_writer_t *writer );
+char *wkt_writer_getwkt(wkt_writer_t *writer);
 
 /**
  * Returns the length of the buffer obtained using the wkt_writer_getwkt() function.
  * @param writer the writer
  * @return the length of the Well-Known Text data buffer
  */
-size_t wkt_writer_length( wkt_writer_t *writer );
+size_t wkt_writer_length(wkt_writer_t *writer);
 
 /**
  * Parses a Well-Known Text geometry from the given character array.

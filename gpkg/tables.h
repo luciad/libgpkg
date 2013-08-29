@@ -71,7 +71,7 @@ extern const column_info_t tiles_table_columns[];
 /**
  * Null terminated array of all geopacakge metadata table descriptions.
  */
-extern const table_info_t * const tables[];
+extern const table_info_t *const tables[];
 
 /** @} */
 

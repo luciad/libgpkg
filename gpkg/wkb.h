@@ -31,16 +31,16 @@
  * geomtery sources.
  */
 typedef struct {
-    /** @private */
-    geom_consumer_t geom_consumer;
-    /** @private */
-    binstream_t stream;
-    /** @private */
-    size_t start[GEOM_MAX_DEPTH];
-    /** @private */
-    size_t children[GEOM_MAX_DEPTH];
-    /** @private */
-    int offset;
+  /** @private */
+  geom_consumer_t geom_consumer;
+  /** @private */
+  binstream_t stream;
+  /** @private */
+  size_t start[GEOM_MAX_DEPTH];
+  /** @private */
+  size_t children[GEOM_MAX_DEPTH];
+  /** @private */
+  int offset;
 } wkb_writer_t;
 
 /**
@@ -48,20 +48,20 @@ typedef struct {
  * @param writer the writer to initialize
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_writer_init( wkb_writer_t *writer );
+int wkb_writer_init(wkb_writer_t *writer);
 
 /**
  * Destroys a Well-Known Binary writer.
  * @param writer the writer to destroy
  */
-void wkb_writer_destroy( wkb_writer_t *writer );
+void wkb_writer_destroy(wkb_writer_t *writer);
 
 /**
  * Returns a Well-Known Binary writer as a geometry consumer. This function should be used
  * to pass the writer to another function that takes a geom_consumer_t as input.
  * @param writer the writer
  */
-geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer);
+geom_consumer_t *wkb_writer_geom_consumer(wkb_writer_t *writer);
 
 /**
  * Returns a pointer to the Well-Known Binary data that was written by the given writer. The length of the returned
@@ -69,14 +69,14 @@ geom_consumer_t* wkb_writer_geom_consumer(wkb_writer_t *writer);
  * @param writer the writer
  * @return a pointer to the Well-Known Binary data
  */
-uint8_t* wkb_writer_getwkb( wkb_writer_t *writer );
+uint8_t *wkb_writer_getwkb(wkb_writer_t *writer);
 
 /**
  * Returns the length of the buffer obtained using the wkb_writer_getwkb() function.
  * @param writer the writer
  * @return the length of the Well-Known Binary data buffer
  */
-size_t wkb_writer_length( wkb_writer_t *writer );
+size_t wkb_writer_length(wkb_writer_t *writer);
 
 /**
  * Parses a Well-Known Binary geometry from the given stream. The stream should be positioned at the start

@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
-    return gpkg_extension_init(db, pzErrMsg, pThunk);
+  return gpkg_extension_init(db, pzErrMsg, pThunk);
 }
 
 #ifdef __cplusplus
