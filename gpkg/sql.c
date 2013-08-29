@@ -15,7 +15,6 @@
  */
 #include <stdarg.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include "sqlite.h"
 #include "sql.h"
 
@@ -93,7 +92,7 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
     int stmt_res = sqlite3_step(stmt);
     if ( stmt_res == SQLITE_DONE ) {
         if ( nodata != NULL ) {
-            result = nodata(stmt, data);
+            stmt_res = nodata(stmt, data);
         }
     } else {
         if ( row == NULL ) {
@@ -228,27 +227,22 @@ int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void* data
     return result;
 }
 
+static int sql_check_table_exists_nodata(sqlite3_stmt *stmt, void *data) {
+    *((int*) data) = 0;
+    return SQLITE_DONE;
+}
+
+static int sql_check_table_exists_row(sqlite3_stmt *stmt, void *data) {
+    *((int*) data) = 1;
+    return SQLITE_DONE;
+}
+
 int sql_check_table_exists(sqlite3 *db, const char* db_name, const char* table_name, int *exists) {
-    sqlite3_stmt *stmt = NULL;
-    int result = SQLITE_OK;
-
-    result = sql_stmt_init(&stmt, db, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_name);
+    int result = sql_exec_stmt(db, sql_check_table_exists_row, sql_check_table_exists_nodata, exists, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_name);
     if (result != SQLITE_OK) {
-        return result;
-    }
-
-    result = sqlite3_step(stmt);
-    if (result == SQLITE_ROW) {
-        *exists = 1;
-        result = SQLITE_OK;
-    } else if (result == SQLITE_DONE) {
-        *exists = 0;
-        result = SQLITE_OK;
-    } else {
         *exists = 0;
     }
 
-    sql_stmt_destroy(stmt);
     return result;
 }
 
@@ -262,73 +256,86 @@ static int sql_count_columns(const table_info_t *table_info) {
     return nColumns;
 }
 
-static int sql_check_cols(sqlite3_stmt *stmt, const table_info_t *table_info, error_t *error) {
-    int result;
+typedef struct {
+    error_t *error;
+    int *cols_found;
+    int nColumns;
+    const table_info_t *table_info;
+} check_cols_data;
+
+static int sql_check_cols_row(sqlite3_stmt *stmt, void* data) {
+    check_cols_data *check = (check_cols_data*)data;
+    error_t *error = check->error;
+    int *found = check->cols_found;
+    int nColumns = check->nColumns;
+    const table_info_t *table_info = check->table_info;
+
+    // 0 index
+    // 1 name
+    // 2 type
+    // 3 not null
+    // 4 default value
+    // 5 primary key
+    char *name = (char*)sqlite3_column_text(stmt, 1);
+    int index = -1;
+    for( int c = 0; c < nColumns; c++) {
+        if (sqlite3_strnicmp(table_info->columns[c].name, name, strlen(table_info->columns[c].name) + 1) == 0) {
+            index = c;
+            break;
+        }
+    }
+
+    if (index != -1) {
+        char *type = (char*)sqlite3_column_text(stmt, 2);
+        if (sqlite3_strnicmp(table_info->columns[index].type, type, strlen(table_info->columns[index].type) + 1) != 0) {
+            if (error) {
+                error_append(error, "Column %s.%s has incorrect type (expected: %s, actual: %s)\n", table_info->name, name, table_info->columns[index].type, type);
+            }
+        }
+
+        int not_null = sqlite3_column_int(stmt, 3);
+        if (not_null != 0 && (table_info->columns[index].flags & SQL_NOT_NULL) == 0) {
+            if (error) {
+                error_append(error, "Column %s.%s should not have 'not null' constraint\n", table_info->name, name);
+            }
+        } else if (not_null == 0 && table_info->columns[index].flags & SQL_NOT_NULL) {
+            if (error) {
+                error_append(error, "Column %s.%s should have 'not null' constraint\n", table_info->name, name);
+            }
+        }
+
+        int pk = sqlite3_column_int(stmt, 5);
+        if (pk != 0 && (table_info->columns[index].flags & SQL_PRIMARY_KEY) == 0) {
+            if (error) {
+                error_append(error, "Column %s.%s should not be part of primary key\n", table_info->name, name);
+            }
+        } else if (pk == 0 && table_info->columns[index].flags & SQL_PRIMARY_KEY) {
+            if (error) {
+                error_append(error, "Column %s.%s should be part of primary key\n", table_info->name, name);
+            }
+        }
+        found[index] = 1;
+    } else {
+        if (error) {
+            error_append(error, "Redundant column %s.%s\n", table_info->name, name);
+        }
+    }
+
+    return SQLITE_OK;
+}
+
+static int sql_check_table_schema(sqlite3 *db, const char* db_name, const table_info_t* table_info, error_t *error) {
     int nColumns = sql_count_columns(table_info);
     int *found = (int*)sqlite3_malloc(nColumns * sizeof(int));
     if (found == NULL) {
         return SQLITE_NOMEM;
     }
     memset(found, 0, nColumns * sizeof(int));
+    check_cols_data data = { error, found, nColumns, table_info };
 
-    result = sqlite3_step(stmt);
-    while( result == SQLITE_ROW ) {
-        // 0 index
-        // 1 name
-        // 2 type
-        // 3 not null
-        // 4 default value
-        // 5 primary key
-        char *name = (char*)sqlite3_column_text(stmt, 1);
-        int index = -1;
-        for( int c = 0; c < nColumns; c++) {
-            if (sqlite3_strnicmp(table_info->columns[c].name, name, strlen(table_info->columns[c].name) + 1) == 0) {
-                index = c;
-                break;
-            }
-        }
+    int result = sql_exec_stmt(db, sql_check_cols_row, NULL, &data, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_info->name);
 
-        if (index != -1) {
-            char *type = (char*)sqlite3_column_text(stmt, 2);
-            if (sqlite3_strnicmp(table_info->columns[index].type, type, strlen(table_info->columns[index].type) + 1) != 0) {
-                printf("Checking column %s against %s\n", name, table_info->columns[index].name);
-                if (error) {
-                    error_append(error, "Column %s.%s has incorrect type (expected: %s, actual: %s)\n", table_info->name, name, table_info->columns[index].type, type);
-                }
-            }
-
-            int not_null = sqlite3_column_int(stmt, 3);
-            if (not_null != 0 && (table_info->columns[index].flags & SQL_NOT_NULL) == 0) {
-                if (error) {
-                    error_append(error, "Column %s.%s should not have 'not null' constraint\n", table_info->name, name);
-                }
-            } else if (not_null == 0 && table_info->columns[index].flags & SQL_NOT_NULL) {
-                if (error) {
-                    error_append(error, "Column %s.%s should have 'not null' constraint\n", table_info->name, name);
-                }
-            }
-
-            int pk = sqlite3_column_int(stmt, 5);
-            if (pk != 0 && (table_info->columns[index].flags & SQL_PRIMARY_KEY) == 0) {
-                if (error) {
-                    error_append(error, "Column %s.%s should not be part of primary key\n", table_info->name, name);
-                }
-            } else if (pk == 0 && table_info->columns[index].flags & SQL_PRIMARY_KEY) {
-                if (error) {
-                    error_append(error, "Column %s.%s should be part of primary key\n", table_info->name, name);
-                }
-            }
-            found[index] = 1;
-        } else {
-            if (error) {
-                error_append(error, "Redundant column %s.%s\n", table_info->name, name);
-            }
-        }
-
-        result = sqlite3_step(stmt);
-    }
-
-    if (result == SQLITE_DONE) {
+    if (result == SQLITE_OK) {
         for (int i = 0; i < nColumns; i++) {
             if (found[i] == 0) {
                 if (error) {
@@ -340,16 +347,6 @@ static int sql_check_cols(sqlite3_stmt *stmt, const table_info_t *table_info, er
 
     sqlite3_free(found);
 
-    return result;
-}
-
-static int sql_check_table_schema(sqlite3 *db, const char* db_name, const table_info_t* table_info, error_t *error) {
-    sqlite3_stmt *stmt = NULL;
-    int result = sql_stmt_init(&stmt, db, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_info->name);
-    if (result == SQLITE_OK) {
-        result = sql_check_cols(stmt, table_info, error);
-    }
-    sql_stmt_destroy(stmt);
     return result;
 }
 
