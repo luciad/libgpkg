@@ -251,8 +251,8 @@ static void wkt_tokenizer_init(wkt_tokenizer_t *tok, const char *data, size_t le
   tok->end = data + length;
 }
 
-static void wkt_tokenizer_error(wkt_tokenizer_t *tok, error_t *error, const char* msg) {
-  if ( tok-> token_length > 0 ) {
+static void wkt_tokenizer_error(wkt_tokenizer_t *tok, error_t *error, const char *msg) {
+  if (tok-> token_length > 0) {
     error_append(error, "%s at column %d: %.*s", msg, tok->token_position, tok->token_length, tok->token_start);
   } else {
     error_append(error, "%s at column %d", msg, tok->token_position);
@@ -363,7 +363,9 @@ static int wkt_read_point(wkt_tokenizer_t *tok, const geom_header_t *header, con
 
   for (int i = 0; i < header->coord_size; i++) {
     if (tok->token != WKT_NUMBER) {
-      if (error)  wkt_tokenizer_error( tok, error, "Expected number" );
+      if (error) {
+        wkt_tokenizer_error(tok, error, "Expected number");
+      }
       return SQLITE_IOERR;
     }
 
@@ -390,7 +392,9 @@ static int wkt_read_points(wkt_tokenizer_t *tok, const geom_header_t *header, co
   do {
     for (int i = 0; i < header->coord_size; i++) {
       if (tok->token != WKT_NUMBER) {
-        if (error)  wkt_tokenizer_error( tok, error, "Expected number" );
+        if (error) {
+          wkt_tokenizer_error(tok, error, "Expected number");
+        }
         return SQLITE_IOERR;
       }
 
@@ -424,7 +428,9 @@ static int wkt_read_point_text(wkt_tokenizer_t *tok, const geom_header_t *header
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -436,7 +442,9 @@ static int wkt_read_point_text(wkt_tokenizer_t *tok, const geom_header_t *header
   }
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -451,7 +459,9 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, const geom_header_t *h
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -478,7 +488,9 @@ static int wkt_read_multipoint_text(wkt_tokenizer_t *tok, const geom_header_t *h
   } while (more_points);
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -493,7 +505,9 @@ static int wkt_read_linestring_text(wkt_tokenizer_t *tok, const geom_header_t *h
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -505,7 +519,9 @@ static int wkt_read_linestring_text(wkt_tokenizer_t *tok, const geom_header_t *h
   }
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -520,7 +536,9 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, const geom_header
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -547,7 +565,9 @@ static int wkt_read_multilinestring_text(wkt_tokenizer_t *tok, const geom_header
   } while (more_linestrings);
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -562,7 +582,9 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, const geom_header_t *head
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -589,7 +611,9 @@ static int wkt_read_polygon_text(wkt_tokenizer_t *tok, const geom_header_t *head
   } while (more_rings);
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -604,7 +628,9 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, const geom_header_t 
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -631,7 +657,9 @@ static int wkt_read_multipolygon_text(wkt_tokenizer_t *tok, const geom_header_t 
   } while (more_polygons);
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -648,7 +676,9 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, const geom_hea
   }
 
   if (tok->token != WKT_LPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected '(' or 'empty'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected '(' or 'empty'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -668,7 +698,9 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, const geom_hea
   } while (more_geometries);
 
   if (tok->token != WKT_RPAREN) {
-    if (error)  wkt_tokenizer_error( tok, error, "Expected ')'" );
+    if (error) {
+      wkt_tokenizer_error(tok, error, "Expected ')'");
+    }
     return SQLITE_IOERR;
   } else {
     wkt_tokenizer_next(tok);
@@ -679,7 +711,7 @@ static int wkt_read_geometrycollection_text(wkt_tokenizer_t *tok, const geom_hea
 static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header_t *parent_header, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_type_t geometry_type;
-  int(*read_body)(wkt_tokenizer_t*,const geom_header_t*, geom_consumer_t const*, error_t*);
+  int(*read_body)(wkt_tokenizer_t *, const geom_header_t *, geom_consumer_t const *, error_t *);
   switch (tok->token) {
     case WKT_POINT:
       geometry_type = GEOM_POINT;
@@ -711,7 +743,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header
       break;
     default:
       if (error) {
-        wkt_tokenizer_error( tok, error, "Unsupported WKT geometry type" );
+        wkt_tokenizer_error(tok, error, "Unsupported WKT geometry type");
       }
       result = SQLITE_IOERR;
       goto exit;
@@ -742,7 +774,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header
       break;
     default:
       if (error) {
-        wkt_tokenizer_error( tok, error, "Unexpected token" );
+        wkt_tokenizer_error(tok, error, "Unexpected token");
       }
       result = SQLITE_IOERR;
       goto exit;
@@ -759,7 +791,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header
 
   if (parent_header != NULL && parent_header->coord_type != header.coord_type) {
     if (error) {
-      wkt_tokenizer_error( tok, error, "Child dimension differs from parent dimension" );
+      wkt_tokenizer_error(tok, error, "Child dimension differs from parent dimension");
     }
     result = SQLITE_IOERR;
     goto exit;
