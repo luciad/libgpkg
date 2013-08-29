@@ -24,3 +24,5 @@ add_subdirectory( gpkg )
 add_subdirectory( shell )
 add_subdirectory( sqlite )
 
+enable_testing()
+add_subdirectory( test )

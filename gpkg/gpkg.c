@@ -478,6 +478,13 @@ static int AddGeometryColumn_(sqlite3 *db, char *db_name, char *table_name, char
   return SQLITE_OK;
 }
 
+/*
+ * Supports the following parameter lists:
+ * 4: table, column, type, srid
+ * 5: db, table, column, type, srid
+ * 6: table, column, type, srid, z, m
+ * 7: db, table, column, type, srid, z, m
+ */
 static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_TEXT_ARG(db_name)
   FUNCTION_TEXT_ARG(table_name)
@@ -488,7 +495,7 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
   FUNCTION_INT_ARG(m)
   FUNCTION_START(context)
 
-  if (nbArgs == 7) {
+  if (nbArgs == 5 || nbArgs == 7) {
     FUNCTION_GET_TEXT_ARG(context, db_name)
   } else {
     FUNCTION_SET_TEXT_ARG(db_name, "main")
@@ -497,9 +504,13 @@ static void AddGeometryColumn(sqlite3_context *context, int nbArgs, sqlite3_valu
   FUNCTION_GET_TEXT_ARG(context, column_name)
   FUNCTION_GET_TEXT_ARG(context, geometry_type)
   FUNCTION_GET_INT_ARG(srs_id)
-  FUNCTION_GET_INT_ARG(z)
-  FUNCTION_GET_INT_ARG(m)
-
+  if (nbArgs == 6 || nbArgs == 7) {
+    FUNCTION_GET_INT_ARG(z)
+    FUNCTION_GET_INT_ARG(m)
+  } else {
+    FUNCTION_SET_INT_ARG(z, 2)
+    FUNCTION_SET_INT_ARG(m, 2)
+  }
 
   FUNCTION_START_TRANSACTION(__add_geom_col)
 
@@ -855,6 +866,8 @@ int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_ro
   FUNC(CheckGpkg, 1);
   FUNC(InitGpkg, 0);
   FUNC(InitGpkg, 1);
+  FUNC(AddGeometryColumn, 4);
+  FUNC(AddGeometryColumn, 5);
   FUNC(AddGeometryColumn, 6);
   FUNC(AddGeometryColumn, 7);
   FUNC(CreateTilesTable, 1);
