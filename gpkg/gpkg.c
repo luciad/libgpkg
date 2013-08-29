@@ -806,7 +806,7 @@ static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_val
 extern "C" {
 #endif
 
-const char * GPKG_CALL gpkg_libversion(void) {
+const char * gpkg_libversion(void) {
     return LIBGPKG_VERSION;
 }
 
