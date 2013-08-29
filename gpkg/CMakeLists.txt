@@ -32,7 +32,7 @@ add_definitions( -DGPKG_HAVE_CONFIG_H )
 
 include_directories( "${PROJECT_SOURCE_DIR}/sqlite" ${CMAKE_CURRENT_BINARY_DIR} )
 
-add_library ( gpkg_ext MODULE $<TARGET_OBJECTS:gpkg_obj> )
+add_library ( gpkg_ext MODULE $<TARGET_OBJECTS:gpkg_obj> ext.c )
 set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 
 if ( WIN32 )
@@ -46,6 +46,7 @@ endif()
 
 if ( MSVC )
   add_definitions(-DGPKG_CALL=__cdecl)
-  set_target_properties( gpkg_ext PROPERTIES COMPILE_DEFINITIONS "$<TARGET_PROPERTY:gpkg_ext,COMPILE_DEFINITIONS> -DGPKG_API=__declspec\(dllexport\)" )
+  get_target_property( gpkg_ext gpkg_ext_OLD_COMPILE_DEFINITIONS COMPILE_DEFINITIONS )
+  set_target_properties( gpkg_ext PROPERTIES COMPILE_DEFINITIONS "${gpkg_ext_OLD_COMPILE_DEFINITIONS} -DGPKG_API=__declspec\(dllexport\)" )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TP" )
 endif()

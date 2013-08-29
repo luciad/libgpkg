@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <stdio.h>
 #include <stdint.h>
 #include "binstream.h"
 #include "check.h"
@@ -807,7 +806,7 @@ static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_val
 extern "C" {
 #endif
 
-GPKG_EXPORT const char * GPKG_CALL gpkg_libversion(void) {
+const char * GPKG_CALL gpkg_libversion(void) {
     return LIBGPKG_VERSION;
 }
 
@@ -816,7 +815,7 @@ GPKG_EXPORT const char * GPKG_CALL gpkg_libversion(void) {
 #define ST_FUNC(name, args) REGISTER_FUNC(name, ST_##name, args) REGISTER_FUNC(ST_##name, ST_##name, args)
 #define ST_ALIAS(name, function, args) REGISTER_FUNC(name, ST_##function, args) REGISTER_FUNC(ST_##name, ST_##function, args)
 
-GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
+int gpkg_extension_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
     SQLITE_EXTENSION_INIT2(pThunk)
 
     if ( sqlite3_libversion_number() < 3007000 ) {

@@ -1484,7 +1484,7 @@ static void open_db(struct callback_data *p){
   if( p->db==0 ){
     sqlite3_initialize();
 #ifndef SQLITE_OMIT_LOAD_EXTENSION	  
-	sqlite3_auto_extension((void ( *)()) sqlite3_gpkg_init);
+	sqlite3_auto_extension((void ( *)()) gpkg_extension_init);
 #endif	  
     sqlite3_open(p->zDbFilename, &p->db);
     db = p->db;
