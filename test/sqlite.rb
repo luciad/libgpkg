@@ -115,27 +115,32 @@ module SQLite3
       stmt = stmt_ptr.get_pointer(0)
       stmt_ptr.free
 
-      vars.each_with_index do |var, i|
+      if res != SQLite3::OK
+        raise sqlite3_errmsg(@db)
+      end
+
+      vars.flatten.each_with_index do |var, i|
         case var
           when Integer
-            sqlite3_bind_int64(stmt, i + 1, var)
+            res = sqlite3_bind_int64(stmt, i + 1, var)
           when Float
-            sqlite3_bind_double(stmt, i + 1, var)
+            res = sqlite3_bind_double(stmt, i + 1, var)
           when String
             if var.encoding == BINARY
               blob_ptr = FFI::MemoryPointer.new(:char, var.length)
               blob_ptr.put_bytes(0, var)
-              sqlite3_bind_blob(stmt, i + 1, blob_ptr, var.length, TRANSIENT)
+              res = sqlite3_bind_blob(stmt, i + 1, blob_ptr, var.length, TRANSIENT)
               blob_ptr.free
             else
-              sqlite3_bind_text(stmt, i + 1, var.encode(UTF8), -1, TRANSIENT)
+              res = sqlite3_bind_text(stmt, i + 1, var.encode(UTF8), -1, TRANSIENT)
             end
           else
+            raise "Unsupported parameter #{var}"
         end
-      end
 
-      if res != SQLite3::OK
-        raise sqlite3_errmsg(@db)
+        if res != SQLite3::OK
+          raise sqlite3_errmsg(@db)
+        end
       end
 
       all_rows = []
@@ -198,6 +203,7 @@ module SQLite3
 
     def get_first_row( sql, *vars )
       execute( sql, *vars ) { |row| return row }
+      nil
     end
 
     def get_first_value( sql, *vars )

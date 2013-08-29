@@ -16,22 +16,22 @@ require_relative 'gpkg'
 
 describe 'InitGpkg' do
   it 'should return NULL' do
-    expect(result_of('SELECT InitGpkg()')).to eq(nil)
+    execute 'SELECT InitGpkg()'
   end
 
   it 'should return NULL when called a second time' do
-    expect(result_of('SELECT InitGpkg()')).to eq(nil)
-    expect(result_of('SELECT InitGpkg()')).to eq(nil)
+    execute 'SELECT InitGpkg()'
+    execute 'SELECT InitGpkg()'
   end
 end
 
 describe 'CheckGpkg' do
   it 'should raise error when called before InitGpkg' do
-    expect { result_of('SELECT CheckGpkg()') }.to raise_error
+    execute 'SELECT CheckGpkg()', :expect => :error
   end
 
   it 'should return NULL when called after InitGpkg' do
-    expect(result_of('SELECT InitGpkg()')).to eq(nil)
-    expect(result_of('SELECT CheckGpkg()')).to eq(nil)
+    execute 'SELECT InitGpkg()'
+    execute 'SELECT CheckGpkg()'
   end
 end

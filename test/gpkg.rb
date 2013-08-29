@@ -15,12 +15,26 @@
 require_relative 'sqlite'
 
 module GeoPackageHelpers
+  DEFAULT_EXEC_OPTS = {
+      :expect => nil
+  }
+
   def execute(sql, *vars)
-    @db.execute(sql, *vars)
+    opts = Hash === vars.last ? DEFAULT_EXEC_OPTS.merge(vars.pop) : DEFAULT_EXEC_OPTS
+    case opts[:expect]
+      when :error
+        expect { result_of(sql, *vars) }.to raise_error
+      else
+        expect(result_of(sql, *vars)).to eq(opts[:expect])
+    end
   end
 
   def result_of(sql, *vars)
     @db.get_first_value(sql, *vars)
+  end
+
+  def check_table(table, expected)
+    expect(table_structure_of(table)).to eq(expected)
   end
 
   def table_structure_of(table)
