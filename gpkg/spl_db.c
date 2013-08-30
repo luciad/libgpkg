@@ -34,8 +34,8 @@ static column_info_t spatial_ref_sys_columns[] = {
   {NULL, NULL, N, 0, NULL}
 };
 static value_t spatial_ref_sys_data[] = {
-  I(-1), T("NONE"), I(-1), T("Undefined - Cartesian"), T(""), T("undefined"),
-  I(0), T("NONE"), I(0), T("Undefined - Geographic Long/Lat"), T(""), T("undefined")
+  I(-1), T("NONE"), I(-1), T("Undefined - Cartesian"), T(""), T("Undefined"),
+  I(0), T("NONE"), I(0), T("Undefined - Geographic Long/Lat"), T(""), T("Undefined")
 };
 static table_info_t spatial_ref_sys = {
   "spatial_ref_sys",
