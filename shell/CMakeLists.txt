@@ -14,7 +14,7 @@ if ( READLINE_FOUND )
   target_link_libraries ( gpkg_shell "${READLINE_LIBRARY}" )
 endif()
 
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND DO_CODE_COVERAGE )
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
   set_target_properties( gpkg_shell PROPERTIES LINK_FLAGS "--coverage" )
 endif()
 

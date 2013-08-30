@@ -39,7 +39,7 @@ if ( WIN32 )
   set_target_properties ( gpkg_ext PROPERTIES PREFIX "" )
 endif()
 
-if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND DO_CODE_COVERAGE )
+if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage" )
   set_target_properties( gpkg_ext PROPERTIES LINK_FLAGS "--coverage" )
 endif()

@@ -1,8 +1,8 @@
 cmake_minimum_required( VERSION 2.8 )
 project ( libgpkg )
 
-SET (DO_TEST false CACHE BOOL "Enable Testing?")
-SET (DO_CODE_COVERAGE false CACHE BOOL "Enable Code coverage?")
+option(GPKG_TEST "Enable Testing?" OFF)
+option(GPKG_COVERAGE "Enable Code coverage?" OFF)
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.5" )
@@ -27,8 +27,7 @@ add_subdirectory( gpkg )
 add_subdirectory( shell )
 add_subdirectory( sqlite )
 
-if(DO_TEST)
-  message("Testing enabled")
+if(GPKG_TEST)
   include( CTest )
   add_subdirectory( test )
 endif()
