@@ -47,6 +47,8 @@ typedef struct {
   /** @private */
   size_t limit;
   /** @private */
+  int limit_set;
+  /** @private */
   size_t position;
   /** @private */
   size_t capacity;
@@ -82,6 +84,14 @@ int binstream_init_growable(binstream_t *stream, size_t initial_cap);
  * @param stream the stream to destroy
  */
 void binstream_destroy(binstream_t *stream);
+
+/**
+ * Resets the given binary stream. After calling this function the position will be set to 0, the limit will be
+ * set to the capacity and the endianness will be reset to LITTLE.
+ *
+ * @param stream the stream to reset
+ */
+void binstream_reset(binstream_t *stream);
 
 /**
  * Returns the a pointer to the data buffer of this stream offset by the current position. At most binstream_available()

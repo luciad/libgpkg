@@ -20,9 +20,10 @@
 
 int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
   stream->data = data;
-  stream->capacity = length;
   stream->limit = length;
+  stream->limit_set = 0;
   stream->position = 0;
+  stream->capacity = length;
   stream->end = LITTLE;
   stream->growable = 0;
   return SQLITE_OK;
@@ -36,8 +37,9 @@ int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
 
   stream->data = data;
   stream->limit = initial_cap;
-  stream->capacity = initial_cap;
+  stream->limit_set = 0;
   stream->position = 0;
+  stream->capacity = initial_cap;
   stream->end = LITTLE;
   stream->growable = 1;
   return SQLITE_OK;
@@ -51,6 +53,13 @@ void binstream_destroy(binstream_t *stream) {
   if (stream->growable == 1) {
     sqlite3_free(stream->data);
   }
+}
+
+void binstream_reset(binstream_t *stream) {
+  stream->position = 0;
+  stream->limit = stream->capacity;
+  stream->limit_set = 0;
+  stream->end = LITTLE;
 }
 
 static int binstream_ensureavailable(binstream_t *stream, size_t needed) {
@@ -71,12 +80,12 @@ static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
     if (needed > newcapacity) {
       newcapacity = needed;
     }
-    uint8_t *newdata = (uint8_t *) sqlite3_realloc(stream->data, (int) newcapacity);
+    uint8_t *newdata = (uint8_t *) sqlite3_realloc(stream->data, (int) (newcapacity * sizeof(uint8_t)));
     if (newdata == NULL) {
       return SQLITE_NOMEM;
     }
     stream->data = newdata;
-    if (stream->limit == stream->capacity) {
+    if (stream->limit_set == 0) {
       stream->limit = newcapacity;
     }
     stream->capacity = newcapacity;
@@ -90,6 +99,7 @@ size_t binstream_position(binstream_t *stream) {
 
 void binstream_flip(binstream_t *stream) {
   stream->limit = stream->position;
+  stream->limit_set = 1;
   stream->position = 0;
 }
 
