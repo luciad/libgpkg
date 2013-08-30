@@ -16,7 +16,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include "gpb.h"
+#include "gpkg_geom.h"
 #include "sqlite.h"
 #include "nan.h"
 
@@ -31,12 +31,12 @@
     }
 #define CHECK_ENV(gpb, error) CHECK_ENV_COMP(gpb, x, error) CHECK_ENV_COMP(gpb, y, error) CHECK_ENV_COMP(gpb, z, error) CHECK_ENV_COMP(gpb, m, error)
 
-static size_t gpb_header_size(gpb_header_t *gpb) {
+static size_t gpb_header_size(geom_blob_header_t *gpb) {
   int coord_count = ((gpb->envelope.has_env_x ? 2 : 0) + (gpb->envelope.has_env_y ? 2 : 0) + (gpb->envelope.has_env_z ? 2 : 0) + (gpb->envelope.has_env_m ? 2 : 0));
   return (size_t) 4 /* Magic number */  + 4 /* SRID */ + 8 * coord_count /* Envelope */;
 }
 
-int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
+int gpb_read_header(binstream_t *stream, geom_blob_header_t *gpb, error_t *error) {
   uint8_t head[2];
   if (binstream_nread_u8(stream, head, 2) != SQLITE_OK) {
     return SQLITE_IOERR;
@@ -138,7 +138,7 @@ int gpb_read_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
   return SQLITE_OK;
 }
 
-int gpb_write_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
+int gpb_write_header(binstream_t *stream, geom_blob_header_t *gpb, error_t *error) {
   CHECK_ENV(gpb, error)
 
   if (binstream_write_nu8(stream, (uint8_t *)"GP", 2)) {
@@ -214,11 +214,11 @@ int gpb_write_header(binstream_t *stream, gpb_header_t *gpb, error_t *error) {
 static int gpb_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
   int result = SQLITE_OK;
 
-  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
 
   if (wkb->offset < 0) {
-    gpb_header_t *gpb_header = &writer->header;
+    geom_blob_header_t *gpb_header = &writer->header;
     if (header->geom_type != GEOM_POINT) {
       switch (header->coord_type) {
         case GEOM_XYZ:
@@ -262,7 +262,7 @@ static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
     goto exit;
   }
 
-  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
   geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
   result = wkb_consumer->coordinates(wkb_consumer, header, point_count, coords);
@@ -280,7 +280,7 @@ static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
     }
   }
 
-  gpb_header_t *gpb = &writer->header;
+  geom_blob_header_t *gpb = &writer->header;
   gpb->empty = 0;
   int offset = 0;
   switch (header->coord_type) {
@@ -323,7 +323,7 @@ exit:
 }
 
 static int gpb_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
-  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
 
   geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
@@ -333,7 +333,7 @@ static int gpb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
 static int gpb_end(const geom_consumer_t *consumer) {
   int result = SQLITE_OK;
 
-  gpb_writer_t *writer = (gpb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
   binstream_t *stream = &wkb->stream;
 
@@ -353,33 +353,22 @@ static int gpb_end(const geom_consumer_t *consumer) {
     goto exit;
   }
 
-  binstream_flip(stream);
+  geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
+  result = wkb_consumer->end(wkb_consumer);
 
 exit:
   return result;
 }
 
-int gpb_writer_init(gpb_writer_t *writer, int32_t srid) {
+int gpb_writer_init(geom_blob_writer_t *writer, int32_t srid) {
   geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
   geom_envelope_init(&writer->header.envelope);
   writer->header.version = GPB_VERSION;
   writer->header.srid = srid;
   writer->header.empty = 1;
-  return wkb_writer_init(&writer->wkb_writer);
+  return wkb_writer_init(&writer->wkb_writer, WKB_ISO);
 }
 
-geom_consumer_t *gpb_writer_geom_consumer(gpb_writer_t *writer) {
-  return &writer->geom_consumer;
-}
-
-void gpb_writer_destroy(gpb_writer_t *writer) {
+void gpb_writer_destroy(geom_blob_writer_t *writer) {
   wkb_writer_destroy(&writer->wkb_writer);
-}
-
-uint8_t *gpb_writer_getgpb(gpb_writer_t *writer) {
-  return binstream_data(&writer->wkb_writer.stream);
-}
-
-size_t gpb_writer_length(gpb_writer_t *writer) {
-  return binstream_available(&writer->wkb_writer.stream);
 }

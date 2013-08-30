@@ -25,6 +25,11 @@
  * @{
  */
 
+typedef enum {
+  WKB_ISO,
+  WKB_SPATIALITE
+} wkb_dialect;
+
 /**
  * A Well-Known Binary writer. wkb_writer_t instances can be used to generate a WKB blob based on
  * any geometry source. Use wkb_writer_geom_consumer() to obtain a geom_consumer_t pointer that can be passed to
@@ -41,6 +46,7 @@ typedef struct {
   size_t children[GEOM_MAX_DEPTH];
   /** @private */
   int offset;
+  wkb_dialect dialect;
 } wkb_writer_t;
 
 /**
@@ -48,7 +54,7 @@ typedef struct {
  * @param writer the writer to initialize
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_writer_init(wkb_writer_t *writer);
+int wkb_writer_init(wkb_writer_t *writer, wkb_dialect dialect);
 
 /**
  * Destroys a Well-Known Binary writer.
@@ -87,7 +93,7 @@ size_t wkb_writer_length(wkb_writer_t *writer);
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_read_geometry(binstream_t *stream, geom_consumer_t const *consumer, error_t *error);
+int wkb_read_geometry(binstream_t *stream, wkb_dialect dialect, geom_consumer_t const *consumer, error_t *error);
 
 /**
  * Parses the header of a Well-Known Binary geometry from the given stream. The stream should be positioned at the start
@@ -98,7 +104,7 @@ int wkb_read_geometry(binstream_t *stream, geom_consumer_t const *consumer, erro
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_read_header(binstream_t *stream, geom_header_t *header, error_t *error);
+int wkb_read_header(binstream_t *stream, wkb_dialect dialect, geom_header_t *header, error_t *error);
 
 /**
  * Populates a geometry envelope based on the coordinates of a Well-Known Binary geometry from the given stream. The
@@ -109,7 +115,7 @@ int wkb_read_header(binstream_t *stream, geom_header_t *header, error_t *error);
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_fill_envelope(binstream_t *stream, geom_envelope_t *envelope, error_t *error);
+int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t *envelope, error_t *error);
 
 /** @} */
 

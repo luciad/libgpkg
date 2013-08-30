@@ -16,6 +16,11 @@ libgpkg is distributed under the [Apache Software License](https://www.apache.or
 # Usage
 libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sqlite.org/c3ref/load_extension.html) C function or using the [load\_extension](http://sqlite.org/lang_corefunc.html#load_extension) SQL function. Once loaded libgpkg extends SQLite with the function listed below. These function can be used just like any of the core functions that SQLite provides.
 
+libgpkg exposes two SQLite extension entry points: sqlite3_gpkg_init and sqlite3_spl_init.
+sqlite3_gpkg_init is the default which loads libgpkg in GeoPackage mode.
+sqlite3_spl_init loads libgpkg in a Spatialite 4 emulation mode. This mode is not intended to be a replacement
+of Spatialite but it does allow libgpkg to read and write Spatialite's geometry BLOB and metadata tables.
+
 ## Standard Functions
 - ST\_MinX, ST\_MaxX, ST\_MinY, ST\_MaxY, ST\_MinZ, ST\_MaxZ, ST\_MinM, ST\_MaxM.
 - ST\_SRID
@@ -29,8 +34,8 @@ libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sq
 
 ## Non-Standard Functions
 
-- CheckGpkg
-- InitGpkg
+- CheckSpatialDB
+- InitSpatialDB
 - AddGeometryColumn
 - CreateTilesTable
 - CreateSpatialIndex

@@ -13,25 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <sqlite3ext.h>
-#include "gpkg.h"
+#include "blobio.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#ifndef GPKG_EXPORT
-#define GPKG_EXPORT
-#endif
-
-#ifndef GPKG_CALL
-#define GPKG_CALL
-#endif
-
-GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
-  return gpkg_extension_init(db, pzErrMsg, pThunk);
+uint8_t *geom_blob_writer_getdata(geom_blob_writer_t *writer) {
+  return binstream_data(&writer->wkb_writer.stream);
 }
 
-#ifdef __cplusplus
+size_t geom_blob_writer_length(geom_blob_writer_t *writer) {
+  return binstream_available(&writer->wkb_writer.stream);
 }
-#endif
+
+geom_consumer_t *geom_blob_writer_geom_consumer(geom_blob_writer_t *writer) {
+  return &writer->geom_consumer;
+}

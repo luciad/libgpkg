@@ -18,7 +18,10 @@
 
 #include "sqlite.h"
 #include "error.h"
+#include "sql.h"
 
-int check_gpkg(sqlite3 *db, char *db_name, error_t *error);
+int init_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error);
+
+int check_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error);
 
 #endif

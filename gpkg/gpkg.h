@@ -18,6 +18,10 @@
 
 #include <sqlite3ext.h>
 
+#ifdef GPKG_HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /**
  * \addtogroup gpkg Library initialization and metadata
  * @{
@@ -27,16 +31,35 @@
 extern "C" {
 #endif
 
+typedef enum {
+  GEOPACKAGE,
+  SPATIALITE4
+}
+gpkg_schema;
+
+#ifndef GPKG_EXPORT
+#define GPKG_EXPORT
+#endif
+
+#ifndef GPKG_CALL
+#define GPKG_CALL
+#endif
+
 /**
  * Returns the version number of libgpkg as a string.
  * @return a version number
  */
-const char *gpkg_libversion(void);
+GPKG_EXPORT const char *GPKG_CALL gpkg_libversion();
 
 /**
  * Entry point for the GeoPackage SQLite extension.
  */
-int gpkg_extension_init(sqlite3 *, const char **, const sqlite3_api_routines *);
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
+ * Entry point for the Spatialite emulation SQLite extension.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_spl_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 #ifdef __cplusplus
 }

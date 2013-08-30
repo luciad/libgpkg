@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "check.h"
-#include "tables.h"
+#include "sql.h"
 
 static int integrity_check_row(sqlite3_stmt *stmt, void *data) {
   const char *row = (const char *)sqlite3_column_text(stmt, 0);
@@ -24,11 +24,11 @@ static int integrity_check_row(sqlite3_stmt *stmt, void *data) {
   return SQLITE_OK;
 }
 
-static int integrity_check(sqlite3 *db, char *db_name, error_t *error) {
+static int integrity_check(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
   return sql_exec_stmt(db, integrity_check_row, NULL, error, "PRAGMA integrity_check");
 }
 
-static int table_definitions(sqlite3 *db, char *db_name, error_t *error) {
+static int table_definitions(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
   int result = SQLITE_OK;
 
   const table_info_t *const *table = tables;
@@ -43,7 +43,7 @@ static int table_definitions(sqlite3 *db, char *db_name, error_t *error) {
   return result;
 }
 
-typedef int(*check_func)(sqlite3 *db, char *db_name, error_t *error);
+typedef int(*check_func)(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error);
 
 static check_func checks[] = {
   integrity_check,
@@ -51,12 +51,12 @@ static check_func checks[] = {
   NULL
 };
 
-int check_gpkg(sqlite3 *db, char *db_name, error_t *error) {
+int check_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
   int result = SQLITE_OK;
 
   check_func *current_func = checks;
   while (*current_func != NULL) {
-    result = (*current_func)(db, db_name, error);
+    result = (*current_func)(db, db_name, tables, error);
     if (result != SQLITE_OK) {
       break;
     }
@@ -64,4 +64,23 @@ int check_gpkg(sqlite3 *db, char *db_name, error_t *error) {
   }
 
   return result;
+}
+
+int init_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
+  int result = SQLITE_OK;
+  const table_info_t *const *table = tables;
+
+  while (*table != NULL) {
+    result = sql_init_table(db, db_name, *table, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  if (result == SQLITE_OK && error_count(error) > 0) {
+    return SQLITE_ERROR;
+  } else {
+    return result;
+  }
 }

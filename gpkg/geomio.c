@@ -53,8 +53,8 @@ void geom_consumer_init(
   consumer->coordinates = coordinates != NULL ? coordinates : geom_coordinates;
 }
 
-int geom_coord_dim(const geom_header_t *wkb) {
-  switch (wkb->coord_type) {
+int geom_coord_dim(coord_type_t coord_type) {
+  switch (coord_type) {
     default:
     case GEOM_XY:
       return 2;
@@ -66,8 +66,8 @@ int geom_coord_dim(const geom_header_t *wkb) {
   }
 }
 
-const char *geom_type_name(const geom_header_t *wkb) {
-  switch (wkb->geom_type) {
+const char *geom_type_name(geom_type_t geom_type) {
+  switch (geom_type) {
     case GEOM_POINT:
       return "ST_Point";
     case GEOM_LINESTRING:

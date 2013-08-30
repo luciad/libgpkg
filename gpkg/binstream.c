@@ -80,7 +80,7 @@ static int binstream_ensurecapacity(binstream_t *stream, size_t needed) {
     if (needed > newcapacity) {
       newcapacity = needed;
     }
-    uint8_t *newdata = (uint8_t *) sqlite3_realloc(stream->data, (int) (newcapacity * sizeof(uint8_t)));
+    uint8_t *newdata = (uint8_t *) sqlite3_realloc(stream->data, (int)(newcapacity * sizeof(uint8_t)));
     if (newdata == NULL) {
       return SQLITE_NOMEM;
     }

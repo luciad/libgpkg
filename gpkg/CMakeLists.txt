@@ -1,20 +1,23 @@
 add_library (
   gpkg_obj OBJECT
   binstream.c
+  blobio.c
   check.c
   error.c
   geomio.c
-  gpb.c
-  gpkg.c
-  tables.c
+  gpkg_db.c
+  gpkg_geom.c
   sql.c
+  spatialdb.c
+  spl_db.c
+  spl_geom.c
   strbuf.c
   wkb.c
   wkt.c
 )
 set_target_properties( gpkg_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-add_library ( gpkg_static STATIC $<TARGET_OBJECTS:gpkg_obj> )
+add_library ( gpkg_static STATIC $<TARGET_OBJECTS:gpkg_obj> gpkg.c )
 set_target_properties(
   gpkg_static PROPERTIES
   OUTPUT_NAME "gpkg"
@@ -32,7 +35,7 @@ add_definitions( -DGPKG_HAVE_CONFIG_H )
 
 include_directories( "${PROJECT_SOURCE_DIR}/sqlite" ${CMAKE_CURRENT_BINARY_DIR} )
 
-add_library ( gpkg_ext MODULE $<TARGET_OBJECTS:gpkg_obj> ext.c )
+add_library ( gpkg_ext MODULE $<TARGET_OBJECTS:gpkg_obj> gpkg.c )
 set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 
 if ( WIN32 )

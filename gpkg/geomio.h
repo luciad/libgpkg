@@ -16,6 +16,7 @@
 #ifndef GPKG_GEOMIO_H
 #define GPKG_GEOMIO_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 /**
@@ -93,7 +94,7 @@ typedef enum {
 #define GEOM_MAX_COORD_SIZE 4
 
 /**
- * The header of a geometry.
+ * The header of a geometry. All geometries, including top-level and nested geometries, have a geometry header.
  */
 typedef struct {
   /**
@@ -227,13 +228,13 @@ void geom_consumer_init(
  * Returns the coordinate dimension of the geometry.
  * @param header the geometry header containing the coordinate dimension information
  */
-int geom_coord_dim(const geom_header_t *header);
+int geom_coord_dim(coord_type_t coord_type);
 
 /**
  * Returns the geometry type as a string.
  * @param header the geometry header containing the type information
  */
-const char *geom_type_name(const geom_header_t *header);
+const char *geom_type_name(geom_type_t geom_type);
 
 int geom_type_from_string(const char *type_name, geom_type_t *type);
 
