@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include <string.h>
+#include <stdio.h>
 #include <float.h>
 #include "sqlite.h"
 #include "geomio.h"
@@ -66,49 +67,118 @@ int geom_coord_dim(coord_type_t coord_type) {
   }
 }
 
-const char *geom_type_name(geom_type_t geom_type) {
-  switch (geom_type) {
-    case GEOM_POINT:
-      return "ST_Point";
-    case GEOM_LINESTRING:
-      return "ST_LineString";
-    case GEOM_POLYGON:
-      return "ST_Polygon";
-    case GEOM_MULTIPOINT:
-      return "ST_MultiPoint";
-    case GEOM_MULTILINESTRING:
-      return "ST_MultiLineString";
-    case GEOM_MULTIPOLYGON:
-      return "ST_MultiPolygon";
-    case GEOM_GEOMETRYCOLLECTION:
-      return "ST_GeometryCollection";
-    case GEOM_GEOMETRY:
-      return "ST_Geometry";
-    default:
-      return NULL;
+int geom_normalized_type_name(const char *geom_type, const char **normalized_geom_type) {
+  geom_type_t geom_type_enum;
+
+  int res = geom_type_from_string(geom_type, &geom_type_enum);
+  if (res != SQLITE_OK) {
+    return res;
   }
+
+  return geom_type_name(geom_type_enum, normalized_geom_type);
+}
+
+int geom_type_name(geom_type_t geom_type, const char **geom_type_name) {
+  int result = SQLITE_OK;
+
+  switch (geom_type) {
+    case GEOM_GEOMETRY:
+      *geom_type_name = "Geometry";
+      break;
+    case GEOM_POINT:
+      *geom_type_name = "Point";
+      break;
+    case GEOM_CURVE:
+      *geom_type_name = "Curve";
+      break;
+    case GEOM_LINESTRING:
+      *geom_type_name = "LineString";
+      break;
+    case GEOM_SURFACE:
+      *geom_type_name = "Surface";
+      break;
+    case GEOM_CURVE_POLYGON:
+      *geom_type_name = "CurvePolygon";
+      break;
+    case GEOM_POLYGON:
+      *geom_type_name = "Polygon";
+      break;
+    case GEOM_GEOMETRYCOLLECTION:
+      *geom_type_name = "GeometryCollection";
+      break;
+    case GEOM_MULTISURFACE:
+      *geom_type_name = "MultiSurface";
+      break;
+    case GEOM_MULTIPOLYGON:
+      *geom_type_name = "MultiPolygon";
+      break;
+    case GEOM_MULTICURVE:
+      *geom_type_name = "MultiCurve";
+      break;
+    case GEOM_MULTILINESTRING:
+      *geom_type_name = "MultiLineString";
+      break;
+    case GEOM_MULTIPOINT:
+      *geom_type_name = "MultiPoint";
+      break;
+    default:
+      *geom_type_name = NULL;
+      result = SQLITE_ERROR;
+  }
+
+  return result;
 }
 
 int geom_type_from_string(const char *type_name, geom_type_t *type) {
   geom_type_t geom_type = GEOM_GEOMETRY;
 
   int result = SQLITE_OK;
-  if (sqlite3_strnicmp(type_name, "point", 6) == 0) {
-    geom_type = GEOM_POINT;
-  } else if (sqlite3_strnicmp(type_name, "polygon", 8) == 0) {
-    geom_type = GEOM_POLYGON;
+  if (sqlite3_strnicmp(type_name, "po", 2) == 0) {
+    const char *remainder = type_name + 2;
+    if (sqlite3_strnicmp(remainder, "int", 4) == 0) {
+      geom_type = GEOM_POINT;
+    } else if (sqlite3_strnicmp(remainder, "lygon", 6) == 0) {
+      geom_type = GEOM_POLYGON;
+    } else {
+      result = SQLITE_ERROR;
+    }
+  } else if (sqlite3_strnicmp(type_name, "multi", 5) == 0) {
+    const char *remainder = type_name + 5;
+    if (sqlite3_strnicmp(remainder, "curve", 6) == 0) {
+      geom_type = GEOM_MULTICURVE;
+    } else if (sqlite3_strnicmp(remainder, "surface", 8) == 0) {
+      geom_type = GEOM_MULTISURFACE;
+    } else if (sqlite3_strnicmp(remainder, "linestring", 11) == 0) {
+      geom_type = GEOM_MULTILINESTRING;
+    } else if (sqlite3_strnicmp(remainder, "po", 2) == 0) {
+      remainder = remainder + 2;
+      if (sqlite3_strnicmp(remainder, "int", 4) == 0) {
+        geom_type = GEOM_MULTIPOINT;
+      } else if (sqlite3_strnicmp(remainder, "lygon", 6) == 0) {
+        geom_type = GEOM_MULTIPOLYGON;
+      } else {
+        result = SQLITE_ERROR;
+      }
+    } else {
+      result = SQLITE_ERROR;
+    }
+  } else if (sqlite3_strnicmp(type_name, "geometry", 8) == 0) {
+    const char *remainder = type_name + 8;
+    if (sqlite3_strnicmp(remainder, "", 1) == 0) {
+      geom_type = GEOM_GEOMETRY;
+    } else if (sqlite3_strnicmp(remainder, "collection", 11) == 0) {
+      geom_type = GEOM_GEOMETRYCOLLECTION;
+    } else {
+      result = SQLITE_ERROR;
+    }
+  } else if (sqlite3_strnicmp(type_name, "curve", 6) == 0) {
+    geom_type = GEOM_CURVE;
+  } else if (sqlite3_strnicmp(type_name, "surface", 8) == 0) {
+    geom_type = GEOM_SURFACE;
   } else if (sqlite3_strnicmp(type_name, "linestring", 11) == 0) {
     geom_type = GEOM_LINESTRING;
-  } else if (sqlite3_strnicmp(type_name, "multipoint", 11) == 0) {
-    geom_type = GEOM_MULTIPOINT;
-  } else if (sqlite3_strnicmp(type_name, "multipolygon", 13) == 0) {
-    geom_type = GEOM_MULTIPOLYGON;
-  } else if (sqlite3_strnicmp(type_name, "multilinestring", 16) == 0) {
-    geom_type = GEOM_MULTILINESTRING;
-  } else if (sqlite3_strnicmp(type_name, "geometrycollection", 19) == 0) {
-    geom_type = GEOM_GEOMETRYCOLLECTION;
-  } else if (sqlite3_strnicmp(type_name, "geometry", 9) == 0) {
-    geom_type = GEOM_GEOMETRY;
+  } else if (sqlite3_strnicmp(type_name, "curvepolygon", 13) == 0) {
+    geom_type = GEOM_CURVE_POLYGON;
   } else {
     result = SQLITE_ERROR;
   }

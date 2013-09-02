@@ -31,12 +31,6 @@
 extern "C" {
 #endif
 
-typedef enum {
-  GEOPACKAGE,
-  SPATIALITE4
-}
-gpkg_schema;
-
 #ifndef GPKG_EXPORT
 #define GPKG_EXPORT
 #endif
@@ -57,9 +51,14 @@ GPKG_EXPORT const char *GPKG_CALL gpkg_libversion();
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 /**
- * Entry point for the Spatialite emulation SQLite extension.
+ * Entry point for the Spatialite 3.x emulation SQLite extension.
  */
-GPKG_EXPORT int GPKG_CALL sqlite3_spl_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+GPKG_EXPORT int GPKG_CALL sqlite3_spl3_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
+ * Entry point for the Spatialite 4.x emulation SQLite extension.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_spl4_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 #ifdef __cplusplus
 }

@@ -21,76 +21,11 @@
 #include "geomio.h"
 #include "sql.h"
 #include "sqlite.h"
-#include "spatialdb.h"
+#include "spatialdb_internal.h"
 #include "wkb.h"
 #include "wkt.h"
 
 SQLITE_EXTENSION_INIT1
-
-#define TEXT_FUNC_START(context, args, text, error) \
-  error_t error;\
-  char error_buffer[256];\
-  char *text = (char *) sqlite3_value_text(args[0]);\
-  size_t length = (size_t) sqlite3_value_bytes(args[0]);\
-\
-  if (text == NULL || length == 0) {\
-    sqlite3_result_null(context);\
-    return;\
-  }\
-\
-  if (error_init_fixed(&error, error_buffer, 256) != SQLITE_OK) {\
-    sqlite3_result_error(context, "Could not init error buffer", -1);\
-    goto exit;\
-  }
-
-#define TEXT_FUNC_END \
-exit:\
-  error_destroy(&error);
-
-#define BLOB_FUNC_START(context, args, stream, error) \
-  error_t error;\
-  char error_buffer[256];\
-  binstream_t stream;\
-\
-  uint8_t *blob = (uint8_t *) sqlite3_value_blob(args[0]);\
-  size_t length = (size_t) sqlite3_value_bytes(args[0]);\
-  if (blob == NULL || length == 0) {\
-    sqlite3_result_null(context);\
-    return;\
-  }\
-\
-  if (error_init_fixed(&error, error_buffer, 256) != SQLITE_OK) {\
-    sqlite3_result_error(context, "Could not init error buffer", -1);\
-    goto exit;\
-  }\
-\
-  binstream_init(&stream, blob, length);
-
-#define BLOB_FUNC_END \
-exit:\
-  binstream_destroy(&stream);\
-  error_destroy(&error);
-
-#define GEOMBLOB_FUNC_START(spatialdb, context, args, geomblob, stream, error) \
-  const spatialdb_t *spatialdb = (const spatialdb_t *)sqlite3_user_data(context); \
-  geom_blob_header_t geomblob;\
-  BLOB_FUNC_START(context, args, stream, error) \
-  if (spatialdb->read_blob_header(&stream, &geomblob, &error) != SQLITE_OK) {\
-    sqlite3_result_error(context, error_count(&error) > 0 ? error_message(&error) : "Invalid geometry blob header", -1);\
-    goto exit;\
-  }
-
-#define GEOMBLOB_FUNC_END BLOB_FUNC_END
-
-#define WKB_FUNC_START(spatialdb, context, args, geomblob, wkb, stream, error) \
-  GEOMBLOB_FUNC_START(spatialdb, context, args, geomblob, stream, error) \
-  geom_header_t wkb;\
-  if (spatialdb->read_geometry_header(&stream, &wkb, &error) != SQLITE_OK) {\
-    sqlite3_result_error(context, error_count(&error) > 0 ? error_message(&error) : "Invalid geometry blob header", -1);\
-    goto exit;\
-  }
-
-#define WKB_FUNC_END GEOMBLOB_FUNC_END
 
 #define ST_MIN_MAX(name, check, field) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) { \
     GEOMBLOB_FUNC_START(spatialdb, context, args, geomblob, stream, error) \
@@ -188,12 +123,13 @@ static void ST_CoordDim(sqlite3_context *context, int nbArgs, sqlite3_value **ar
 
 static void ST_GeometryType(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   WKB_FUNC_START(spatialdb, context, args, geomblob, wkb, stream, error)
-  const char *type_name = geom_type_name(wkb.geom_type);
-  if (type_name) {
+  const char *type_name;
+  if (geom_type_name(wkb.geom_type, &type_name) == SQLITE_OK) {
     sqlite3_result_text(context, type_name, -1, SQLITE_STATIC);
   } else {
     sqlite3_result_error(context, "Unknown geometry type", -1);
   }
+
   WKB_FUNC_END
 }
 
@@ -207,13 +143,14 @@ static void ST_GeomFromWKB(sqlite3_context *context, int nbArgs, sqlite3_value *
   const spatialdb_t *spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
   BLOB_FUNC_START(context, args, stream, error)
 
+  geom_blob_writer_t writer;
   int32_t srid = -1;
   if (nbArgs == 2) {
-    srid = (int32_t) sqlite3_value_int(args[1]);
+    int32_t srid = (int32_t) sqlite3_value_int(args[1]);
+    spatialdb->writer_init_srid(&writer, srid);
+  } else {
+    spatialdb->writer_init(&writer);
   }
-
-  geom_blob_writer_t writer;
-  spatialdb->writer_init(&writer, srid);
 
   int result = spatialdb->read_geometry(&stream, geom_blob_writer_geom_consumer(&writer), &error);
 
@@ -249,13 +186,15 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
   const spatialdb_t *spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
   TEXT_FUNC_START(context, args, text, error)
 
+  geom_blob_writer_t writer;
   int32_t srid = -1;
   if (nbArgs == 2) {
-    srid = (int32_t) sqlite3_value_int(args[1]);
+    int32_t srid = (int32_t) sqlite3_value_int(args[1]);
+    spatialdb->writer_init_srid(&writer, srid);
+  } else {
+    spatialdb->writer_init(&writer);
   }
 
-  geom_blob_writer_t writer;
-  spatialdb->writer_init(&writer, srid);
   int result = wkt_read_geometry(text, length, geom_blob_writer_geom_consumer(&writer), &error);
 
   if (result != SQLITE_OK) {
@@ -284,71 +223,6 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
 
   TEXT_FUNC_END
 }
-
-#define FUNCTION_RESULT result
-#define FUNCTION_DB_HANDLE db_handle
-#define FUNCTION_ERROR error
-#define FUNCTION_ERROR_PTR &FUNCTION_ERROR
-
-#define FUNCTION_START(context) \
-    int FUNCTION_RESULT = SQLITE_OK;\
-    int arg_counter = 0;\
-    error_t FUNCTION_ERROR;\
-    FUNCTION_RESULT = error_init(FUNCTION_ERROR_PTR);\
-    if (FUNCTION_RESULT != SQLITE_OK) {\
-        goto exit;\
-    }\
-    sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context);
-
-#define FUNCTION_END(context) \
-  exit:\
-    if (FUNCTION_RESULT == SQLITE_OK) {\
-        if (error_count(FUNCTION_ERROR_PTR) > 0) {\
-            sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
-        } else {\
-            sqlite3_result_null(context);\
-        }\
-    } else {\
-        sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
-    }\
-    error_destroy(FUNCTION_ERROR_PTR);
-
-#define FUNCTION_START_TRANSACTION(name) \
-    char *name##_transaction = #name;\
-    FUNCTION_RESULT = sql_begin(FUNCTION_DB_HANDLE, name##_transaction);\
-    if (FUNCTION_RESULT != SQLITE_OK) {\
-        goto exit;\
-    }
-#define FUNCTION_END_TRANSACTION(name) \
-    if (FUNCTION_RESULT == SQLITE_OK && error_count(FUNCTION_ERROR_PTR) == 0) {\
-        FUNCTION_RESULT = sql_commit(FUNCTION_DB_HANDLE, name##_transaction);\
-    } else {\
-        sql_rollback(FUNCTION_DB_HANDLE, name##_transaction);\
-    }
-
-#define FUNCTION_TEXT_ARG(arg) \
-    char* arg = NULL;\
-    int free_##arg = 0;
-#define FUNCTION_GET_TEXT_ARG(context, arg) \
-    arg = sqlite3_mprintf("%s", sqlite3_value_text(args[arg_counter++]));\
-    free_##arg = 1;\
-    if (arg == NULL) {\
-        sqlite3_result_error_code(context, SQLITE_NOMEM);\
-        goto exit;\
-    }
-#define FUNCTION_SET_TEXT_ARG(arg, val) \
-    arg = val;\
-    free_##arg = 0;
-#define FUNCTION_FREE_TEXT_ARG(arg) \
-    if (free_##arg != 0) {\
-        sqlite3_free(arg);\
-        arg = NULL;\
-    }
-
-#define FUNCTION_INT_ARG(arg) int arg = 0;
-#define FUNCTION_GET_INT_ARG(arg) arg = sqlite3_value_int(args[arg_counter++]);
-#define FUNCTION_SET_INT_ARG(arg, val) arg = val;
-#define FUNCTION_FREE_INT_ARG(arg)
 
 static void SpatialDBType(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   const spatialdb_t *spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
@@ -514,9 +388,14 @@ static void CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite3_val
   }
 #define FUNC(name, args, config) REGISTER_FUNC(name, name, args, config)
 #define ST_FUNC(name, args, config) REGISTER_FUNC(name, ST_##name, args, config) REGISTER_FUNC(ST_##name, ST_##name, args, config)
+#define GPKG_FUNC(name, args, config) REGISTER_FUNC(name, GPKG_##name, args, config) REGISTER_FUNC(GPKG_##name, GPKG_##name, args, config)
 #define ST_ALIAS(name, function, args, config) REGISTER_FUNC(name, ST_##function, args, config) REGISTER_FUNC(ST_##name, ST_##function, args, config)
 
-int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, gpkg_schema schema) {
+extern const spatialdb_t GEOPACKAGE_DB;
+extern const spatialdb_t SPATIALITE3_DB;
+extern const spatialdb_t SPATIALITE4_DB;
+
+int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, spatialdb_schema schema) {
   SQLITE_EXTENSION_INIT2(pThunk)
 
   if (sqlite3_libversion_number() < 3007000) {
@@ -527,7 +406,9 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   }
 
   const spatialdb_t *spatialdb;
-  if (schema == SPATIALITE4) {
+  if (schema == SPATIALITE3) {
+    spatialdb = &SPATIALITE3_DB;
+  } else if (schema == SPATIALITE4) {
     spatialdb = &SPATIALITE4_DB;
   } else {
     spatialdb = &GEOPACKAGE_DB;

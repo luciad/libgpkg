@@ -28,35 +28,55 @@
  * Enumeration of geometry types.
  */
 typedef enum {
+  GEOM_GEOMETRY,
   /**
    * Point
    */
-  GEOM_POINT = 1,
+  GEOM_POINT,
+  /**
+   * Curve
+   */
+  GEOM_CURVE,
   /**
    * Line string
    */
   GEOM_LINESTRING,
   /**
+   * Surface
+   */
+  GEOM_SURFACE,
+  /**
+   * Curve polygon
+   */
+  GEOM_CURVE_POLYGON,
+  /**
    * Polygon
    */
   GEOM_POLYGON,
   /**
-   * Multi point
+   * Geometry collection
    */
-  GEOM_MULTIPOINT,
+  GEOM_GEOMETRYCOLLECTION,
   /**
-   * Multi line string
+   * Multi surface
    */
-  GEOM_MULTILINESTRING,
+  GEOM_MULTISURFACE,
   /**
    * Multi polygon
    */
   GEOM_MULTIPOLYGON,
   /**
-   * Geometry collection
+   * Multi curve
    */
-  GEOM_GEOMETRYCOLLECTION,
-  GEOM_GEOMETRY,
+  GEOM_MULTICURVE,
+  /**
+   * Multi line string
+   */
+  GEOM_MULTILINESTRING,
+  /**
+   * Multi point
+   */
+  GEOM_MULTIPOINT,
   /**
    * Linear ring. Note that this is not a top level geometry type. It is present to allow linear rings to be treated
    * in the same way as other geometries.
@@ -208,7 +228,7 @@ typedef struct geom_consumer_t {
 
 /**
  * Initializes a geometry consumer.
- * @param consumer the geometry consumer to initialize
+ * @param[out] consumer the geometry consumer to initialize
  * @param begin the begin callback
  * @param end the end callback
  * @param begin_geometry the begin_geometry callback
@@ -226,17 +246,33 @@ void geom_consumer_init(
 
 /**
  * Returns the coordinate dimension of the geometry.
- * @param header the geometry header containing the coordinate dimension information
+ * @param coord_type the coordinate type
+ * @return the coordinate dimension corresponding to the coordinate type
  */
 int geom_coord_dim(coord_type_t coord_type);
 
 /**
  * Returns the geometry type as a string.
- * @param header the geometry header containing the type information
+ * @param geom_type the geometry type constant
+ * @return the geometry type string
  */
-const char *geom_type_name(geom_type_t geom_type);
+int geom_type_name(geom_type_t geom_type, const char **geom_type_name);
 
+/**
+ * Determines the geometry type constant corresponding to the given geometry type name.
+ * @param type_name the geometry type name
+ * @param[out] type a pointer to a geom_type_t value which will be written to
+ * @return SQLITE_OK or an error code if the type_name is invalid
+ */
 int geom_type_from_string(const char *type_name, geom_type_t *type);
+
+/**
+ * Returns a normalized version of the given geometry type name. This function is equivalent to
+ * calling geom_type_from_string followed by geom_type_name.
+ * @param geom_type_name the geometry type name
+ * @return a normalized geometry type name or NULL if the given geometry type name is invalid
+ */
+int geom_normalized_type_name(const char *geom_type_name, const char **normalized_geom_type_name);
 
 /**
  * Initializes a geometry envelope.

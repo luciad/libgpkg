@@ -188,10 +188,15 @@ static int read_blob_header(binstream_t *stream, geom_blob_header_t *header, err
   return gpb_read_header(stream, header, error);
 }
 
-static int AddGeometryColumn_(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
+static int gpkg_writer_init(geom_blob_writer_t *writer) {
+  return gpb_writer_init(writer, -1);
+}
+
+static int add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
   int result;
 
-  result = geom_type_from_string(geom_type, NULL);
+  const char *normalized_geom_type;
+  result = geom_normalized_type_name(geom_type, &normalized_geom_type);
   if (result != SQLITE_OK) {
     error_append(error, "Invalid geometry type: %s", geom_type);
     return result;
@@ -220,16 +225,6 @@ static int AddGeometryColumn_(sqlite3 *db, const char *db_name, const char *tabl
     return SQLITE_OK;
   }
 
-  // Check if required meta tables exist
-  result = sql_check_table(db, db_name, &gpkg_spatial_ref_sys, error);
-  if (result != SQLITE_OK) {
-    return result;
-  }
-  result = sql_check_table(db, db_name, &gpkg_geometry_columns, error);
-  if (result != SQLITE_OK) {
-    return result;
-  }
-
   if (error_count(error) > 0) {
     return SQLITE_OK;
   }
@@ -246,14 +241,14 @@ static int AddGeometryColumn_(sqlite3 *db, const char *db_name, const char *tabl
     return SQLITE_OK;
   }
 
-  result = sql_exec(db, "ALTER TABLE \"%w\".\"%w\" ADD COLUMN \"%w\" %s", db_name, table_name, column_name, geom_type);
+  result = sql_exec(db, "ALTER TABLE \"%w\".\"%w\" ADD COLUMN \"%w\" %s", db_name, table_name, column_name, normalized_geom_type);
   if (result != SQLITE_OK) {
     error_append(error, sqlite3_errmsg(db));
     return result;
   }
 
   result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (table_name, column_name, geometry_type, srs_id, z, m) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name, "gpkg_geometry_columns", table_name, column_name,
-                    geom_type, srs_id, z, m);
+                    normalized_geom_type, srs_id, z, m);
   if (result != SQLITE_OK) {
     error_append(error, sqlite3_errmsg(db));
     return result;
@@ -262,7 +257,7 @@ static int AddGeometryColumn_(sqlite3 *db, const char *db_name, const char *tabl
   return SQLITE_OK;
 }
 
-static int CreateTilesTable_(sqlite3 *db, const char *db_name, const char *table_name, error_t *error) {
+static int create_tiles_table(sqlite3 *db, const char *db_name, const char *table_name, error_t *error) {
   int result = SQLITE_OK;
 
   // Check if the target table exists
@@ -293,7 +288,7 @@ static int CreateTilesTable_(sqlite3 *db, const char *db_name, const char *table
   return SQLITE_OK;
 }
 
-static int CreateSpatialIndex_(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, error_t *error) {
+static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, error_t *error) {
   int result = SQLITE_OK;
   char *index_table_name = NULL;
   int exists = 0;
@@ -513,11 +508,12 @@ const spatialdb_t GEOPACKAGE_DB = {
   check,
   write_blob_header,
   read_blob_header,
+  gpkg_writer_init,
   gpb_writer_init,
   gpb_writer_destroy,
-  AddGeometryColumn_,
-  CreateTilesTable_,
-  CreateSpatialIndex_,
+  add_geometry_column,
+  create_tiles_table,
+  create_spatial_index,
   fill_envelope,
   read_geometry_header,
   read_geometry

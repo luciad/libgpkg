@@ -24,7 +24,7 @@
  */
 typedef struct {
   /**
-   * The GeoPacakge Binary version number.
+   * The encoding version number.
    */
   uint8_t version;
 

@@ -455,7 +455,8 @@ struct callback_data {
   const char *zVfs;           /* Name of VFS to use */
   sqlite3_stmt *pStmt;   /* Current statement if any. */
   FILE *pLog;            /* Write log output here */
-  gpkg_schema spatialSchema;
+  const char* gpkgMode;
+  void (*gpkgEntryPoint)();
 };
 
 /*
@@ -1485,7 +1486,7 @@ static void open_db(struct callback_data *p){
   if( p->db==0 ){
     sqlite3_initialize();
 #ifndef SQLITE_OMIT_LOAD_EXTENSION	  
-	sqlite3_auto_extension(p->spatialSchema == SPATIALITE4 ? (void ( *)()) sqlite3_spl_init : (void ( *)()) sqlite3_gpkg_init);
+	sqlite3_auto_extension(p->gpkgEntryPoint);
 #endif	  
     sqlite3_open(p->zDbFilename, &p->db);
     db = p->db;
@@ -2938,7 +2939,8 @@ static void main_init(struct callback_data *data) {
   data->showHeader = 0;
   sqlite3_config(SQLITE_CONFIG_URI, 1);
   sqlite3_config(SQLITE_CONFIG_LOG, shellLog, data);
-  data->spatialSchema = GEOPACKAGE;
+  data->gpkgMode = "GeoPackage";
+  data->gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_init;
   sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "gpkg> ");
   sqlite3_snprintf(sizeof(continuePrompt), continuePrompt," ...> ");
   sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);
@@ -3056,9 +3058,14 @@ int main(int argc, char **argv){
         fprintf(stderr, "no such VFS: \"%s\"\n", argv[i]);
         exit(1);
       }
-    }else if( strcmp(z,"-spatialite")==0 ){
-       data.spatialSchema = SPATIALITE4;
-       sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "spl > ");
+    }else if( strcmp(z,"-spl3")==0 ){
+      data.gpkgMode = "Spatialite 3.x";
+      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_spl3_init;
+      sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "spl3> ");
+    }else if( strcmp(z,"-spl4")==0 ){
+      data.gpkgMode = "Spatialite 4.x";
+      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_spl4_init;
+      sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "spl4> ");
     }
   }
   if( data.zDbFilename==0 ){
@@ -3165,7 +3172,7 @@ int main(int argc, char **argv){
           if( bail_on_error ) return rc;
         }
       }
-    }else if( strcmp(z,"-spatialite")==0 ){
+    }else if( strcmp(z,"-spl3")==0 || strcmp(z,"-spl4")==0 ){
       i++;
     }else{
       fprintf(stderr,"%s: Error: unknown option: %s\n", Argv0, z);
@@ -3205,7 +3212,7 @@ int main(int argc, char **argv){
         sqlite3_libversion(), 
         sqlite3_sourceid(),
         gpkg_libversion(),
-        (data.spatialSchema == GEOPACKAGE ? "GeoPackage" : "Spatialite")
+        data.gpkgMode
       );
       zHome = find_home_dir();
       if( zHome ){
