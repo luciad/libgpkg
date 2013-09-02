@@ -16,18 +16,18 @@ require_relative 'gpkg'
 
 describe 'AddGeometryColumn' do
   it 'should return NULL on success' do
-    execute 'SELECT InitGpkg()'
+    execute 'SELECT InitSpatialDB()'
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom', 'point', 0)"
   end
 
-  it 'should succeed even if InitGpkg was not called' do
+  it 'should succeed even if InitSpatialDB was not called' do
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom', 'point', 0)"
   end
 
   it 'should support all geometry types' do
-    execute 'SELECT InitGpkg()'
+    execute 'SELECT InitSpatialDB()'
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom1', 'point', 0)"
     execute "SELECT AddGeometryColumn('test', 'geom2', 'polygon', 0)"
@@ -40,18 +40,18 @@ describe 'AddGeometryColumn' do
 
     check_table 'test',
                 'id' => {:index => 0, :type => 'int', :not_null => false, :default => nil, :primary_key => false},
-                'geom1' => {:index => 1, :type => 'point', :not_null => false, :default => nil, :primary_key => false},
-                'geom2' => {:index => 2, :type => 'polygon', :not_null => false, :default => nil, :primary_key => false},
-                'geom3' => {:index => 3, :type => 'linestring', :not_null => false, :default => nil, :primary_key => false},
-                'geom4' => {:index => 4, :type => 'multipoint', :not_null => false, :default => nil, :primary_key => false},
-                'geom5' => {:index => 5, :type => 'multipolygon', :not_null => false, :default => nil, :primary_key => false},
-                'geom6' => {:index => 6, :type => 'multilinestring', :not_null => false, :default => nil, :primary_key => false},
-                'geom7' => {:index => 7, :type => 'geometrycollection', :not_null => false, :default => nil, :primary_key => false},
-                'geom8' => {:index => 8, :type => 'geometry', :not_null => false, :default => nil, :primary_key => false}
+                'geom1' => {:index => 1, :type => 'Point', :not_null => false, :default => nil, :primary_key => false},
+                'geom2' => {:index => 2, :type => 'Polygon', :not_null => false, :default => nil, :primary_key => false},
+                'geom3' => {:index => 3, :type => 'LineString', :not_null => false, :default => nil, :primary_key => false},
+                'geom4' => {:index => 4, :type => 'MultiPoint', :not_null => false, :default => nil, :primary_key => false},
+                'geom5' => {:index => 5, :type => 'MultiPolygon', :not_null => false, :default => nil, :primary_key => false},
+                'geom6' => {:index => 6, :type => 'MultiLineString', :not_null => false, :default => nil, :primary_key => false},
+                'geom7' => {:index => 7, :type => 'GeometryCollection', :not_null => false, :default => nil, :primary_key => false},
+                'geom8' => {:index => 8, :type => 'Geometry', :not_null => false, :default => nil, :primary_key => false}
   end
 
   it 'should raise error on unsupported geometry type' do
-    execute 'SELECT InitGpkg()'
+    execute 'SELECT InitSpatialDB()'
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom', 'circularstring', 0)", :expect => :error
   end
