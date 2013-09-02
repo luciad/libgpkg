@@ -16,18 +16,18 @@ require_relative 'gpkg'
 
 describe 'AddGeometryColumn' do
   it 'should return NULL on success' do
-    execute 'SELECT InitSpatialDB()'
+    execute 'SELECT InitSpatialMetadata()'
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom', 'point', 0)"
   end
 
-  it 'should succeed even if InitSpatialDB was not called' do
+  it 'should succeed even if InitSpatialMetadata was not called' do
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom', 'point', 0)"
   end
 
   it 'should support all geometry types' do
-    execute 'SELECT InitSpatialDB()'
+    execute 'SELECT InitSpatialMetadata()'
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom1', 'point', 0)"
     execute "SELECT AddGeometryColumn('test', 'geom2', 'polygon', 0)"
@@ -51,7 +51,7 @@ describe 'AddGeometryColumn' do
   end
 
   it 'should raise error on unsupported geometry type' do
-    execute 'SELECT InitSpatialDB()'
+    execute 'SELECT InitSpatialMetadata()'
     execute 'CREATE TABLE test (id int)'
     execute "SELECT AddGeometryColumn('test', 'geom', 'circularstring', 0)", :expect => :error
   end

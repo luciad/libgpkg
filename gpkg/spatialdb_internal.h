@@ -18,147 +18,171 @@
 
 #include "spatialdb.h"
 
-#define TEXT_FUNC_START(context, args, text, error) \
-  error_t error;\
-  char error_buffer[256];\
-  char *text = (char *) sqlite3_value_text(args[0]);\
-  size_t length = (size_t) sqlite3_value_bytes(args[0]);\
-\
-  if (text == NULL || length == 0) {\
-    sqlite3_result_null(context);\
-    return;\
-  }\
-\
-  if (error_init_fixed(&error, error_buffer, 256) != SQLITE_OK) {\
-    sqlite3_result_error(context, "Could not init error buffer", -1);\
-    goto exit;\
-  }
-
-#define TEXT_FUNC_END \
-exit:\
-  error_destroy(&error);
-
-#define BLOB_FUNC_START(context, args, stream, error) \
-  error_t error;\
-  char error_buffer[256];\
-  binstream_t stream;\
-\
-  uint8_t *blob = (uint8_t *) sqlite3_value_blob(args[0]);\
-  size_t length = (size_t) sqlite3_value_bytes(args[0]);\
-  if (blob == NULL || length == 0) {\
-    sqlite3_result_null(context);\
-    return;\
-  }\
-\
-  if (error_init_fixed(&error, error_buffer, 256) != SQLITE_OK) {\
-    sqlite3_result_error(context, "Could not init error buffer", -1);\
-    goto exit;\
-  }\
-\
-  binstream_init(&stream, blob, length);
-
-#define BLOB_FUNC_END \
-exit:\
-  binstream_destroy(&stream);\
-  error_destroy(&error);
-
-#define GEOMBLOB_FUNC_START(spatialdb, context, args, geomblob, stream, error) \
-  const spatialdb_t *spatialdb = (const spatialdb_t *)sqlite3_user_data(context); \
-  geom_blob_header_t geomblob;\
-  BLOB_FUNC_START(context, args, stream, error) \
-  if (spatialdb->read_blob_header(&stream, &geomblob, &error) != SQLITE_OK) {\
-    sqlite3_result_error(context, error_count(&error) > 0 ? error_message(&error) : "Invalid geometry blob header", -1);\
-    goto exit;\
-  }
-
-#define GEOMBLOB_FUNC_END BLOB_FUNC_END
-
-#define WKB_FUNC_START(spatialdb, context, args, geomblob, wkb, stream, error) \
-  GEOMBLOB_FUNC_START(spatialdb, context, args, geomblob, stream, error) \
-  geom_header_t wkb;\
-  if (spatialdb->read_geometry_header(&stream, &wkb, &error) != SQLITE_OK) {\
-    sqlite3_result_error(context, error_count(&error) > 0 ? error_message(&error) : "Invalid geometry blob header", -1);\
-    goto exit;\
-  }
-
-#define WKB_FUNC_END GEOMBLOB_FUNC_END
-
+#define FUNCTION_NOOP do {} while(0)
 #define FUNCTION_RESULT result
 #define FUNCTION_DB_HANDLE db_handle
 #define FUNCTION_ERROR error
-#define FUNCTION_ERROR_PTR &FUNCTION_ERROR
 
-#define FUNCTION_START(context) \
-    int FUNCTION_RESULT = SQLITE_OK;\
-    int arg_counter = 0;\
-    error_t FUNCTION_ERROR;\
-    FUNCTION_RESULT = error_init(FUNCTION_ERROR_PTR);\
-    if (FUNCTION_RESULT != SQLITE_OK) {\
-        goto exit;\
-    }\
-    sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context);
+#define FUNCTION_START(context)                                                                                        \
+    int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
+    error_t FUNCTION_ERROR;                                                                                            \
+    if (error_init(&FUNCTION_ERROR) != SQLITE_OK) {                                                                    \
+        sqlite3_result_error(context, "Could not init error buffer", -1);                                              \
+        goto exit;                                                                                                     \
+    };                                                                                                                 \
+    sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context)
 
-#define FUNCTION_END(context) \
-  exit:\
-    if (FUNCTION_RESULT == SQLITE_OK) {\
-        if (error_count(FUNCTION_ERROR_PTR) > 0) {\
-            sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
-        } else {\
-            sqlite3_result_null(context);\
-        }\
-    } else {\
-        sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
-    }\
-    error_destroy(FUNCTION_ERROR_PTR);
+#define FUNCTION_START_STATIC(context, error_buf_size)                                                                 \
+    int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
+    char error_buffer[error_buf_size];                                                                                 \
+    error_t FUNCTION_ERROR;                                                                                            \
+    if (error_init_fixed(&FUNCTION_ERROR, error_buffer, error_buf_size) != SQLITE_OK) {                                \
+        sqlite3_result_error(context, "Could not init error buffer", -1);                                              \
+        goto exit;                                                                                                     \
+    }                                                                                                                  \
+    sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context)
 
-#define FUNCTION_END_INT_RESULT(context, sqlite_result) \
-  exit:\
-    if (FUNCTION_RESULT == SQLITE_OK) {\
-        if (error_count(FUNCTION_ERROR_PTR) > 0) {\
-            sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
-        } else {\
-            sqlite3_result_int(context, sqlite_result);\
-        }\
-    } else {\
-        sqlite3_result_error(context, error_message(FUNCTION_ERROR_PTR), -1);\
-    }\
-    error_destroy(FUNCTION_ERROR_PTR);
+#define FUNCTION_END(context)                                                                                          \
+  exit:                                                                                                                \
+    if (FUNCTION_RESULT == SQLITE_OK) {                                                                                \
+        if (error_count(&FUNCTION_ERROR) > 0) {                                                                        \
+            sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                         \
+        }                                                                                                              \
+    } else {                                                                                                           \
+        sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                             \
+    }                                                                                                                  \
+    error_destroy(&FUNCTION_ERROR)
 
-#define FUNCTION_START_TRANSACTION(name) \
-    char *name##_transaction = #name;\
-    FUNCTION_RESULT = sql_begin(FUNCTION_DB_HANDLE, name##_transaction);\
-    if (FUNCTION_RESULT != SQLITE_OK) {\
-        goto exit;\
-    }
-#define FUNCTION_END_TRANSACTION(name) \
-    if (FUNCTION_RESULT == SQLITE_OK && error_count(FUNCTION_ERROR_PTR) == 0) {\
-        FUNCTION_RESULT = sql_commit(FUNCTION_DB_HANDLE, name##_transaction);\
-    } else {\
-        sql_rollback(FUNCTION_DB_HANDLE, name##_transaction);\
-    }
+#define FUNCTION_START_TRANSACTION(name)                                                                               \
+    char *name##_transaction = #name;                                                                                  \
+    do {                                                                                                               \
+      FUNCTION_RESULT = sql_begin(FUNCTION_DB_HANDLE, name##_transaction);                                             \
+      if (FUNCTION_RESULT != SQLITE_OK) {                                                                              \
+        goto exit;                                                                                                     \
+      }                                                                                                                \
+    } while(0)
+#define FUNCTION_END_TRANSACTION(name) do {                                                                            \
+        if (FUNCTION_RESULT == SQLITE_OK && error_count(&FUNCTION_ERROR) == 0) {                                       \
+            FUNCTION_RESULT = sql_commit(FUNCTION_DB_HANDLE, name##_transaction);                                      \
+        } else {                                                                                                       \
+            sql_rollback(FUNCTION_DB_HANDLE, name##_transaction);                                                      \
+        }                                                                                                              \
+    } while(0)
 
-#define FUNCTION_TEXT_ARG(arg) \
-    char* arg = NULL;\
-    int free_##arg = 0;
-#define FUNCTION_GET_TEXT_ARG(context, arg) \
-    arg = sqlite3_mprintf("%s", sqlite3_value_text(args[arg_counter++]));\
-    free_##arg = 1;\
-    if (arg == NULL) {\
-        sqlite3_result_error_code(context, SQLITE_NOMEM);\
-        goto exit;\
-    }
-#define FUNCTION_SET_TEXT_ARG(arg, val) \
-    arg = val;\
-    free_##arg = 0;
-#define FUNCTION_FREE_TEXT_ARG(arg) \
-    if (free_##arg != 0) {\
-        sqlite3_free(arg);\
-        arg = NULL;\
-    }
+#define FUNCTION_SPATIALDB_ARG(name) const spatialdb_t *name = NULL
+#define FUNCTION_GET_SPATIALDB_ARG(context, name) name = (const spatialdb_t *)sqlite3_user_data(context)
+#define FUNCTION_FREE_SPATIALDB_ARG(arg) FUNCTION_NOOP
 
-#define FUNCTION_INT_ARG(arg) int arg = 0;
-#define FUNCTION_GET_INT_ARG(arg) arg = sqlite3_value_int(args[arg_counter++]);
-#define FUNCTION_SET_INT_ARG(arg, val) arg = val;
-#define FUNCTION_FREE_INT_ARG(arg)
+#define FUNCTION_INT_ARG(arg) int32_t arg = 0
+#define FUNCTION_GET_INT_ARG(arg, ix) arg = sqlite3_value_int(args[ix])
+#define FUNCTION_SET_INT_ARG(arg, val) arg = val
+#define FUNCTION_FREE_INT_ARG(arg) FUNCTION_NOOP
+
+#define FUNCTION_TEXT_ARG_LENGTH(arg) arg##length
+#define FUNCTION_TEXT_ARG(arg)                                                                                         \
+    const char* arg = NULL;                                                                                            \
+    size_t FUNCTION_TEXT_ARG_LENGTH(arg);                                                                              \
+    int free_##arg = 0
+#define FUNCTION_GET_TEXT_ARG(context, arg, ix)                                                                        \
+    arg = (const char *)sqlite3_value_text(args[ix]);                                                                  \
+    FUNCTION_TEXT_ARG_LENGTH(arg) = (size_t) sqlite3_value_bytes(args[ix]);                                            \
+    do {                                                                                                               \
+        if (arg != NULL) {                                                                                             \
+          arg = sqlite3_mprintf("%s", sqlite3_value_text(args[ix]));                                                   \
+          free_##arg = 1;                                                                                              \
+          if (arg == NULL) {                                                                                           \
+            sqlite3_result_error_code(context, SQLITE_NOMEM);                                                          \
+            goto exit;                                                                                                 \
+          }                                                                                                            \
+        }                                                                                                              \
+    } while(0);
+#define FUNCTION_GET_TEXT_ARG_UNSAFE(arg,ix)                                                                           \
+    arg = (const char *)sqlite3_value_text(args[ix]);                                                                  \
+    FUNCTION_TEXT_ARG_LENGTH(arg) = (size_t) sqlite3_value_bytes(args[ix])
+#define FUNCTION_SET_TEXT_ARG(arg, val)                                                                                \
+    arg = val;                                                                                                         \
+    free_##arg = 0
+#define FUNCTION_FREE_TEXT_ARG(arg)                                                                                    \
+    do {                                                                                                               \
+        if (free_##arg != 0) {                                                                                         \
+            sqlite3_free((void*)arg);                                                                                  \
+            arg = NULL;                                                                                                \
+        }                                                                                                              \
+    } while (0)
+#define FUNCTION_BLOB_ARG(arg)                                                                                         \
+    uint8_t* arg = NULL;                                                                                               \
+    size_t arg##_length
+#define FUNCTION_GET_BLOB_ARG_UNSAFE(context,arg,ix)                                                                   \
+    arg = (uint8_t *)sqlite3_value_blob(args[ix]);                                                                     \
+    arg##_length = (size_t) sqlite3_value_bytes(args[ix]);                                                             \
+    do {                                                                                                               \
+        if (arg == NULL || arg##_length == 0) {                                                                        \
+            sqlite3_result_null(context);                                                                              \
+            goto exit;                                                                                                 \
+        }                                                                                                              \
+    } while (0)
+#define FUNCTION_FREE_BLOB_ARG(arg) FUNCTION_NOOP
+
+#define FUNCTION_STREAM_ARG(arg)                                                                                       \
+    FUNCTION_BLOB_ARG(arg##_blob);                                                                                     \
+    binstream_t arg
+#define FUNCTION_GET_STREAM_ARG_UNSAFE(context, arg,ix)                                                                \
+    FUNCTION_GET_BLOB_ARG_UNSAFE(context, arg##_blob,ix);                                                              \
+    binstream_init(&arg, arg##_blob, arg##_blob_length)
+#define FUNCTION_FREE_STREAM_ARG(arg)                                                                                  \
+    FUNCTION_FREE_BLOB_ARG(arg##_blob);                                                                                \
+    binstream_destroy(&arg)
+
+#define FUNCTION_GEOM_ARG_STREAM(arg) arg##_stream
+#define FUNCTION_GEOM_ARG(arg)                                                                                         \
+    FUNCTION_STREAM_ARG( arg##_stream );                                                                               \
+    geom_blob_header_t arg
+#define FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, arg,ix)                                                       \
+    FUNCTION_GET_STREAM_ARG_UNSAFE(context, arg##_stream,ix);                                                          \
+    do {                                                                                                               \
+        if (spatialdb->read_blob_header(&arg##_stream, &arg, &FUNCTION_ERROR) != SQLITE_OK) {                          \
+            if ( error_count(&FUNCTION_ERROR) == 0 ) {                                                                 \
+                error_append(&FUNCTION_ERROR, "Invalid geometry blob header");                                         \
+            }                                                                                                          \
+            goto exit;                                                                                                 \
+        }                                                                                                              \
+    } while (0)
+
+#define FUNCTION_FREE_GEOM_ARG(arg) FUNCTION_FREE_STREAM_ARG(arg##_stream)
+
+#define FUNCTION_WKB_ARG_GEOM(arg) arg##_geom
+#define FUNCTION_WKB_ARG(arg)                                                                                          \
+    FUNCTION_GEOM_ARG(arg##_geom);                                                                                     \
+    geom_header_t arg
+#define FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, arg,ix)                                                        \
+    FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, arg##_geom,ix);                                                   \
+    do {                                                                                                               \
+        if (spatialdb->read_geometry_header(&arg##_geom_stream, &arg, &FUNCTION_ERROR) != SQLITE_OK) {                 \
+            if ( error_count(&FUNCTION_ERROR) == 0 ) {                                                                 \
+                error_append(&FUNCTION_ERROR, "Invalid geometry blob header");                                         \
+            }                                                                                                          \
+            goto exit;                                                                                                 \
+        }                                                                                                              \
+    } while (0)
+
+#define FUNCTION_FREE_WKB_ARG(arg) FUNCTION_FREE_GEOM_ARG(arg##_geom)
+
+#define REGISTER_FUNCTION(name, function, args, config, error)                                                         \
+    do {                                                                                                               \
+        int name##result = sqlite3_create_function_v2(                                                                 \
+            db, #name, args, SQLITE_UTF8, (void *) config, function, NULL, NULL, NULL                                  \
+        );                                                                                                             \
+        if (name##result != SQLITE_OK) {                                                                               \
+            error_append(error, "Error registering function %s/%d: %s", #name, args, sqlite3_errmsg(db));              \
+        }                                                                                                              \
+    } while(0)
+
+#define REG_FUNC(prefix, name, args, config, error)                                                                    \
+    REGISTER_FUNCTION(name, prefix##_##name, args, config, error);                                                     \
+    REGISTER_FUNCTION(prefix##_##name, prefix##_##name, args, config, error)
+
+#define REG_ALIAS(prefix, name, function, args, config, error)                                                         \
+    REGISTER_FUNCTION(name, prefix##_##function, args, config, error);                                                 \
+    REGISTER_FUNCTION(prefix##_##name, prefix##_##function, args, config, error)
 
 #endif

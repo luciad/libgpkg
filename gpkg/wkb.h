@@ -117,6 +117,8 @@ int wkb_read_header(binstream_t *stream, wkb_dialect dialect, geom_header_t *hea
  */
 int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t *envelope, error_t *error);
 
+int wkb_fill_geom_header( uint32_t wkb_type, geom_header_t *header, error_t *error );
+
 /** @} */
 
 #endif

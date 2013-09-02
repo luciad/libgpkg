@@ -14,24 +14,24 @@
 
 require_relative 'gpkg'
 
-describe 'InitSpatialDB' do
+describe 'InitSpatialMetadata' do
   it 'should return NULL' do
-    execute 'SELECT InitSpatialDB()'
+    execute 'SELECT InitSpatialMetadata()'
   end
 
   it 'should return NULL when called a second time' do
-    execute 'SELECT InitSpatialDB()'
-    execute 'SELECT InitSpatialDB()'
+    execute 'SELECT InitSpatialMetadata()'
+    execute 'SELECT InitSpatialMetadata()'
   end
 end
 
 describe 'CheckGpkg' do
-  it 'should raise error when called before InitSpatialDB' do
-    execute 'SELECT CheckSpatialDB()', :expect => :error
+  it 'should raise error when called before InitSpatialMetadata' do
+    execute 'SELECT CheckSpatialMetadata()', :expect => :error
   end
 
-  it 'should return NULL when called after InitSpatialDB' do
-    execute 'SELECT InitSpatialDB()'
-    execute 'SELECT CheckSpatialDB()'
+  it 'should return NULL when called after InitSpatialMetadata' do
+    execute 'SELECT InitSpatialMetadata()'
+    execute 'SELECT CheckSpatialMetadata()'
   end
 end

@@ -502,8 +502,11 @@ static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, e
   return wkb_read_geometry(stream, WKB_ISO, consumer, error);
 }
 
+
+
 const spatialdb_t GEOPACKAGE_DB = {
   "GeoPackage",
+  NULL,
   init,
   check,
   write_blob_header,

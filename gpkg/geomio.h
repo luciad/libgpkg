@@ -28,60 +28,60 @@
  * Enumeration of geometry types.
  */
 typedef enum {
-  GEOM_GEOMETRY,
+  GEOM_GEOMETRY = 0,
   /**
    * Point
    */
-  GEOM_POINT,
-  /**
-   * Curve
-   */
-  GEOM_CURVE,
+  GEOM_POINT = 1,
   /**
    * Line string
    */
-  GEOM_LINESTRING,
-  /**
-   * Surface
-   */
-  GEOM_SURFACE,
-  /**
-   * Curve polygon
-   */
-  GEOM_CURVE_POLYGON,
+  GEOM_LINESTRING = 2,
   /**
    * Polygon
    */
-  GEOM_POLYGON,
-  /**
-   * Geometry collection
-   */
-  GEOM_GEOMETRYCOLLECTION,
-  /**
-   * Multi surface
-   */
-  GEOM_MULTISURFACE,
-  /**
-   * Multi polygon
-   */
-  GEOM_MULTIPOLYGON,
-  /**
-   * Multi curve
-   */
-  GEOM_MULTICURVE,
-  /**
-   * Multi line string
-   */
-  GEOM_MULTILINESTRING,
+  GEOM_POLYGON = 3,
   /**
    * Multi point
    */
-  GEOM_MULTIPOINT,
+  GEOM_MULTIPOINT = 4,
+  /**
+   * Multi line string
+   */
+  GEOM_MULTILINESTRING = 5,
+  /**
+   * Multi polygon
+   */
+  GEOM_MULTIPOLYGON = 6,
+  /**
+   * Geometry collection
+   */
+  GEOM_GEOMETRYCOLLECTION = 7,
+  /**
+   * Curve polygon
+   */
+  GEOM_CURVE_POLYGON = 10,
+  /**
+   * Multi curve
+   */
+  GEOM_MULTICURVE = 11,
+  /**
+   * Multi surface
+   */
+  GEOM_MULTISURFACE = 12,
+  /**
+   * Surface
+   */
+  GEOM_SURFACE = 997,
+  /**
+   * Curve
+   */
+  GEOM_CURVE = 998,
   /**
    * Linear ring. Note that this is not a top level geometry type. It is present to allow linear rings to be treated
    * in the same way as other geometries.
    */
-  GEOM_LINEARRING
+  GEOM_LINEARRING = 999,
 } geom_type_t;
 
 /**

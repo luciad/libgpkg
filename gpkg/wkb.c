@@ -105,6 +105,66 @@ int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t 
   return result;
 }
 
+int wkb_fill_geom_header( uint32_t wkb_type, geom_header_t *header, error_t *error ) {
+  uint32_t modifier = (wkb_type / 1000) * 1000;
+  uint32_t geom_type = wkb_type % 1000;
+
+  switch (modifier) {
+    case WKB_XY:
+      header->coord_size = 2;
+      header->coord_type = GEOM_XY;
+      break;
+    case WKB_XYZ:
+      header->coord_size = 3;
+      header->coord_type = GEOM_XYZ;
+      break;
+    case WKB_XYM:
+      header->coord_size = 3;
+      header->coord_type = GEOM_XYM;
+      break;
+    case WKB_XYZM:
+      header->coord_size = 4;
+      header->coord_type = GEOM_XYZM;
+      break;
+    default:
+      if (error) {
+        error_append(error, "Unsupported geometry modifier: %d", modifier);
+      }
+      return SQLITE_IOERR;
+  }
+
+  switch (geom_type) {
+    case WKB_POINT:
+      header->geom_type = GEOM_POINT;
+      break;
+    case WKB_LINESTRING:
+      header->geom_type = GEOM_LINESTRING;
+      break;
+    case WKB_POLYGON:
+      header->geom_type = GEOM_POLYGON;
+      break;
+    case WKB_MULTIPOINT:
+      header->geom_type = GEOM_MULTIPOINT;
+      break;
+    case WKB_MULTILINESTRING:
+      header->geom_type = GEOM_MULTILINESTRING;
+      break;
+    case WKB_MULTIPOLYGON:
+      header->geom_type = GEOM_MULTIPOLYGON;
+      break;
+    case WKB_GEOMETRYCOLLECTION:
+      header->geom_type = GEOM_GEOMETRYCOLLECTION;
+      break;
+    default:
+      if (error) {
+        error_append(error, "Unsupported WKB geometry type: %d", wkb_type);
+      }
+      return SQLITE_IOERR;
+  }
+
+  return SQLITE_OK;
+}
+
 static int read_wkb_geometry_header(binstream_t *stream, wkb_dialect dialect, geom_header_t *header, error_t *error) {
   uint8_t order;
   if (binstream_read_u8(stream, &order) != SQLITE_OK) {

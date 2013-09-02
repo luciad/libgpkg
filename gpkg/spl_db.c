@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "check.h"
-#include "spatialdb.h"
+#include "spatialdb_internal.h"
 #include "spl_geom.h"
 #include "sqlite.h"
 
@@ -314,7 +314,122 @@ static int spl4_add_geometry_column(sqlite3 *db, const char *db_name, const char
     return result;
   }
 
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"ggi_%w_%w\"", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not drop old geometry insert trigger %s.ggi_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    return result;
+  }
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"ggu_%w_%w\"", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not drop old geometry update trigger %s.ggu_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    return result;
+  }
+
+  result = sql_exec(
+             db,
+             "CREATE TRIGGER \"%w\".\"ggi_%w_%w\" AFTER INSERT ON \"%w\"\n"
+             "BEGIN\n"
+             "  SELECT GeometryConstraints(NEW.\"%w\", geometry_type, srid) FROM geometry_columns WHERE f_table_name LIKE %Q and f_geometry_column LIKE %Q;\n"
+             "END;",
+             db_name, table_name, column_name, table_name,
+             column_name, table_name, column_name
+           );
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not create geometry insert trigger: %s", sqlite3_errmsg(db));
+    return result;
+  }
+
+  result = sql_exec(
+             db,
+             "CREATE TRIGGER \"%w\".\"ggu_%w_%w\" AFTER UPDATE ON \"%w\"\n"
+             "BEGIN\n"
+             "  SELECT GeometryConstraints(NEW.\"%w\", geometry_type, srid) FROM geometry_columns WHERE f_table_name LIKE %Q and f_geometry_column LIKE %Q;\n"
+             "END;",
+             db_name, table_name, column_name, table_name,
+             column_name, table_name, column_name
+           );
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not create geometry insert trigger: %s", sqlite3_errmsg(db));
+    return result;
+  }
+
   return SQLITE_OK;
+}
+
+/*
+ * (geometry blob, geometry_type text, srid int, dimension text);
+ * (geometry blob, geometry_type int, srid int);
+ */
+static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  FUNCTION_SPATIALDB_ARG(spatialdb);
+  FUNCTION_WKB_ARG(wkb);
+  FUNCTION_TEXT_ARG(expected_geometry_type_text);
+  FUNCTION_INT_ARG(expected_geometry_type_int);
+  FUNCTION_INT_ARG(expected_srid);
+  FUNCTION_TEXT_ARG(expected_dimension_text);
+  geom_header_t expected;
+
+  FUNCTION_START_STATIC(context, 256);
+  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
+
+  if (nbArgs == 3) {
+    FUNCTION_GET_INT_ARG(expected_geometry_type_int, 1);
+    FUNCTION_GET_INT_ARG(expected_srid, 2);
+    FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, wkb, 0);
+    wkb_fill_geom_header(expected_geometry_type_int, &expected, &error);
+  } else {
+    FUNCTION_GET_TEXT_ARG(context, expected_geometry_type_text, 1);
+    FUNCTION_GET_INT_ARG(expected_srid, 2);
+    FUNCTION_GET_TEXT_ARG(context, expected_dimension_text, 3);
+    FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, wkb, 0);
+
+    FUNCTION_RESULT = geom_type_from_string(expected_geometry_type_text, &expected.geom_type);
+    if (FUNCTION_RESULT != SQLITE_OK) {
+      error_append(&error, "Invalid geometry type %s", expected_geometry_type_text);
+      goto exit;
+    }
+
+    if (sqlite3_strnicmp( expected_dimension_text, "xy", 2 ) == 0) {
+      expected.coord_size = 2;
+      expected.coord_type = GEOM_XY;
+    } else if (sqlite3_strnicmp( expected_dimension_text, "xyz", 3 ) == 0) {
+      expected.coord_size = 3;
+      expected.coord_type = GEOM_XYZ;
+    } else if (sqlite3_strnicmp( expected_dimension_text, "xym", 3 ) == 0) {
+      expected.coord_size = 3;
+      expected.coord_type = GEOM_XYM;
+    } else if (sqlite3_strnicmp( expected_dimension_text, "xyzm", 4 ) == 0) {
+      expected.coord_size = 4;
+      expected.coord_type = GEOM_XYZM;
+    } else {
+      error_append(&error, "Unsupported geometry dimension: %s", expected_dimension_text);
+      goto exit;
+    }
+  }
+
+  if (geom_is_assignable(expected.geom_type, wkb.geom_type) != 0) {
+    const char *expected_name;
+    geom_type_name(expected.geom_type, &expected_name);
+    const char *actual_name;
+    geom_type_name(wkb.geom_type, &actual_name);
+    error_append(&error, "Geometry of type %s can not be written to column of type %s", actual_name, expected_name);
+  }
+
+  if (FUNCTION_WKB_ARG_GEOM(wkb).srid != expected_srid) {
+    error_append(&error, "Geometry of with srid %d can not be written to column with srid %d", FUNCTION_WKB_ARG_GEOM(wkb).srid, expected_srid);
+  }
+
+  if (wkb.coord_type != expected.coord_type) {
+    error_append(&error, "Geometry of with dimension %d can not be written to column with dimension %d", wkb.coord_type, expected.coord_type);
+  }
+
+  FUNCTION_END(context);
+  FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
+  FUNCTION_FREE_WKB_ARG(wkb);
+  FUNCTION_FREE_TEXT_ARG(expected_geometry_type_text);
+  FUNCTION_FREE_INT_ARG(expected_geometry_type_int);
+  FUNCTION_FREE_INT_ARG(expected_srid);
+  FUNCTION_FREE_TEXT_ARG(expected_dimension_text);
 }
 
 static int fill_envelope(binstream_t *stream, geom_envelope_t *envelope, error_t *error) {
@@ -329,20 +444,175 @@ static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, e
   return wkb_read_geometry(stream, WKB_SPATIALITE, consumer, error);
 }
 
-/*
- * (geometry blob, geometry_type text, srid int, dimension text);
- * (geometry blob, geometry_type int, srid int);
- */
-static int geometry_constraints(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, error_t *error) {
+  int result = SQLITE_OK;
+  char *index_table_name = NULL;
+  int exists = 0;
 
+  index_table_name = sqlite3_mprintf("idx_%s_%s", table_name, column_name);
+  if (index_table_name == NULL) {
+    result = SQLITE_NOMEM;
+    goto exit;
+  }
+
+  // Check if the target table exists
+  exists = 0;
+  result = sql_check_table_exists(db, db_name, index_table_name, &exists);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not check if index table %s.%s exists: %s", db_name, index_table_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  if (exists) {
+    result = SQLITE_OK;
+    goto exit;
+  }
+
+  // Check if the target table exists
+  exists = 0;
+  result = sql_check_table_exists(db, db_name, table_name, &exists);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not check if table %s.%s exists: %s", db_name, table_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  if (!exists) {
+    error_append(error, "Table %s.%s does not exist", db_name, table_name);
+    goto exit;
+  }
+
+  int geom_col_count = 0;
+  result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".geometry_columns WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not check if column %s.%s.%s exists in %s.geometry_columns: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  if (geom_col_count == 0) {
+    error_append(error, "Column %s.%s.%s is not registered in %s.geometry_columns", db_name, table_name, column_name, db_name);
+    goto exit;
+  }
+
+  int spatial_index_updates = 0;
+  result = sql_exec_for_int(db, &spatial_index_updates, "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not set spatial index enabled flag for column %s.%s.%s: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  if (spatial_index_updates == 0) {
+    // Spatial index already enabled; silent return
+    goto exit;
+  }
+
+  result = sql_exec(db, "DROP TABLE IF EXISTS \"%w\".\"%w\"", db_name, index_table_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not drop old rtree table %s.%s: %s", db_name, index_table_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"gii_%w_%w\"", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not drop old rtree insert trigger %s.gii_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"giu_%w_%w\"", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not drop old rtree update trigger %s.gii_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"gid_%w_%w\"", db_name, table_name, column_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not drop old rtree delete trigger %s.gii_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  result = sql_exec(db, "CREATE VIRTUAL TABLE \"%w\".\"%w\" USING rtree(pkid, minx, maxx, miny, maxy)", db_name, index_table_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not create rtree table %s.%s: %s", db_name, index_table_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  result = sql_exec(
+             db,
+             "CREATE TRIGGER \"%w\".\"gii_%w_%w\" AFTER INSERT ON \"%w\"\n"
+             "BEGIN\n"
+             "  SELECT RTreeAlign(\"%w\", NEW.rowid, NEW.\"%w\");\n"
+             "END;",
+             db_name, table_name, column_name, table_name,
+             index_table_name, column_name
+           );
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not create rtree insert trigger: %s", sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  result = sql_exec(
+             db,
+             "CREATE TRIGGER \"%w\".\"giu_%w_%w\" AFTER UPDATE ON \"%w\"\n"
+             "BEGIN\n"
+             "  SELECT RTreeAlign(\"%w\", NEW.rowid, NEW.\"%w\");\n"
+             "END;",
+             db_name, table_name, column_name, table_name,
+             index_table_name, column_name
+           );
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not create rtree update trigger: %s", sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  result = sql_exec(
+             db,
+             "CREATE TRIGGER \"%w\".\"gid_%w_%w\" AFTER DELETE ON \"%w\"\n"
+             "BEGIN\n"
+             "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
+             "END;",
+             db_name, table_name, column_name, table_name, column_name, column_name,
+             index_table_name
+           );
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  result = sql_exec(
+             db,
+             "INSERT OR REPLACE INTO \"%w\".\"%w\" (id, minx, maxx, miny, maxy) "
+             "  SELECT rowid, ST_MinX(\"%w\"), ST_MaxX(\"%w\"), ST_MinY(\"%w\"), ST_MaxY(\"%w\") FROM \"%w\".\"%w\""
+             "  WHERE \"%w\" NOTNULL AND NOT ST_IsEmpty(\"%w\")",
+             db_name, index_table_name,
+             column_name, column_name, column_name, column_name, db_name, table_name,
+             column_name, column_name
+           );
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not populate rtree: %s", sqlite3_errmsg(db));
+    goto exit;
+  }
+
+exit:
+  sqlite3_free(index_table_name);
+  return result;
 }
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/*
+ * (indx_table_name text, rowid int, geometry blob)
+ */
+static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  FUNCTION_TEXT_ARG(index_table_name);
+  FUNCTION_TEXT_ARG(row_id);
+
+  FUNCTION_FREE_TEXT_ARG(index_table_name);
+  FUNCTION_FREE_TEXT_ARG(row_id);
+}
+
+void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {
+  REG_FUNC(GPKG, GeometryConstraints, 3, spatialDb, error);
+  REG_FUNC(GPKG, GeometryConstraints, 4, spatialDb, error);
+  REG_FUNC(GPKG, RTreeAlign, 3, spatialDb, error);
+}
 
 const spatialdb_t SPATIALITE3_DB = {
   "Spatialite3",
+  spatialite_init,
   spl3_init,
   spl3_check,
   write_blob_header,
@@ -352,7 +622,7 @@ const spatialdb_t SPATIALITE3_DB = {
   spb_writer_destroy,
   spl3_add_geometry_column,
   NULL,
-  NULL,
+  create_spatial_index,
   fill_envelope,
   read_geometry_header,
   read_geometry
@@ -360,6 +630,7 @@ const spatialdb_t SPATIALITE3_DB = {
 
 const spatialdb_t SPATIALITE4_DB = {
   "Spatialite4",
+  spatialite_init,
   spl4_init,
   spl4_check,
   write_blob_header,
@@ -369,12 +640,8 @@ const spatialdb_t SPATIALITE4_DB = {
   spb_writer_destroy,
   spl4_add_geometry_column,
   NULL,
-  NULL,
+  create_spatial_index,
   fill_envelope,
   read_geometry_header,
   read_geometry
 };
-
-#ifdef __cplusplus
-}
-#endif
