@@ -275,6 +275,16 @@ int geom_type_from_string(const char *type_name, geom_type_t *type);
 int geom_normalized_type_name(const char *geom_type_name, const char **normalized_geom_type_name);
 
 /**
+ * Determines if a geometry with type actual_type can be assigned to a variable with type expected_type. A geometry
+ * is considered assignable if the expected type is equal to or a super type of the actual type.
+ * @param expected_type the expected geometry type
+ * @param expected_type the actual geometry type
+ * @return 1 if expected_type is equal to or a super type of actual_type
+ *         0 otherwise
+ */
+int geom_is_assignable(geom_type_t expected_type, geom_type_t actual_type);
+
+/**
  * Initializes a geometry envelope.
  * @param envelope the envelope to initialize
  */

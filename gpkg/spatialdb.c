@@ -224,6 +224,35 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
   TEXT_FUNC_END
 }
 
+static void GPKG_IsAssignable(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  FUNCTION_TEXT_ARG(expected_type_name)
+  FUNCTION_TEXT_ARG(actual_type_name)
+  FUNCTION_START(context)
+
+  FUNCTION_GET_TEXT_ARG(context, expected_type_name)
+  FUNCTION_GET_TEXT_ARG(context, actual_type_name)
+
+  geom_type_t expected_type;
+  FUNCTION_RESULT = geom_type_from_string(expected_type_name, &expected_type);
+  if (FUNCTION_RESULT != SQLITE_OK) {
+    error_append(FUNCTION_ERROR_PTR, "Invalid geometry type %s", expected_type_name);
+    goto exit;
+  }
+
+  geom_type_t actual_type;
+  FUNCTION_RESULT = geom_type_from_string(actual_type_name, &actual_type);
+  if (FUNCTION_RESULT != SQLITE_OK) {
+    error_append(FUNCTION_ERROR_PTR, "Invalid geometry type %s", actual_type_name);
+    goto exit;
+  }
+
+  int assignable = geom_is_assignable(expected_type, actual_type);
+
+  FUNCTION_END_INT_RESULT(context, assignable)
+  FUNCTION_FREE_TEXT_ARG(expected_type_name)
+  FUNCTION_FREE_TEXT_ARG(actual_type_name)
+}
+
 static void SpatialDBType(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   const spatialdb_t *spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
   sqlite3_result_text(context, spatialdb->name, -1, SQLITE_STATIC);
@@ -439,6 +468,8 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   ST_FUNC(WKBFromText, 1, spatialdb);
   ST_ALIAS(WKTToSQL, GeomFromText, 1, spatialdb);
   ST_FUNC(GeomFromText, 2, spatialdb);
+  GPKG_FUNC(IsAssignable, 2, spatialdb);
+
   FUNC(CheckSpatialDB, 0, spatialdb);
   FUNC(CheckSpatialDB, 1, spatialdb);
   FUNC(InitSpatialDB, 0, spatialdb);

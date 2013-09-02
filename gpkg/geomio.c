@@ -190,6 +190,70 @@ int geom_type_from_string(const char *type_name, geom_type_t *type) {
   return result;
 }
 
+static int geom_parent_type(geom_type_t type, geom_type_t *super_type) {
+  int result = SQLITE_OK;
+
+  switch (type) {
+    default:
+    case GEOM_GEOMETRY:
+      result = SQLITE_ERROR;
+      break;
+    case GEOM_POINT:
+    case GEOM_CURVE:
+    case GEOM_SURFACE:
+    case GEOM_GEOMETRYCOLLECTION:
+      *super_type = GEOM_GEOMETRY;
+      break;
+    case GEOM_LINESTRING:
+    case GEOM_LINEARRING:
+      *super_type = GEOM_CURVE;
+      break;
+    case GEOM_CURVE_POLYGON:
+      *super_type = GEOM_SURFACE;
+      break;
+    case GEOM_POLYGON:
+      *super_type = GEOM_CURVE_POLYGON;
+      break;
+    case GEOM_MULTISURFACE:
+    case GEOM_MULTICURVE:
+    case GEOM_MULTIPOINT:
+      *super_type = GEOM_GEOMETRYCOLLECTION;
+      break;
+    case GEOM_MULTIPOLYGON:
+      *super_type = GEOM_MULTISURFACE;
+      break;
+    case GEOM_MULTILINESTRING:
+      *super_type = GEOM_MULTICURVE;
+      break;
+  }
+
+  return result;
+}
+
+int geom_is_assignable(geom_type_t expected_type, geom_type_t actual_type) {
+  const char *t1, *t2;
+  geom_type_name(expected_type, &t1);
+  geom_type_name(actual_type, &t2);
+
+  geom_type_t type = actual_type;
+  while (1) {
+    geom_type_name(type, &t1);
+    if (expected_type == type) {
+      return 1;
+    } else {
+      geom_type_t parent_type;
+      int res = geom_parent_type(type, &parent_type);
+      if (res != SQLITE_OK) {
+        return 0;
+      } else {
+        type = parent_type;
+      }
+    }
+  }
+
+  return 0;
+}
+
 void geom_envelope_init(geom_envelope_t *envelope) {
   envelope->has_env_x = 0;
   envelope->min_x = DBL_MAX;
