@@ -25,9 +25,11 @@
 #define GPB_LITTLE_ENDIAN 1
 
 #define CHECK_ENV_COMP(gpb, comp, error) \
-    if (gpb->envelope.has_env_##comp && gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
-        if (error) error_append(error, "GPB envelope min" #comp " > max" #comp ": [min: %f, max: %f]", gpb->envelope.min_##comp, gpb->envelope.max_##comp);\
-        return SQLITE_IOERR;\
+    if (gpb->envelope.has_env_##comp) { \
+        if (gpkg_isnan(gpb->envelope.min_##comp) == 0 && gpkg_isnan(gpb->envelope.max_##comp) == 0 && gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
+            if (error) error_append(error, "GPB envelope min" #comp " > max" #comp ": [min: %f, max: %f]", gpb->envelope.min_##comp, gpb->envelope.max_##comp);\
+            return SQLITE_IOERR;\
+        }\
     }
 #define CHECK_ENV(gpb, error) CHECK_ENV_COMP(gpb, x, error) CHECK_ENV_COMP(gpb, y, error) CHECK_ENV_COMP(gpb, z, error) CHECK_ENV_COMP(gpb, m, error)
 
@@ -341,6 +343,14 @@ static int gpb_end(const geom_consumer_t *consumer) {
   result = binstream_seek(stream, 0);
   if (result != SQLITE_OK) {
     goto exit;
+  }
+
+  if (writer->header.empty != 0) {
+    geom_envelope_t *envelope = &writer->header.envelope;
+    envelope->min_x = envelope->max_x = GPKG_NAN;
+    envelope->min_y = envelope->max_y = GPKG_NAN;
+    envelope->min_z = envelope->max_z = GPKG_NAN;
+    envelope->min_m = envelope->max_m = GPKG_NAN;
   }
 
   result = gpb_write_header(stream, &writer->header, NULL);

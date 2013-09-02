@@ -78,7 +78,7 @@ static void ST_SRID(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
       goto exit;
     }
     if (spatialdb->write_blob_header(&FUNCTION_GEOM_ARG_STREAM(geomblob), &geomblob, &FUNCTION_ERROR) != SQLITE_OK) {
-      if ( error_count(&FUNCTION_ERROR) == 0 ) {
+      if (error_count(&FUNCTION_ERROR) == 0) {
         error_append(&FUNCTION_ERROR, "Error writing geometry blob header");
       }
       goto exit;
@@ -596,7 +596,7 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   }
 
   if (spatialdb->init != NULL) {
-    spatialdb->init( db, spatialdb, &error );
+    spatialdb->init(db, spatialdb, &error);
   }
 
   REG_FUNC(ST, MinX, 1, spatialdb, &error);

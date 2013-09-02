@@ -805,6 +805,7 @@ static int wkt_read_geometry_tagged_text(wkt_tokenizer_t *tok, const geom_header
       coord_type = GEOM_XYZM;
       coord_size = 4;
       break;
+    case WKT_EMPTY:
     case WKT_LPAREN:
       coord_type = GEOM_XY;
       coord_size = 2;

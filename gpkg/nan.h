@@ -19,10 +19,12 @@
 #ifdef _MSC_VER
 // MSVC does not provide C99 isnan; use _isnan from float.h instead.
 #include <float.h>
-#define isnan _isnan
+#define gpkg_isnan(x) _isnan(x)
 #else
 // Default is C99 isnan
 #include <math.h>
+#define GPKG_NAN nan("")
+#define gpkg_isnan(x) isnan(x)
 #endif
 
 #endif

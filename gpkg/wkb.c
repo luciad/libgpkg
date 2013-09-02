@@ -105,7 +105,7 @@ int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t 
   return result;
 }
 
-int wkb_fill_geom_header( uint32_t wkb_type, geom_header_t *header, error_t *error ) {
+int wkb_fill_geom_header(uint32_t wkb_type, geom_header_t *header, error_t *error) {
   uint32_t modifier = (wkb_type / 1000) * 1000;
   uint32_t geom_type = wkb_type % 1000;
 
@@ -687,7 +687,7 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
     } else {
       if (children == 0) {
         for (int i = 0; i < header->coord_size; i++) {
-          result = binstream_write_u64(stream, 0x7ff8000000000000);
+          result = binstream_write_double(stream, GPKG_NAN);
           if (result != SQLITE_OK) {
             goto exit;
           }

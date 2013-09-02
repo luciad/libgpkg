@@ -389,16 +389,16 @@ static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlit
       goto exit;
     }
 
-    if (sqlite3_strnicmp( expected_dimension_text, "xy", 2 ) == 0) {
+    if (sqlite3_strnicmp(expected_dimension_text, "xy", 2) == 0) {
       expected.coord_size = 2;
       expected.coord_type = GEOM_XY;
-    } else if (sqlite3_strnicmp( expected_dimension_text, "xyz", 3 ) == 0) {
+    } else if (sqlite3_strnicmp(expected_dimension_text, "xyz", 3) == 0) {
       expected.coord_size = 3;
       expected.coord_type = GEOM_XYZ;
-    } else if (sqlite3_strnicmp( expected_dimension_text, "xym", 3 ) == 0) {
+    } else if (sqlite3_strnicmp(expected_dimension_text, "xym", 3) == 0) {
       expected.coord_size = 3;
       expected.coord_type = GEOM_XYM;
-    } else if (sqlite3_strnicmp( expected_dimension_text, "xyzm", 4 ) == 0) {
+    } else if (sqlite3_strnicmp(expected_dimension_text, "xyzm", 4) == 0) {
       expected.coord_size = 4;
       expected.coord_type = GEOM_XYZM;
     } else {
@@ -494,7 +494,8 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
   }
 
   int spatial_index_updates = 0;
-  result = sql_exec_for_int(db, &spatial_index_updates, "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, column_name);
+  result = sql_exec_for_int(db, &spatial_index_updates,
+                            "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, column_name);
   if (result != SQLITE_OK) {
     error_append(error, "Could not set spatial index enabled flag for column %s.%s.%s: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
     goto exit;
