@@ -68,6 +68,30 @@ describe 'WKBFromText' do
   it 'should raise error on incorrect empty set' do
     execute AS_WKB, 'Point empt', :expect => :error
   end
+
+  it 'should parse empty point correctly' do
+    execute AS_WKB, 'Point empty', :expect => '0101000000000000000000f87f000000000000f87f'
+  end
+
+  it 'should parse empty linestring correctly' do
+    execute AS_WKB, 'linestring empty', :expect => '010200000000000000'
+  end
+
+  it 'should parse empty polygon correctly' do
+    execute AS_WKB, 'polygon empty', :expect => '010300000000000000'
+  end
+
+  it 'should parse empty multipoint correctly' do
+    execute AS_WKB, 'MultiPoint empty', :expect => '010400000000000000'
+  end
+
+  it 'should parse empty multilinestring correctly' do
+    execute AS_WKB, 'multilinestring empty', :expect => '010500000000000000'
+  end
+
+  it 'should parse empty multipolygon correctly' do
+    execute AS_WKB, 'multipolygon empty', :expect => '010600000000000000'
+  end
 end
 
 describe 'AsText' do
@@ -127,5 +151,85 @@ describe 'AsText' do
 
   it 'should format geometrycollections correctly' do
     execute AS_TEXT, 'geometrycollection(point(0 0), linestring(2 1, 3 4))', :expect => 'GeometryCollection (Point (0 0), LineString (2 1, 3 4))'
+  end
+end
+
+describe 'GeomFromText' do
+  AS_GEOM = 'SELECT lower(hex(GeomFromText(?)))'
+  
+  it 'should parse XY points correctly' do
+    execute AS_GEOM, 'Point(1 2)', :expect => '47500001ffffffff0101000000000000000000f03f0000000000000040'
+  end
+
+  it 'should be case insensitive' do
+    execute AS_GEOM, 'pOiNt(1 2)', :expect => '47500001ffffffff0101000000000000000000f03f0000000000000040'
+  end
+
+  it 'should parse XYZ points correctly' do
+    execute AS_GEOM, 'Point Z(1 2 3)', :expect => '47500001ffffffff01e9030000000000000000f03f00000000000000400000000000000840'
+  end
+
+  it 'should parse XYM points correctly' do
+    execute AS_GEOM, 'Point M(1 2 3)', :expect => '47500001ffffffff01d1070000000000000000f03f00000000000000400000000000000840'
+  end
+
+  it 'should parse XYZM points correctly' do
+    execute AS_GEOM, 'Point ZM(1 2 3 4)', :expect => '47500001ffffffff01b90b0000000000000000f03f000000000000004000000000000008400000000000001040'
+  end
+
+  it 'should parse XY line strings correctly' do
+    execute AS_GEOM, 'LineString(1 2, 3 4)', :expect => '47500003ffffffff000000000000f03f000000000000084000000000000000400000000000001040010200000002000000000000000000f03f000000000000004000000000000008400000000000001040'
+  end
+
+  it 'should parse XYZ line strings correctly' do
+    execute AS_GEOM, 'LineString Z(1 2 3, 4 5 6)', :expect => '47500005ffffffff000000000000f03f0000000000001040000000000000004000000000000014400000000000000840000000000000184001ea03000002000000000000000000f03f00000000000000400000000000000840000000000000104000000000000014400000000000001840'
+  end
+
+  it 'should parse XYM line strings correctly' do
+    execute AS_GEOM, 'LineString M(1 2 3, 4 5 6)', :expect => '47500007ffffffff000000000000f03f0000000000001040000000000000004000000000000014400000000000000840000000000000184001d207000002000000000000000000f03f00000000000000400000000000000840000000000000104000000000000014400000000000001840'
+  end
+
+  it 'should parse XYZM line strings correctly' do
+    execute AS_GEOM, 'LineString ZM(1 2 3 4, 5 6 7 8)', :expect => '47500009ffffffff000000000000f03f00000000000014400000000000000040000000000000184000000000000008400000000000001c400000000000001040000000000000204001ba0b000002000000000000000000f03f000000000000004000000000000008400000000000001040000000000000144000000000000018400000000000001c400000000000002040'
+  end
+
+  it 'should raise error on unclosed WKT' do
+    execute AS_GEOM, 'LineString ZM(1 ', :expect => :error
+  end
+
+  it 'should raise error on unknown geometry type' do
+    execute AS_GEOM, 'MyGeometry EMPTY', :expect => :error
+  end
+
+  it 'should raise error on incorrect modifiers' do
+    execute AS_GEOM, 'Point X (1 2)', :expect => :error
+  end
+
+  it 'should raise error on incorrect empty set' do
+    execute AS_GEOM, 'Point empt', :expect => :error
+  end
+
+  it 'should parse empty point correctly' do
+    execute AS_GEOM, 'Point empty', :expect => '47500011ffffffff0101000000000000000000f87f000000000000f87f'
+  end
+
+  it 'should parse empty linestring correctly' do
+    execute AS_GEOM, 'linestring empty', :expect => '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010200000000000000'
+  end
+
+  it 'should parse empty polygon correctly' do
+    execute AS_GEOM, 'polygon empty', :expect => '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010300000000000000'
+  end
+
+  it 'should parse empty multipoint correctly' do
+    execute AS_GEOM, 'MultiPoint empty', :expect => '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010400000000000000'
+  end
+
+  it 'should parse empty multilinestring correctly' do
+    execute AS_GEOM, 'multilinestring empty', :expect => '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010500000000000000'
+  end
+
+  it 'should parse empty multipolygon correctly' do
+    execute AS_GEOM, 'multipolygon empty', :expect => '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010600000000000000'
   end
 end
