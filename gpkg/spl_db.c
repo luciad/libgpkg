@@ -17,6 +17,8 @@
 #include "spatialdb_internal.h"
 #include "spl_geom.h"
 #include "sqlite.h"
+#include "blobio.h"
+#include "geomio.h"
 
 #define N NULL_VALUE
 #define D(v) DOUBLE_VALUE(v)
@@ -376,7 +378,7 @@ static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlit
     FUNCTION_GET_INT_ARG(expected_geometry_type_int, 1);
     FUNCTION_GET_INT_ARG(expected_srid, 2);
     FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, wkb, 0);
-    wkb_fill_geom_header(expected_geometry_type_int, &expected, &error);
+    wkb_fill_geom_header((uint32_t)expected_geometry_type_int, &expected, &error);
   } else {
     FUNCTION_GET_TEXT_ARG(context, expected_geometry_type_text, 1);
     FUNCTION_GET_INT_ARG(expected_srid, 2);
@@ -407,21 +409,30 @@ static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlit
     }
   }
 
-  if (geom_is_assignable(expected.geom_type, wkb.geom_type) != 0) {
+  if (geom_is_assignable(expected.geom_type, wkb.geom_type) == 0) {
     const char *expected_name;
     geom_type_name(expected.geom_type, &expected_name);
     const char *actual_name;
     geom_type_name(wkb.geom_type, &actual_name);
     error_append(&error, "Geometry of type %s can not be written to column of type %s", actual_name, expected_name);
+    goto exit;
   }
 
   if (FUNCTION_WKB_ARG_GEOM(wkb).srid != expected_srid) {
     error_append(&error, "Geometry of with srid %d can not be written to column with srid %d", FUNCTION_WKB_ARG_GEOM(wkb).srid, expected_srid);
+    goto exit;
   }
 
   if (wkb.coord_type != expected.coord_type) {
-    error_append(&error, "Geometry of with dimension %d can not be written to column with dimension %d", wkb.coord_type, expected.coord_type);
+    const char* expected_coord_type;
+    geom_coord_type_name(expected.coord_type, &expected_coord_type);
+    const char* actual_coord_type;
+    geom_coord_type_name(wkb.coord_type, &actual_coord_type);
+    error_append(&error, "%s geometry can not be written to %s column", actual_coord_type, expected_coord_type);
+    goto exit;
   }
+
+  sqlite3_result_int(context, 1);
 
   FUNCTION_END(context);
   FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
@@ -551,6 +562,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db,
              "CREATE TRIGGER \"%w\".\"giu_%w_%w\" AFTER UPDATE ON \"%w\"\n"
              "BEGIN\n"
+             "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
              "  SELECT RTreeAlign(\"%w\", NEW.rowid, NEW.\"%w\");\n"
              "END;",
              db_name, table_name, column_name, table_name,
@@ -598,11 +610,28 @@ exit:
  * (indx_table_name text, rowid int, geometry blob)
  */
 static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  FUNCTION_SPATIALDB_ARG(spatialdb);
   FUNCTION_TEXT_ARG(index_table_name);
   FUNCTION_TEXT_ARG(row_id);
+  FUNCTION_GEOM_ARG(geom);
 
+  FUNCTION_START_STATIC(context, 256);
+  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
+  FUNCTION_GET_TEXT_ARG(context, index_table_name, 0);
+  FUNCTION_GET_TEXT_ARG(context, row_id, 1);
+  FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geom, 2);
+
+  sql_exec(
+    sqlite3_context_db_handle(context),
+    "INSERT OR REPLACE INTO \"%w\" (pkid, xmin, ymin, xmax, ymax) VALUES (%s, %1.12f, %1.12f, %1.12f, %1.12f)",
+    index_table_name, row_id, geom.envelope.min_x, geom.envelope.min_y, geom.envelope.max_x, geom.envelope.max_y
+  );
+
+  FUNCTION_END(context);
+  FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
   FUNCTION_FREE_TEXT_ARG(index_table_name);
   FUNCTION_FREE_TEXT_ARG(row_id);
+  FUNCTION_FREE_GEOM_ARG(geom);
 }
 
 void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {

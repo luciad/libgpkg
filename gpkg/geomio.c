@@ -129,6 +129,30 @@ int geom_type_name(geom_type_t geom_type, const char **geom_type_name) {
   return result;
 }
 
+int geom_coord_type_name(coord_type_t coord_type, const char **coord_type_name) {
+    int result = SQLITE_OK;
+
+    switch (coord_type) {
+        case GEOM_XY:
+            *coord_type_name = "XY";
+            break;
+        case GEOM_XYZ:
+            *coord_type_name = "XYZ";
+            break;
+        case GEOM_XYM:
+            *coord_type_name = "XYM";
+            break;
+        case GEOM_XYZM:
+            *coord_type_name = "XYZM";
+            break;
+        default:
+            *coord_type_name = NULL;
+            result = SQLITE_ERROR;
+    }
+
+    return result;
+}
+
 int geom_type_from_string(const char *type_name, geom_type_t *type) {
   geom_type_t geom_type = GEOM_GEOMETRY;
 
@@ -231,13 +255,8 @@ static int geom_parent_type(geom_type_t type, geom_type_t *super_type) {
 }
 
 int geom_is_assignable(geom_type_t expected_type, geom_type_t actual_type) {
-  const char *t1, *t2;
-  geom_type_name(expected_type, &t1);
-  geom_type_name(actual_type, &t2);
-
   geom_type_t type = actual_type;
   while (1) {
-    geom_type_name(type, &t1);
     if (expected_type == type) {
       return 1;
     } else {

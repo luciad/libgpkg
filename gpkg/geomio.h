@@ -259,6 +259,13 @@ int geom_coord_dim(coord_type_t coord_type);
 int geom_type_name(geom_type_t geom_type, const char **geom_type_name);
 
 /**
+ * Returns the coordinate type as a string.
+ * @param coord_type the coordinate type constant
+ * @return the coordinate type string
+ */
+int geom_coord_type_name(coord_type_t coord_type, const char **coord_type_name);
+
+/**
  * Determines the geometry type constant corresponding to the given geometry type name.
  * @param type_name the geometry type name
  * @param[out] type a pointer to a geom_type_t value which will be written to
