@@ -37,24 +37,15 @@ double fp_nan() {
   return fp_uint64_to_double(nan_bits);
 }
 
-#ifdef __cplusplus
-  #include <limits>
-#endif
-
 uint64_t fp_double_to_uint64(double x) {
-  #ifdef __cplusplus
-    static_assert( std::numeric_limits<double>::is_iec559, "This implementation assumes IEEE-754 floating point" );
-  #else
-    #ifndef __STDC_IEC_559__
-      #error "This implementation assumes IEEE-754 floating point"
-    #endif
-  #endif
+  /* Assumes double matches IEEE 754 double format */
   uint64_t bits;
   memcpy(&bits, &x, sizeof(uint64_t));
   return bits;
 }
 
 double fp_uint64_to_double(uint64_t x) {
+  /* Assumes double matches IEEE 754 double format */
   double dbl;
   memcpy(&dbl, &x, sizeof(uint64_t));
   return dbl;
