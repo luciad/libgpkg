@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "binstream.h"
+#include "fp.h"
 #include "sqlite.h"
 
 int binstream_init(binstream_t *stream, uint8_t *data, size_t length) {
@@ -345,7 +346,7 @@ int binstream_read_double(binstream_t *stream, double *out) {
 }
 
 int binstream_write_double(binstream_t *stream, double val) {
-  return binstream_write_u64(stream, * ((uint64_t *) &val));
+  return binstream_write_u64(stream, fp_double_to_uint64(val));
 }
 
 int binstream_write_ndouble(binstream_t *stream, const double *val, size_t count) {
@@ -354,7 +355,7 @@ int binstream_write_ndouble(binstream_t *stream, const double *val, size_t count
     return result;
   }
   for (int i = 0; i < count; i++) {
-    binstream_write_u64_unchecked(stream, * ((uint64_t *) &val[i]));
+    binstream_write_u64_unchecked(stream, fp_double_to_uint64(val[i]));
   }
   return SQLITE_OK;
 }

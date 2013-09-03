@@ -4,6 +4,7 @@ add_library (
   blobio.c
   check.c
   error.c
+  fp.c
   geomio.c
   gpkg_db.c
   gpkg_geom.c

@@ -20,7 +20,7 @@
 #include "sqlite.h"
 #include "error.h"
 #include "geomio.h"
-#include "nan.h"
+#include "fp.h"
 
 #define WKB_BE 0
 #define WKB_LE 1
@@ -254,7 +254,7 @@ static int read_point(binstream_t *stream, wkb_dialect dialect, const geom_consu
       }
       return result;
     }
-    allnan &= isnan(coord[i]);
+    allnan &= fp_isnan(coord[i]);
   }
 
   if (allnan) {
@@ -687,7 +687,7 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
     } else {
       if (children == 0) {
         for (int i = 0; i < header->coord_size; i++) {
-          result = binstream_write_double(stream, GPKG_NAN);
+          result = binstream_write_double(stream, fp_nan());
           if (result != SQLITE_OK) {
             goto exit;
           }

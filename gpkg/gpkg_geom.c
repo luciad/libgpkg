@@ -18,7 +18,7 @@
 #include <string.h>
 #include "gpkg_geom.h"
 #include "sqlite.h"
-#include "nan.h"
+#include "fp.h"
 
 #define GPB_VERSION 0
 #define GPB_BIG_ENDIAN 0
@@ -26,7 +26,7 @@
 
 #define CHECK_ENV_COMP(gpb, comp, error) \
     if (gpb->envelope.has_env_##comp) { \
-        if (gpkg_isnan(gpb->envelope.min_##comp) == 0 && gpkg_isnan(gpb->envelope.max_##comp) == 0 && gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
+        if ((gpb->empty && (!fp_isnan(gpb->envelope.min_##comp) || !fp_isnan(gpb->envelope.max_##comp))) || gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
             if (error) error_append(error, "GPB envelope min" #comp " > max" #comp ": [min: %f, max: %f]", gpb->envelope.min_##comp, gpb->envelope.max_##comp);\
             return SQLITE_IOERR;\
         }\
@@ -275,7 +275,7 @@ static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
   if (header->geom_type == GEOM_POINT) {
     int allnan = 1;
     for (int i = 0; i < header->coord_size; i++) {
-      allnan &= isnan(coords[i]);
+      allnan &= fp_isnan(coords[i]);
     }
     if (allnan) {
       goto exit;
@@ -347,10 +347,11 @@ static int gpb_end(const geom_consumer_t *consumer) {
 
   if (writer->header.empty != 0) {
     geom_envelope_t *envelope = &writer->header.envelope;
-    envelope->min_x = envelope->max_x = GPKG_NAN;
-    envelope->min_y = envelope->max_y = GPKG_NAN;
-    envelope->min_z = envelope->max_z = GPKG_NAN;
-    envelope->min_m = envelope->max_m = GPKG_NAN;
+    double nan = fp_nan();
+    envelope->min_x = envelope->max_x = nan;
+    envelope->min_y = envelope->max_y = nan;
+    envelope->min_z = envelope->max_z = nan;
+    envelope->min_m = envelope->max_m = nan;
   }
 
   result = gpb_write_header(stream, &writer->header, NULL);
