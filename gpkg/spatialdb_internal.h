@@ -46,10 +46,16 @@
   exit:                                                                                                                \
     if (FUNCTION_RESULT == SQLITE_OK) {                                                                                \
         if (error_count(&FUNCTION_ERROR) > 0) {                                                                        \
+            if (strlen(error_message(&FUNCTION_ERROR)) == 0) {                                                         \
+              error_append(&FUNCTION_ERROR, "unknown error" );                                                         \
+            }                                                                                                          \
             sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                         \
         }                                                                                                              \
     } else {                                                                                                           \
-        sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                             \
+      if (error_count(&FUNCTION_ERROR) == 0 || strlen(error_message(&FUNCTION_ERROR)) == 0) {                          \
+        error_append(&FUNCTION_ERROR, "unknown error: %d", FUNCTION_RESULT );                                          \
+      }                                                                                                                \
+      sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                               \
     }                                                                                                                  \
     error_destroy(&FUNCTION_ERROR)
 
