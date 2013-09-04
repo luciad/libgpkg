@@ -28,11 +28,11 @@
 
 static column_info_t spl3_spatial_ref_sys_columns[] = {
   {"srid", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"auth_name", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"auth_srid", "integer", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"ref_sys_name", "text", T("Unknown"), SQL_NOT_NULL, NULL},
+  {"auth_name", "text", N, SQL_NOT_NULL, NULL},
+  {"auth_srid", "integer", N, SQL_NOT_NULL, NULL},
+  {"ref_sys_name", "text", T("Unknown"), 0, NULL},
   {"proj4text", "text", N, SQL_NOT_NULL, NULL},
-  {"srs_wkt", "text", T("Undefined"), SQL_NOT_NULL, NULL},
+  {"srs_wkt", "text", T("Undefined"), 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static value_t spl3_spatial_ref_sys_data[] = {
