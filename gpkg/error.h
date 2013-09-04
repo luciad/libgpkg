@@ -35,6 +35,14 @@ int error_init(error_t *error);
 int error_init_fixed(error_t *error, char *buffer, size_t length);
 
 /**
+ * Resets an error to the state it had after calling error_init or error_init_fixed.
+ * This function erases the content of the message buffer. It does not create a new buffer.
+ * @param error the error buffer to reset
+ * @return SQLITE_OK on success, an error code otherwise
+ */
+int error_reset(error_t *error);
+
+/**
  * Destroys an error buffer, freeing any internal data structures that have been allocated. If the error
  * buffer was initialized using error_init_fixed() the char buffer passed to error_init_fixed() will not be freed.
  *

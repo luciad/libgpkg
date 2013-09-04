@@ -323,8 +323,8 @@ static void ST_WKBFromText(sqlite3_context *context, int nbArgs, sqlite3_value *
 static void GPKG_IsAssignable(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_TEXT_ARG(expected_type_name);
   FUNCTION_TEXT_ARG(actual_type_name);
-  FUNCTION_START(context);
 
+  FUNCTION_START(context);
   FUNCTION_GET_TEXT_ARG(context, expected_type_name, 0);
   FUNCTION_GET_TEXT_ARG(context, actual_type_name, 1);
 
@@ -351,7 +351,9 @@ static void GPKG_IsAssignable(sqlite3_context *context, int nbArgs, sqlite3_valu
 
 static void GPKG_SpatialDBType(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_SPATIALDB_ARG(spatialdb);
+
   FUNCTION_START(context);
+  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
 
   sqlite3_result_text(context, spatialdb->name, -1, SQLITE_STATIC);
 
@@ -384,8 +386,8 @@ static void GPKG_CheckSpatialMetaData(sqlite3_context *context, int nbArgs, sqli
 static void GPKG_InitSpatialMetaData(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_SPATIALDB_ARG(spatialdb);
   FUNCTION_TEXT_ARG(db_name);
-  FUNCTION_START(context);
 
+  FUNCTION_START(context);
   FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
   if (nbArgs == 0) {
     FUNCTION_SET_TEXT_ARG(db_name, "main");
@@ -564,11 +566,37 @@ static void GPKG_CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite
   FUNCTION_FREE_TEXT_ARG(column_name);
 }
 
-extern const spatialdb_t GEOPACKAGE_DB;
-extern const spatialdb_t SPATIALITE3_DB;
-extern const spatialdb_t SPATIALITE4_DB;
+const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
+  char error_message[256];
+  error_t error;
+  error_init_fixed(&error, error_message, 256);
 
-int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, spatialdb_schema schema) {
+  const spatialdb_t *schemas[] = {
+    spatialdb_geopackage_schema(),
+    spatialdb_spatialite4_schema(),
+    spatialdb_spatialite3_schema(),
+    NULL
+  };
+
+  const spatialdb_t **schema = &schemas[0];
+  while (*schema != NULL) {
+    error_reset(&error);
+    (*schema)->check_meta(db, "main", &error);
+    if (error_count(&error) == 0) {
+      break;
+    } else {
+      schema++;
+    }
+  }
+
+  if (*schema != NULL) {
+    return *schema;
+  } else {
+    return schemas[0];
+  }
+}
+
+int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, const spatialdb_t *spatialdb) {
   SQLITE_EXTENSION_INIT2(pThunk)
 
   if (sqlite3_libversion_number() < 3007000) {
@@ -578,21 +606,16 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     return SQLITE_ERROR;
   }
 
-  const spatialdb_t *spatialdb;
-  if (schema == SPATIALITE3) {
-    spatialdb = &SPATIALITE3_DB;
-  } else if (schema == SPATIALITE4) {
-    spatialdb = &SPATIALITE4_DB;
-  } else {
-    spatialdb = &GEOPACKAGE_DB;
-  }
-
   error_t error;
   if (error_init(&error) != SQLITE_OK) {
     if (pzErrMsg) {
       *pzErrMsg = sqlite3_mprintf("libgpkg requires SQLite 3.7.0 or higher; detected %s", sqlite3_libversion());
     }
     return SQLITE_ERROR;
+  }
+
+  if (spatialdb == NULL) {
+    spatialdb = spatialdb_detect_schema(db);
   }
 
   if (spatialdb->init != NULL) {

@@ -46,19 +46,24 @@ extern "C" {
 GPKG_EXPORT const char *GPKG_CALL gpkg_libversion();
 
 /**
- * Entry point for the GeoPackage SQLite extension.
+ * Entry point for the libgpkg SQLite extension that forces usage of the GeoPackage database schema.
  */
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 /**
- * Entry point for the Spatialite 3.x emulation SQLite extension.
+ * Entry point for the libgpkg SQLite extension that attempts to autodetect the schema to use.
  */
-GPKG_EXPORT int GPKG_CALL sqlite3_spl3_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_auto_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 /**
- * Entry point for the Spatialite 4.x emulation SQLite extension.
+ * Entry point for the libgpkg SQLite extension that forces usage of the Spatialite 3.x database schema.
  */
-GPKG_EXPORT int GPKG_CALL sqlite3_spl4_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_spl3_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
+ * Entry point for the libgpkg SQLite extension that forces usage of the Spatialite 4.x database schema.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_spl4_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 #ifdef __cplusplus
 }

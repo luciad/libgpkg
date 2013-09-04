@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "check.h"
-#include "spatialdb.h"
+#include "spatialdb_internal.h"
 #include "gpkg_geom.h"
 #include "sqlite.h"
 
@@ -502,9 +502,7 @@ static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, e
   return wkb_read_geometry(stream, WKB_ISO, consumer, error);
 }
 
-
-
-const spatialdb_t GEOPACKAGE_DB = {
+static const spatialdb_t GEOPACKAGE = {
   "GeoPackage",
   NULL,
   init,
@@ -521,3 +519,7 @@ const spatialdb_t GEOPACKAGE_DB = {
   read_geometry_header,
   read_geometry
 };
+
+const spatialdb_t *spatialdb_geopackage_schema() {
+  return &GEOPACKAGE;
+}

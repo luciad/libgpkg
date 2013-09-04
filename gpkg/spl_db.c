@@ -424,9 +424,9 @@ static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlit
   }
 
   if (wkb.coord_type != expected.coord_type) {
-    const char* expected_coord_type;
+    const char *expected_coord_type;
     geom_coord_type_name(expected.coord_type, &expected_coord_type);
-    const char* actual_coord_type;
+    const char *actual_coord_type;
     geom_coord_type_name(wkb.coord_type, &actual_coord_type);
     error_append(&error, "%s geometry can not be written to %s column", actual_coord_type, expected_coord_type);
     goto exit;
@@ -634,13 +634,13 @@ static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value 
   FUNCTION_FREE_GEOM_ARG(geom);
 }
 
-void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {
+static void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {
   REG_FUNC(GPKG, GeometryConstraints, 3, spatialDb, error);
   REG_FUNC(GPKG, GeometryConstraints, 4, spatialDb, error);
   REG_FUNC(GPKG, RTreeAlign, 3, spatialDb, error);
 }
 
-const spatialdb_t SPATIALITE3_DB = {
+static const spatialdb_t SPATIALITE3 = {
   "Spatialite3",
   spatialite_init,
   spl3_init,
@@ -658,7 +658,7 @@ const spatialdb_t SPATIALITE3_DB = {
   read_geometry
 };
 
-const spatialdb_t SPATIALITE4_DB = {
+static const spatialdb_t SPATIALITE4 = {
   "Spatialite4",
   spatialite_init,
   spl4_init,
@@ -675,3 +675,11 @@ const spatialdb_t SPATIALITE4_DB = {
   read_geometry_header,
   read_geometry
 };
+
+const spatialdb_t *spatialdb_spatialite3_schema() {
+  return &SPATIALITE3;
+}
+
+const spatialdb_t *spatialdb_spatialite4_schema() {
+  return &SPATIALITE4;
+}

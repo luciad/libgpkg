@@ -24,22 +24,24 @@ int strbuf_init(strbuf_t *strbuf, size_t initial_size) {
     return SQLITE_NOMEM;
   }
 
-  memset(data, 0, initial_size);
-
   strbuf->buffer = data;
   strbuf->capacity = initial_size;
-  strbuf->length = 0;
   strbuf->growable = 1;
+  strbuf_reset(strbuf);
   return SQLITE_OK;
 }
 
 int strbuf_init_fixed(strbuf_t *strbuf, char *buffer, size_t length) {
-  memset(buffer, 0, length);
-
   strbuf->buffer = buffer;
   strbuf->capacity = length - 1;
-  strbuf->length = 0;
   strbuf->growable = 0;
+  strbuf_reset(strbuf);
+  return SQLITE_OK;
+}
+
+int strbuf_reset(strbuf_t *strbuf) {
+  memset(strbuf->buffer, 0, strbuf->capacity);
+  strbuf->length = 0;
   return SQLITE_OK;
 }
 

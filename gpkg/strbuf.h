@@ -56,6 +56,14 @@ int strbuf_init(strbuf_t *strbuf, size_t initial_size);
 int strbuf_init_fixed(strbuf_t *strbuf, char *buffer, size_t length);
 
 /**
+ * Resets a string buffer to the state it had after calling strbuf_init or strbuf_init_fixed.
+ * This function erases the content of the data buffer. It does not create a new buffer.
+ * @param strbuf the buffer to reset
+ * @return SQLITE_OK on success, an error code otherwise
+ */
+int strbuf_reset(strbuf_t *strbuf);
+
+/**
  * Destroys a string buffer, freeing any internal data structures that have been allocated.
  * @param buffer the string buffer to destroy
  */

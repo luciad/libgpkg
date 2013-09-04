@@ -455,7 +455,6 @@ struct callback_data {
   const char *zVfs;           /* Name of VFS to use */
   sqlite3_stmt *pStmt;   /* Current statement if any. */
   FILE *pLog;            /* Write log output here */
-  const char* gpkgMode;
   void (*gpkgEntryPoint)();
 };
 
@@ -1478,6 +1477,19 @@ static char zTimerHelp[] =
 /* Forward reference */
 static int process_input(struct callback_data *p, FILE *in);
 
+static int update_prompt_callback(void *data, int nbCols, char** colValues, char** colNames) {
+  char *spatialdbtype = colValues[0];
+  size_t len = strlen(spatialdbtype);
+
+  sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "%s> ", spatialdbtype);
+  sqlite3_snprintf(sizeof(continuePrompt), continuePrompt,"%*s> ", len, "...");
+  return SQLITE_ABORT;
+}
+
+static void update_prompt(sqlite3 *db) {
+  sqlite3_exec(db, "SELECT GPKG_SpatialDBType()", update_prompt_callback, NULL, NULL);
+}
+
 /*
 ** Make sure the database is open.  If it is not, then open it.  If
 ** the database fails to open, print an error message and exit.
@@ -1485,9 +1497,9 @@ static int process_input(struct callback_data *p, FILE *in);
 static void open_db(struct callback_data *p){
   if( p->db==0 ){
     sqlite3_initialize();
-#ifndef SQLITE_OMIT_LOAD_EXTENSION	  
-	sqlite3_auto_extension(p->gpkgEntryPoint);
-#endif	  
+#ifndef SQLITE_OMIT_LOAD_EXTENSION
+	  sqlite3_auto_extension(p->gpkgEntryPoint);
+#endif
     sqlite3_open(p->zDbFilename, &p->db);
     db = p->db;
     if( db && sqlite3_errcode(db)==SQLITE_OK ){
@@ -1514,6 +1526,7 @@ static void open_db(struct callback_data *p){
       sqlite3_spellfix1_register(db);
     }
 #endif
+    update_prompt(db);
   }
 }
 
@@ -2894,6 +2907,7 @@ static const char zOptions[] =
   "   -csv                 set output mode to 'csv'\n"
   "   -echo                print commands before execution\n"
   "   -init FILENAME       read/process named file\n"
+  "   -gpkg                use the GeoPackage database schema\n"
   "   -[no]header          turn headers on or off\n"
 #if defined(SQLITE_ENABLE_MEMSYS3) || defined(SQLITE_ENABLE_MEMSYS5)
   "   -heap SIZE           Size of heap for memsys3 or memsys5\n"
@@ -2908,7 +2922,8 @@ static const char zOptions[] =
 #endif
   "   -nullvalue TEXT      set text string for NULL values. Default ''\n"
   "   -separator SEP       set output field separator. Default: '|'\n"
-  "   -spatialite          enable Spatialite emulation\n"
+  "   -spl3                use the Spatialite 3.x database schema\n"
+  "   -spl4                use the Spatialite 4.x database schema\n"
   "   -stats               print memory stats before each finalize\n"
   "   -version             show SQLite version\n"
   "   -vfs NAME            use NAME as the default VFS\n"
@@ -2939,10 +2954,9 @@ static void main_init(struct callback_data *data) {
   data->showHeader = 0;
   sqlite3_config(SQLITE_CONFIG_URI, 1);
   sqlite3_config(SQLITE_CONFIG_LOG, shellLog, data);
-  data->gpkgMode = "GeoPackage";
-  data->gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_init;
-  sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "gpkg> ");
-  sqlite3_snprintf(sizeof(continuePrompt), continuePrompt," ...> ");
+  data->gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_auto_init;
+  sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "sqlite> ");
+  sqlite3_snprintf(sizeof(continuePrompt), continuePrompt,"   ...> ");
   sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);
 }
 
@@ -3058,14 +3072,12 @@ int main(int argc, char **argv){
         fprintf(stderr, "no such VFS: \"%s\"\n", argv[i]);
         exit(1);
       }
+    }else if( strcmp(z,"-gpkg")==0 ){
+      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_init;
     }else if( strcmp(z,"-spl3")==0 ){
-      data.gpkgMode = "Spatialite 3.x";
-      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_spl3_init;
-      sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "spl3> ");
+      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_spl3_init;
     }else if( strcmp(z,"-spl4")==0 ){
-      data.gpkgMode = "Spatialite 4.x";
-      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_spl4_init;
-      sqlite3_snprintf(sizeof(mainPrompt), mainPrompt, "spl4> ");
+      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_spl4_init;
     }
   }
   if( data.zDbFilename==0 ){
@@ -3083,7 +3095,7 @@ int main(int argc, char **argv){
   ** files from being created if a user mistypes the database name argument
   ** to the sqlite command-line tool.
   */
-  if( access(data.zDbFilename, 0)==0 ){
+  if( strcmp(":memory:", data.zDbFilename) == 0 || access(data.zDbFilename, 0)==0 ){
     open_db(&data);
   }
 
@@ -3172,7 +3184,7 @@ int main(int argc, char **argv){
           if( bail_on_error ) return rc;
         }
       }
-    }else if( strcmp(z,"-spl3")==0 || strcmp(z,"-spl4")==0 ){
+    }else if( strcmp(z,"-gpkg")==0 || strcmp(z,"-spl3")==0 || strcmp(z,"-spl4")==0 ){
       i++;
     }else{
       fprintf(stderr,"%s: Error: unknown option: %s\n", Argv0, z);
@@ -3206,13 +3218,12 @@ int main(int argc, char **argv){
       int nHistory;
       printf(
         "SQLite version %s %.19s\n" /*extra-version-info*/
-        "libgpkg version %s in %s mode\n"
+        "libgpkg version %s\n"
         "Enter \".help\" for instructions\n"
         "Enter SQL statements terminated with a \";\"\n",
         sqlite3_libversion(), 
         sqlite3_sourceid(),
-        gpkg_libversion(),
-        data.gpkgMode
+        gpkg_libversion()
       );
       zHome = find_home_dir();
       if( zHome ){

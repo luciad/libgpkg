@@ -21,12 +21,6 @@
 #include "sqlite.h"
 #include "gpkg.h"
 
-typedef enum {
-  GEOPACKAGE,
-  SPATIALITE3,
-  SPATIALITE4
-} spatialdb_schema;
-
 typedef struct spatialdb {
   const char *name;
   void(*init)(sqlite3 *db, const struct spatialdb *spatialDb, error_t *error);
@@ -45,6 +39,10 @@ typedef struct spatialdb {
   int(*read_geometry)(binstream_t *stream, geom_consumer_t const *consumer, error_t *error);
 } spatialdb_t;
 
-int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, spatialdb_schema schema);
+const spatialdb_t *spatialdb_geopackage_schema();
+const spatialdb_t *spatialdb_spatialite3_schema();
+const spatialdb_t *spatialdb_spatialite4_schema();
+
+int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, const spatialdb_t *schema);
 
 #endif
