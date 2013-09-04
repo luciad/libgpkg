@@ -130,27 +130,27 @@ int geom_type_name(geom_type_t geom_type, const char **geom_type_name) {
 }
 
 int geom_coord_type_name(coord_type_t coord_type, const char **coord_type_name) {
-    int result = SQLITE_OK;
+  int result = SQLITE_OK;
 
-    switch (coord_type) {
-        case GEOM_XY:
-            *coord_type_name = "XY";
-            break;
-        case GEOM_XYZ:
-            *coord_type_name = "XYZ";
-            break;
-        case GEOM_XYM:
-            *coord_type_name = "XYM";
-            break;
-        case GEOM_XYZM:
-            *coord_type_name = "XYZM";
-            break;
-        default:
-            *coord_type_name = NULL;
-            result = SQLITE_ERROR;
-    }
+  switch (coord_type) {
+    case GEOM_XY:
+      *coord_type_name = "XY";
+      break;
+    case GEOM_XYZ:
+      *coord_type_name = "XYZ";
+      break;
+    case GEOM_XYM:
+      *coord_type_name = "XYM";
+      break;
+    case GEOM_XYZM:
+      *coord_type_name = "XYZM";
+      break;
+    default:
+      *coord_type_name = NULL;
+      result = SQLITE_ERROR;
+  }
 
-    return result;
+  return result;
 }
 
 int geom_type_from_string(const char *type_name, geom_type_t *type) {
