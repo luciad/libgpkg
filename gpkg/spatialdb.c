@@ -609,7 +609,7 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   error_t error;
   if (error_init(&error) != SQLITE_OK) {
     if (pzErrMsg) {
-      *pzErrMsg = sqlite3_mprintf("libgpkg requires SQLite 3.7.0 or higher; detected %s", sqlite3_libversion());
+      *pzErrMsg = sqlite3_mprintf("Could not initialize error buffer");
     }
     return SQLITE_ERROR;
   }
