@@ -211,7 +211,7 @@ static int spl3_add_geometry_column(sqlite3 *db, const char *db_name, const char
     return result;
   }
 
-  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, geometry_type, coord_dimension, srid, spatial_index_enabled) VALUES (%Q, %Q, %Q, %Q, %d, %d)", db_name,
+  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, type, coord_dimension, srid, spatial_index_enabled) VALUES (%Q, %Q, %Q, %Q, %d, %d)", db_name,
                     "geometry_columns", table_name, column_name,
                     normalized_geom_type, coord_type, srs_id, 0);
   if (result != SQLITE_OK) {
