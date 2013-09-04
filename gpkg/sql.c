@@ -92,7 +92,10 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
   int stmt_res = sqlite3_step(stmt);
   if (stmt_res == SQLITE_DONE) {
     if (nodata != NULL) {
-      stmt_res = nodata(stmt, data);
+      int callback_res = nodata(stmt, data);
+      if (callback_res != SQLITE_ABORT) {
+        stmt_res = callback_res;
+      }
     }
   } else {
     if (row == NULL) {
