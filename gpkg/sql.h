@@ -230,7 +230,7 @@ int sql_rollback(sqlite3 *db, char *name);
  * Executes a SQL statement. The SQL statement can be a printf style format pattern.
  * @param db the SQLite database context
  * @param sql the SQL statement to execute
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
 int sql_exec(sqlite3 *db, char *sql, ...);
@@ -239,7 +239,7 @@ int sql_exec(sqlite3 *db, char *sql, ...);
  * Executes a SQL statement. The SQL statement can be a printf style format pattern.
  * @param db the SQLite database context
  * @param sql the SQL statement to execute
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
 int sql_exec_all(sqlite3 *db, char *sql, ...);
@@ -249,7 +249,7 @@ int sql_exec_all(sqlite3 *db, char *sql, ...);
  * @param stmt the currently executing statement
  * @param data the user defined data that was passed to sql_exec_stmt
  * @return SQLITE_OK to continue iterating
- *         SQLITE_DONE to abort iterating; sql_exec_stmt returns with SQLITE_OK
+ *         SQLITE_ABORT to abort iterating; sql_exec_stmt returns with SQLITE_OK
  *         A SQLite error code to abort iterating; sql_exec_stmt returns with the return value of this function
  */
 typedef int(*sql_callback)(sqlite3_stmt *stmt, void *data);
@@ -261,7 +261,7 @@ typedef int(*sql_callback)(sqlite3_stmt *stmt, void *data);
  * @param nodata optional callback that is called when the result set is empty
  * @param data optional user data that is passed to the row and/or nodata callbacks
  * @param sql the SQL statement to execute
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
 int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data, char *sql, ...);
@@ -272,7 +272,7 @@ int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data
  * @param db the SQLite database context
  * @param[out] out on success, out will be set to the returned string value
  * @param sql the SQL statement to execute
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
 int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...);
@@ -283,7 +283,7 @@ int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...);
  * @param db the SQLite database context
  * @param[out] out on success, out will be set to the returned integer value
  * @param sql the SQL statement to execute
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
 int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
@@ -294,7 +294,7 @@ int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
  * @param db the SQLite database context
  * @param[out] out on success, out will be set to the returned double value
  * @param sql the SQL statement to execute
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
 int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...);
@@ -305,7 +305,7 @@ int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...);
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
  * @param table_name the name of the table to check.
  * @param[out] exists on success, exists will be set to 1 if the table exists or to 0 otherwise
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the table check was successful\n
  *         A SQLite error code otherwise
  */
 int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_name, int *exists);
@@ -317,7 +317,7 @@ int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_n
  * @param table_info the table specification
  * @param[out] error on successful exit, error will contain the number of cases where the actual table did not match the specification.
  *                   and descriptive error messages
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the table was checked successfully\n
  *         A SQLite error code otherwise
  */
 int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
@@ -331,7 +331,7 @@ int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_
  * @param table_info the table specification
  * @param[out] error on successful exit, error will contain the number of errors that was encountered while initializing
                      the table and descriptive error messages.
- * @return SQLITE_OK if the transaction was successfully comitted\n
+ * @return SQLITE_OK if the table was initialized successfully\n
  *         A SQLite error code otherwise
  */
 int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);

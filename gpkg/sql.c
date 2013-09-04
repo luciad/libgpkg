@@ -102,7 +102,9 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
     } else {
       while (stmt_res == SQLITE_ROW) {
         int callback_res = row(stmt, data);
-        if (callback_res != SQLITE_OK) {
+        if (callback_res == SQLITE_ABORT) {
+          stmt_res = SQLITE_DONE;
+        } else if (callback_res != SQLITE_OK) {
           stmt_res = callback_res;
         } else {
           stmt_res = sqlite3_step(stmt);
@@ -134,7 +136,7 @@ static int row_string(sqlite3_stmt *stmt, void *data) {
       }
       memmove(*out, text, (size_t)length + 1);
     }
-    return SQLITE_DONE;
+    return SQLITE_ABORT;
   } else {
     return SQLITE_MISUSE;
   }
@@ -142,7 +144,7 @@ static int row_string(sqlite3_stmt *stmt, void *data) {
 
 static int nodata_string(sqlite3_stmt *stmt, void *out) {
   *((char **)out) = NULL;
-  return SQLITE_DONE;
+  return SQLITE_ABORT;
 }
 
 int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
@@ -157,7 +159,7 @@ static int row_int(sqlite3_stmt *stmt, void *data) {
   int col_count = sqlite3_column_count(stmt);
   if (col_count > 0) {
     *((int *)data) = sqlite3_column_int(stmt, 0);
-    return SQLITE_DONE;
+    return SQLITE_ABORT;
   } else {
     return SQLITE_MISUSE;
   }
@@ -165,7 +167,7 @@ static int row_int(sqlite3_stmt *stmt, void *data) {
 
 static int nodata_int(sqlite3_stmt *stmt, void *data) {
   *((int *)data) = 0;
-  return SQLITE_DONE;
+  return SQLITE_ABORT;
 }
 
 int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...) {
@@ -180,7 +182,7 @@ static int row_double(sqlite3_stmt *stmt, void *data) {
   int col_count = sqlite3_column_count(stmt);
   if (col_count > 0) {
     *((double *)data) = sqlite3_column_double(stmt, 0);
-    return SQLITE_DONE;
+    return SQLITE_ABORT;
   } else {
     return SQLITE_MISUSE;
   }
@@ -188,7 +190,7 @@ static int row_double(sqlite3_stmt *stmt, void *data) {
 
 static int nodata_double(sqlite3_stmt *stmt, void *data) {
   *((double *)data) = 0.0;
-  return SQLITE_DONE;
+  return SQLITE_ABORT;
 }
 
 int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...) {
@@ -200,7 +202,7 @@ int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...) {
 }
 
 static int abort_after_first_row(sqlite3_stmt *stmt, void *data) {
-  return SQLITE_DONE;
+  return SQLITE_ABORT;
 }
 
 int sql_exec(sqlite3 *db, char *sql, ...) {
@@ -229,12 +231,12 @@ int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data
 
 static int sql_check_table_exists_nodata(sqlite3_stmt *stmt, void *data) {
   *((int *) data) = 0;
-  return SQLITE_DONE;
+  return SQLITE_ABORT;
 }
 
 static int sql_check_table_exists_row(sqlite3_stmt *stmt, void *data) {
   *((int *) data) = 1;
-  return SQLITE_DONE;
+  return SQLITE_ABORT;
 }
 
 int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_name, int *exists) {
