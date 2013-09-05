@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "fp.h"
 #include "spl_geom.h"
 #include "sqlite.h"
 
@@ -152,7 +152,7 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
   if (header->geom_type == GEOM_POINT) {
     int allnan = 1;
     for (int i = 0; i < header->coord_size; i++) {
-      allnan &= isnan(coords[i]);
+      allnan &= fp_isnan(coords[i]);
     }
     if (allnan) {
       goto exit;

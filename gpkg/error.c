@@ -25,7 +25,7 @@ int error_init_fixed(error_t *error, char *buffer, size_t length) {
 
 int error_reset(error_t *error) {
   error->error_count = 0;
-  strbuf_reset(&error->message);
+  return strbuf_reset(&error->message);
 }
 
 void error_destroy(error_t *error) {
