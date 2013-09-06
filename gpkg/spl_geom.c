@@ -23,9 +23,11 @@
 #define SPB_LITTLE_ENDIAN 0x01
 
 #define CHECK_ENV_COMP(spb, comp, error) \
-    if (spb->envelope.has_env_##comp && spb->envelope.min_##comp > spb->envelope.max_##comp) {\
-        if (error) error_append(error, "SPB envelope min" #comp " > max" #comp ": [min: %f, max: %f]", spb->envelope.min_##comp, spb->envelope.max_##comp);\
-        return SQLITE_IOERR;\
+    if (spb->envelope.has_env_##comp) { \
+      if ((spb->empty && (!fp_isnan(spb->envelope.min_##comp) || !fp_isnan(spb->envelope.max_##comp))) || spb->envelope.min_##comp > spb->envelope.max_##comp) {\
+          if (error) error_append(error, "SPB envelope min" #comp " > max" #comp ": [min: %g, max: %g]", spb->envelope.min_##comp, spb->envelope.max_##comp);\
+          return SQLITE_IOERR;\
+      }\
     }
 #define CHECK_ENV(spb, error) CHECK_ENV_COMP(spb, x, error) CHECK_ENV_COMP(spb, y, error) CHECK_ENV_COMP(spb, z, error) CHECK_ENV_COMP(spb, m, error)
 
@@ -59,8 +61,6 @@ int spb_read_header(binstream_t *stream, geom_blob_header_t *spb, error_t *error
     return SQLITE_IOERR;
   }
 
-  spb->empty = 0;
-
   spb->envelope.has_env_x = 1;
   spb->envelope.has_env_y = 1;
   spb->envelope.has_env_z = 0;
@@ -77,6 +77,8 @@ int spb_read_header(binstream_t *stream, geom_blob_header_t *spb, error_t *error
   if (binstream_read_double(stream, &spb->envelope.max_y)) {
     return SQLITE_IOERR;
   }
+
+  spb->empty = fp_isnan(spb->envelope.min_x) && fp_isnan(spb->envelope.max_x) && fp_isnan(spb->envelope.min_y) && fp_isnan(spb->envelope.max_y);
 
   CHECK_ENV(spb, error)
 
@@ -160,6 +162,7 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
   }
 
   geom_blob_header_t *spb = &writer->header;
+  spb->empty = 0;
   int offset = 0;
   switch (header->coord_type) {
 #define MIN_MAX(coord) double coord = coords[offset++]; \
@@ -221,6 +224,15 @@ static int spb_end(const geom_consumer_t *consumer) {
     goto exit;
   }
 
+  if (writer->header.empty != 0) {
+    geom_envelope_t *envelope = &writer->header.envelope;
+    double nan = fp_nan();
+    envelope->min_x = envelope->max_x = nan;
+    envelope->min_y = envelope->max_y = nan;
+    envelope->min_z = envelope->max_z = nan;
+    envelope->min_m = envelope->max_m = nan;
+  }
+
   result = spb_write_header(stream, &writer->header, NULL);
   if (result != SQLITE_OK) {
     goto exit;
@@ -241,7 +253,10 @@ exit:
 int spb_writer_init(geom_blob_writer_t *writer, int32_t srid) {
   geom_consumer_init(&writer->geom_consumer, NULL, spb_end, spb_begin_geometry, spb_end_geometry, spb_coordinates);
   geom_envelope_init(&writer->header.envelope);
+  writer->header.envelope.has_env_x = 1;
+  writer->header.envelope.has_env_y = 1;
   writer->header.srid = srid;
+  writer->header.empty = 1;
   return wkb_writer_init(&writer->wkb_writer, WKB_SPATIALITE);
 }
 
