@@ -259,7 +259,7 @@ describe 'GeomFromText' do
         to have_result(
                mode == :gpkg ?
                    '47500011ffffffff0101000000000000000000f87f000000000000f87f' :
-                   '0001ffffffffffffffffffffef7fffffffffffffef7fffffffffffffefffffffffffffffefff7c01000000000000000000f87f000000000000f87ffe'
+                   '0001ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f7c01000000000000000000f87f000000000000f87ffe'
            )
   end
 
@@ -268,7 +268,7 @@ describe 'GeomFromText' do
         to have_result(
                mode == :gpkg ?
                    '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010200000000000000' :
-                   '0001ffffffffffffffffffffef7fffffffffffffef7fffffffffffffefffffffffffffffefff7c0200000000000000fe'
+                   '0001ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f7c0200000000000000fe'
            )
   end
 
@@ -277,7 +277,7 @@ describe 'GeomFromText' do
         to have_result(
                mode == :gpkg ?
                    '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010300000000000000' :
-                   '0001ffffffffffffffffffffef7fffffffffffffef7fffffffffffffefffffffffffffffefff7c0300000000000000fe'
+                   '0001ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f7c0300000000000000fe'
            )
   end
 
@@ -286,7 +286,7 @@ describe 'GeomFromText' do
         to have_result(
                mode == :gpkg ?
                    '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010400000000000000' :
-                   '0001ffffffffffffffffffffef7fffffffffffffef7fffffffffffffefffffffffffffffefff7c0400000000000000fe'
+                   '0001ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f7c0400000000000000fe'
            )
   end
 
@@ -295,7 +295,7 @@ describe 'GeomFromText' do
         to have_result(
                mode == :gpkg ?
                    '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010500000000000000' :
-                   '0001ffffffffffffffffffffef7fffffffffffffef7fffffffffffffefffffffffffffffefff7c0500000000000000fe'
+                   '0001ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f7c0500000000000000fe'
            )
   end
 
@@ -304,7 +304,7 @@ describe 'GeomFromText' do
         to have_result(
                mode == :gpkg ?
                    '47500013ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f010600000000000000' :
-                   '0001ffffffffffffffffffffef7fffffffffffffef7fffffffffffffefffffffffffffffefff7c0600000000000000fe'
+                   '0001ffffffff000000000000f87f000000000000f87f000000000000f87f000000000000f87f7c0600000000000000fe'
            )
   end
 end
