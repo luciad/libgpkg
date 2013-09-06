@@ -1,5 +1,4 @@
 #include <geos_c.h>
-#include <malloc.h>
 #include <stdio.h>
 #include "geom_func.h"
 #include "spatialdb_internal.h"
@@ -172,7 +171,7 @@ GEOS_FUNC2_DBL(Distance)
 GEOS_FUNC2_DBL(HausdorffDistance)
 
 void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
-  geos_context_t *ctx = malloc(sizeof(geos_context_t));
+  geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
   GPKG_TLS_KEY_CREATE(last_geos_error);
   GEOSContextHandle_t geos_handle = initGEOS_r(geom_null_msg_handler, geom_tls_msg_handler);
 
