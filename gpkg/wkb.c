@@ -738,8 +738,8 @@ geom_consumer_t *wkb_writer_geom_consumer(wkb_writer_t *writer) {
   return &writer->geom_consumer;
 }
 
-void wkb_writer_destroy(wkb_writer_t *writer) {
-  binstream_destroy(&writer->stream);
+void wkb_writer_destroy(wkb_writer_t *writer, int free_data) {
+  binstream_destroy(&writer->stream, free_data);
 }
 
 uint8_t *wkb_writer_getwkb(wkb_writer_t *writer) {

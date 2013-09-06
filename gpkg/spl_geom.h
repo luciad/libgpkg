@@ -53,7 +53,7 @@ int spb_writer_init(geom_blob_writer_t *writer, int32_t srid);
  * Destroys a Spatialite Binary writer.
  * @param writer the writer to destroy
  */
-void spb_writer_destroy(geom_blob_writer_t *writer);
+void spb_writer_destroy(geom_blob_writer_t *writer, int free_data);
 
 /**
  * Reads a Spatialite Binary header from the given stream. When this method return SQLITE_OK, the stream is guaranteed

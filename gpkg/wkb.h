@@ -60,7 +60,7 @@ int wkb_writer_init(wkb_writer_t *writer, wkb_dialect dialect);
  * Destroys a Well-Known Binary writer.
  * @param writer the writer to destroy
  */
-void wkb_writer_destroy(wkb_writer_t *writer);
+void wkb_writer_destroy(wkb_writer_t *writer, int free_data);
 
 /**
  * Returns a Well-Known Binary writer as a geometry consumer. This function should be used

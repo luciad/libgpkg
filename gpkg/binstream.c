@@ -46,12 +46,12 @@ int binstream_init_growable(binstream_t *stream, size_t initial_cap) {
   return SQLITE_OK;
 }
 
-void binstream_destroy(binstream_t *stream) {
+void binstream_destroy(binstream_t *stream, int free_data) {
   if (stream == NULL) {
     return;
   }
 
-  if (stream->growable == 1) {
+  if (free_data && stream->growable) {
     sqlite3_free(stream->data);
   }
 }

@@ -260,6 +260,6 @@ int spb_writer_init(geom_blob_writer_t *writer, int32_t srid) {
   return wkb_writer_init(&writer->wkb_writer, WKB_SPATIALITE);
 }
 
-void spb_writer_destroy(geom_blob_writer_t *writer) {
-  wkb_writer_destroy(&writer->wkb_writer);
+void spb_writer_destroy(geom_blob_writer_t *writer, int free_data) {
+  wkb_writer_destroy(&writer->wkb_writer, free_data);
 }

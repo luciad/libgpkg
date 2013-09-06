@@ -83,7 +83,7 @@ int binstream_init_growable(binstream_t *stream, size_t initial_cap);
  *
  * @param stream the stream to destroy
  */
-void binstream_destroy(binstream_t *stream);
+void binstream_destroy(binstream_t *stream, int free_data);
 
 /**
  * Resets the given binary stream. After calling this function the position will be set to 0, the limit will be

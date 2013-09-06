@@ -137,7 +137,7 @@
     binstream_init(&arg, arg##_blob, arg##_blob_length)
 #define FUNCTION_FREE_STREAM_ARG(arg)                                                                                  \
     FUNCTION_FREE_BLOB_ARG(arg##_blob);                                                                                \
-    binstream_destroy(&arg)
+    binstream_destroy(&arg, 0)
 
 #define FUNCTION_GEOM_ARG_STREAM(arg) arg##_stream
 #define FUNCTION_GEOM_ARG(arg)                                                                                         \
