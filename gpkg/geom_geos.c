@@ -14,18 +14,14 @@
 #define GEOS_FREE_GEOM(geom) GEOSGeom_destroy_r( geos_context->geos_handle, geom )
 
 #define GEOS_FUNC1(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
-  printf("Calling %s\n", #name);\
   GEOS_START(context);\
-  printf("Getting geom 1\n");\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
-  printf("Calling geom GEOS%s_r(%p)\n", #name, g1);\
   char result = GEOS##name##_r(GEOS_HANDLE, g1);\
   if (result == 2) {\
     sqlite3_result_error(context, "GEOS error", -1);\
   } else {\
     sqlite3_result_int(context, result);\
   }\
-  printf("Freeing geom 1\n");\
   GEOS_FREE_GEOM( g1 );\
 }
 
