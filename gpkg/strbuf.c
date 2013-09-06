@@ -117,7 +117,7 @@ int strbuf_vappend(strbuf_t *buffer, const char *msg, va_list args) {
       buffer->capacity = new_capacity;
     } else {
       result = SQLITE_NOMEM;
-      goto exit;
+      formatted_len = formatted_len - (buffer->capacity - buffer->length) - 1;
     }
   }
 
