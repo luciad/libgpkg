@@ -49,7 +49,10 @@ if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
 endif()
 
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
-  add_definitions(-DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\))
+  add_definitions(
+    -DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\)
+    -DGPKG_HAVE_THREAD
+  )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
 endif()
 

@@ -3,6 +3,44 @@
 #include <stdio.h>
 #include "geom_func.h"
 #include "spatialdb_internal.h"
+#include "tls.h"
+
+#include <stdarg.h>
+
+static void geom_null_msg_handler(const char* fmt, ...) {
+}
+
+GPKG_TLS_KEY(last_geos_error)
+
+static void geom_clear_geos_error() {
+  char *err = GPKG_TLS_GET(last_geos_error);
+  if (err != NULL) {
+    sqlite3_free(err);
+    GPKG_TLS_SET(last_geos_error, NULL);
+  }
+}
+
+static void geom_get_geos_error(error_t *error) {
+  char *err = GPKG_TLS_GET(last_geos_error);
+  if (err != NULL) {
+    error_append(error, err);
+    sqlite3_free(err);
+    GPKG_TLS_SET(last_geos_error, NULL);
+  } else {
+    error_append(error, "GEOS error");
+  }
+}
+
+static void geom_tls_msg_handler(const char* fmt, ...) {
+  geom_clear_geos_error();
+
+  int result;
+  va_list args;
+  va_start(args, fmt);
+  char *err = sqlite3_vmprintf(fmt, args);
+  GPKG_TLS_SET(last_geos_error, err);
+  va_end(args);
+}
 
 #define GEOS_START(context) \
   const geos_context_t *geos_context = (const geos_context_t *)sqlite3_user_data(context); \
@@ -16,9 +54,14 @@
 #define GEOS_FUNC1(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  if (g1 == NULL) {\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1);\
   if (result == 2) {\
-    sqlite3_result_error(context, "GEOS error", -1);\
+    geom_get_geos_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
   } else {\
     sqlite3_result_int(context, result);\
   }\
@@ -29,9 +72,14 @@
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
+  if (g1 == NULL || g2 == NULL) {\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
   if (result == 2) {\
-    sqlite3_result_error(context, "GEOS error", -1);\
+    geom_get_geos_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
   } else {\
     sqlite3_result_int(context, result);\
   }\
@@ -42,12 +90,17 @@
 #define GEOS_FUNC1_DBL(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  if (g1 == NULL) {\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
   double val;\
   char result = GEOS##name##_r(GEOS_HANDLE, g1, &val);\
   if (result == 1) {\
     sqlite3_result_double(context, val);\
   } else {\
-    sqlite3_result_error(context, "GEOS error", -1);\
+    geom_get_geos_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
   }\
   GEOS_FREE_GEOM( g1 );\
 }
@@ -56,12 +109,17 @@
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
+  if (g1 == NULL || g2 == NULL) {\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
   double val;\
   char result = GEOS##name##_r(GEOS_HANDLE, g1, g2, &val);\
   if (result == 1) {\
     sqlite3_result_double(context, val);\
   } else {\
-    sqlite3_result_error(context, "GEOS error", -1);\
+    geom_get_geos_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
   }\
   GEOS_FREE_GEOM( g1 );\
   GEOS_FREE_GEOM( g2 );\
@@ -83,16 +141,18 @@ static GEOSGeometry *get_geos_geom( sqlite3_context *context, const geos_context
   binstream_init(&stream, blob, blob_length);
 
   geos_context->spatialdb->read_blob_header(&stream, &header, error);
-  return GEOSWKBReader_read_r(geos_context->geos_handle, geos_context->wkbreader, binstream_data(&stream), binstream_available(&stream));
+  geom_clear_geos_error();
+  GEOSGeometry *g = GEOSWKBReader_read_r(geos_context->geos_handle, geos_context->wkbreader, binstream_data(&stream), binstream_available(&stream));
+  if (g == NULL) {
+    geom_get_geos_error(error);
+  }
+  return g;
 }
 
 GEOS_FUNC1(isSimple)
 GEOS_FUNC1(isRing)
 
-/*
-TODO segfaults; to be investigated
 GEOS_FUNC1(isClosed)
-*/
 GEOS_FUNC1(isValid)
 
 GEOS_FUNC2(Disjoint)
@@ -113,8 +173,8 @@ GEOS_FUNC2_DBL(HausdorffDistance)
 
 void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
   geos_context_t *ctx = malloc(sizeof(geos_context_t));
-
-  GEOSContextHandle_t geos_handle = initGEOS_r(NULL, NULL);
+  GPKG_TLS_KEY_CREATE(last_geos_error);
+  GEOSContextHandle_t geos_handle = initGEOS_r(geom_null_msg_handler, geom_tls_msg_handler);
 
   ctx->geos_handle = geos_handle;
   ctx->wkbreader = GEOSWKBReader_create_r(geos_handle);
@@ -123,6 +183,7 @@ void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
   REG_FUNC(ST, Area, 1, ctx, error);
   REG_FUNC(ST, Length, 1, ctx, error);
 
+  REG_FUNC(ST, isClosed, 1, ctx, error);
   REG_FUNC(ST, isSimple, 1, ctx, error);
   REG_FUNC(ST, isRing, 1, ctx, error);
   REG_FUNC(ST, isValid, 1, ctx, error);
