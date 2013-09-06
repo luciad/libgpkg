@@ -16,22 +16,22 @@ require_relative 'gpkg'
 
 describe 'InitSpatialMetadata' do
   it 'should return NULL' do
-    execute 'SELECT InitSpatialMetadata()'
+    expect('SELECT InitSpatialMetadata()').to have_result nil
   end
 
   it 'should return NULL when called a second time' do
-    execute 'SELECT InitSpatialMetadata()'
-    execute 'SELECT InitSpatialMetadata()'
+    expect('SELECT InitSpatialMetadata()').to have_result nil
+    expect('SELECT InitSpatialMetadata()').to have_result nil
   end
 end
 
 describe 'CheckGpkg' do
   it 'should raise error when called before InitSpatialMetadata' do
-    execute 'SELECT CheckSpatialMetadata()', :expect => :error
+    expect('SELECT CheckSpatialMetadata()').to raise_sql_error
   end
 
   it 'should return NULL when called after InitSpatialMetadata' do
-    execute 'SELECT InitSpatialMetadata()'
-    execute 'SELECT CheckSpatialMetadata()'
+    expect('SELECT InitSpatialMetadata()').to have_result nil
+    expect('SELECT CheckSpatialMetadata()').to have_result nil
   end
 end

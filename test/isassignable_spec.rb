@@ -52,7 +52,7 @@ describe 'GPKG_IsAssignable' do
     actual_type = type_pair[0].to_s
     expected_type = type_pair[1].to_s
     it "should consider #{actual_type} #{assignable ? 'assignable' : 'not assignable'} to #{expected_type}" do
-      execute 'SELECT GPKG_IsAssignable(?, ?)', expected_type, actual_type, :expect => assignable ? 1 : 0
+      expect(query('SELECT GPKG_IsAssignable(?, ?)', expected_type, actual_type)).to have_result( assignable ? 1 : 0 )
     end
   end
 end

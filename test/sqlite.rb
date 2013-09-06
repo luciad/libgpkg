@@ -96,7 +96,7 @@ module SQLite3
       db_ptr.free
 
       if res != 0
-        raise sqlite3_errstr(res)
+        raise SQLite3Error.new(sqlite3_errstr(res))
       else
         @db = db
       end
@@ -109,14 +109,18 @@ module SQLite3
       end
     end
 
-    def execute(sql, *vars)
+    def execute(*query)
+      query.flatten!
+      sql = query.first
+      vars = query.slice(1, query.length - 1)
+
       stmt_ptr = FFI::MemoryPointer.new :pointer
       res = sqlite3_prepare_v2(@db, sql, -1, stmt_ptr, nil)
       stmt = stmt_ptr.get_pointer(0)
       stmt_ptr.free
 
       if res != SQLite3::OK
-        raise sqlite3_errmsg(@db)
+        raise SQLite3Error.new(sqlite3_errmsg(@db).strip)
       end
 
       vars.flatten.each_with_index do |var, i|
@@ -135,11 +139,11 @@ module SQLite3
               res = sqlite3_bind_text(stmt, i + 1, var.encode(UTF8), -1, TRANSIENT)
             end
           else
-            raise "Unsupported parameter #{var}"
+            raise ArgumentError.new("Unsupported parameter #{var}")
         end
 
         if res != SQLite3::OK
-          raise sqlite3_errmsg(@db)
+          raise SQLite3Error.new(sqlite3_errmsg(@db).strip)
         end
       end
 
@@ -173,7 +177,7 @@ module SQLite3
       sqlite3_finalize(stmt)
 
       if res != SQLite3::DONE
-        raise sqlite3_errmsg(@db)
+        raise SQLite3Error.new(sqlite3_errmsg(@db).strip)
       end
 
       if block_given?
@@ -186,7 +190,7 @@ module SQLite3
     def load_extension(file, entry_point)
       res = sqlite3_enable_load_extension(@db, 1)
       if res != SQLite3::OK
-        raise sqlite3_errmsg(@db)
+        raise SQLite3Error.new(sqlite3_errmsg(@db).strip)
       end
 
       err_ptr = FFI::MemoryPointer.new :pointer
@@ -197,17 +201,17 @@ module SQLite3
       if res != SQLite3::OK
         err_msg = err_msg_ptr.get_string(0)
         sqlite3_free(err_msg_ptr)
-        raise err_msg if err_msg
+        raise SQLite3Error.new(err_msg) if err_msg
       end
     end
 
-    def get_first_row( sql, *vars )
-      execute( sql, *vars ) { |row| return row }
+    def get_first_row( *query )
+      execute( *query ) { |row| return row }
       nil
     end
 
-    def get_first_value( sql, *vars )
-      execute( sql, *vars ) { |row| return row[0] }
+    def get_first_value( *query )
+      execute( *query ) { |row| return row[0] }
       nil
     end
 
@@ -243,4 +247,6 @@ module SQLite3
     attach_function :sqlite3_bind_null, [:pointer, :int], :int
     attach_function :sqlite3_bind_text, [:pointer, :int, :string, :int, :pointer], :int
   end
+
+  class SQLite3Error < RuntimeError; end
 end

@@ -16,128 +16,140 @@ require_relative 'gpkg'
 
 describe 'ST_MinX' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MinX(NULL)'
+    expect('SELECT ST_MinX(NULL)').to have_result nil
   end
 
   it 'should return the X coordinate of a point' do
-    execute "SELECT ST_MinX(GeomFromText('Point(1 0)'))", :expect => 1.0
+    expect("SELECT ST_MinX(GeomFromText('Point(1 0)'))").to have_result 1.0
   end
 
   it 'should return the minimum X coordinate of a line string' do
-    execute "SELECT ST_MinX(GeomFromText('LineString(-1 0, 5 0)'))", :expect => -1.0
+    expect("SELECT ST_MinX(GeomFromText('LineString(-1 0, 5 0)'))").to have_result -1.0
   end
 
-  it 'should return the value from the GPB header' do
-    execute "SELECT ST_MinX(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')", :expect => -5.00000012
+  if mode == :gpkg
+    it 'should return the value from the GPB header' do
+      expect("SELECT ST_MinX(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')").
+          to have_result -5.00000012
+    end
   end
 end
 
 describe 'ST_MaxX' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MaxX(NULL)'
+    expect('SELECT ST_MaxX(NULL)').to have_result nil
   end
 
   it 'should return the X coordinate of a point' do
-    execute "SELECT ST_MaxX(GeomFromText('Point(1 0)'))", :expect => 1.0
+    expect("SELECT ST_MaxX(GeomFromText('Point(1 0)'))").to have_result 1.0
   end
 
   it 'should return the maximum X coordinate of a line string' do
-    execute "SELECT ST_MaxX(GeomFromText('LineString(-1 0, 5 0)'))", :expect => 5.0
+    expect("SELECT ST_MaxX(GeomFromText('LineString(-1 0, 5 0)'))").to have_result 5.0
   end
 
-  it 'should return the value from the GPB header' do
-    execute "SELECT ST_MaxX(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')", :expect => 7.000000120000002
+  if mode == :gpkg
+    it 'should return the value from the GPB header' do
+      expect("SELECT ST_MaxX(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')").
+          to have_result 7.000000120000002
+    end
   end
 end
 
 describe 'ST_MinY' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MinY(NULL)'
+    expect('SELECT ST_MinY(NULL)').to have_result nil
   end
 
   it 'should return the X coordinate of a point' do
-    execute "SELECT ST_MinY(GeomFromText('Point(1 5)'))", :expect => 5.0
+    expect("SELECT ST_MinY(GeomFromText('Point(1 5)'))").to have_result 5.0
   end
 
   it 'should return the minimum Y coordinate of a line string' do
-    execute "SELECT ST_MinY(GeomFromText('LineString(-1 7, 5 -3)'))", :expect => -3.0
+    expect("SELECT ST_MinY(GeomFromText('LineString(-1 7, 5 -3)'))").to have_result -3.0
   end
 
-  it 'should return the value from the GPB header' do
-    execute "SELECT ST_MinY(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')", :expect => -13.00000023
+  if mode == :gpkg
+    it 'should return the value from the GPB header' do
+      expect("SELECT ST_MinY(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')").
+          to have_result -13.00000023
+    end
   end
 end
 
 describe 'ST_MaxY' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MaxY(NULL)'
+    expect('SELECT ST_MaxY(NULL)').to have_result nil
   end
 
   it 'should return the X coordinate of a point' do
-    execute "SELECT ST_MaxY(GeomFromText('Point(1 5)'))", :expect => 5.0
+    expect("SELECT ST_MaxY(GeomFromText('Point(1 5)'))").to have_result 5.0
   end
 
   it 'should return the maximum Y coordinate of a line string' do
-    execute "SELECT ST_MaxY(GeomFromText('LineString(-1 7, 5 -3)'))", :expect => 7.0
+    expect("SELECT ST_MaxY(GeomFromText('LineString(-1 7, 5 -3)'))").to have_result 7.0
   end
 
-  it 'should return the value from the GPB header' do
-    execute "SELECT ST_MaxY(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')", :expect => 10.000000230000003
+  if mode == :gpkg
+    it 'should return the value from the GPB header' do
+      expect("SELECT ST_MaxY(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')").
+          to have_result 10.000000230000003
+    end
   end
 end
 
 describe 'ST_MinM' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MinM(NULL)'
+    expect('SELECT ST_MinM(NULL)').to have_result nil
   end
 
   it 'should return the M coordinate of a point' do
-    execute "SELECT ST_MinM(GeomFromText('Point M (1 5 4)'))", :expect => 4.0
+    expect("SELECT ST_MinM(GeomFromText('Point M (1 5 4)'))").to have_result 4.0
   end
 
   it 'should return NULL if M is undefined' do
-    execute "SELECT ST_MinM(GeomFromText('Point Z (1 5 4)'))"
+    expect("SELECT ST_MinM(GeomFromText('Point Z (1 5 4)'))").to have_result nil
   end
 end
 
 describe 'ST_MaxM' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MaxM(NULL)'
+    expect('SELECT ST_MaxM(NULL)').to have_result nil
   end
 
   it 'should return the M coordinate of a point' do
-    execute "SELECT ST_MaxM(GeomFromText('Point M(1 5 4)'))", :expect => 4.0
+    expect("SELECT ST_MaxM(GeomFromText('Point M(1 5 4)'))").to have_result 4.0
   end
 
   it 'should return NULL if M is undefined' do
-    execute "SELECT ST_MaxM(GeomFromText('Point Z (1 5 4)'))"
+    expect("SELECT ST_MaxM(GeomFromText('Point Z (1 5 4)'))").to have_result nil
   end
 end
 
 describe 'ST_MinZ' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MinZ(NULL)'
+    expect('SELECT ST_MinZ(NULL)').to have_result nil
   end
 
   it 'should return the Z coordinate of a point' do
-    execute "SELECT ST_MinZ(GeomFromText('Point Z (1 5 4)'))", :expect => 4.0
+    expect("SELECT ST_MinZ(GeomFromText('Point Z (1 5 4)'))").to have_result 4.0
   end
 
   it 'should return NULL if Z is undefined' do
-    execute "SELECT ST_MinZ(GeomFromText('Point M (1 5 4)'))"
+    expect("SELECT ST_MinZ(GeomFromText('Point M (1 5 4)'))").to have_result nil
   end
 end
 
 describe 'ST_MaxZ' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_MaxZ(NULL)'
+    expect('SELECT ST_MaxZ(NULL)').to have_result nil
   end
 
   it 'should return the Z coordinate of a point' do
-    execute "SELECT ST_MaxZ(GeomFromText('Point Z (1 5 4)'))", :expect => 4.0
+    expect("SELECT ST_MaxZ(GeomFromText('Point Z (1 5 4)'))").to have_result 4.0
   end
 
   it 'should return NULL if Z is undefined' do
-    execute "SELECT ST_MaxZ(GeomFromText('Point M (1 5 4)'))"
+    expect("SELECT ST_MaxZ(GeomFromText('Point M (1 5 4)'))").to have_result nil
   end
 end

@@ -16,23 +16,29 @@ require_relative 'gpkg'
 
 describe 'ST_SRID' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_SRID(NULL)', :expect => nil
+    expect('SELECT ST_SRID(NULL)').to have_result nil
   end
 
   it 'should return the -1 if SRID was not specified' do
-    execute "SELECT ST_SRID(GeomFromText('Point(1 0)'))", :expect => -1
+    expect("SELECT ST_SRID(GeomFromText('Point(1 0)'))").to have_result (mode == :spl4 ? 0 : -1)
   end
 
   it 'should return the actual SRID value if specified' do
-    execute "SELECT ST_SRID(GeomFromText('Point(1 0)', 20))", :expect => 20
+    expect("SELECT ST_SRID(GeomFromText('Point(1 0)', 20))").to have_result 20
   end
 
   it 'should raise an error on invalid input' do
-    execute "SELECT ST_SRID(x'FFFFFFFFFF'))", :expect => :error
+    expect("SELECT ST_SRID(x'FFFFFFFFFF'))").to raise_sql_error
   end
 
   it 'should return an update geometry when called with two parameters' do
-      execute "SELECT hex(ST_SRID(GeomFromText('Point(1 0)', 20), 10))", :expect => '475000010A0000000101000000000000000000F03F0000000000000000'
-      execute "SELECT ST_SRID(ST_SRID(GeomFromText('Point(1 0)', 20), 10))", :expect => 10
+      expect("SELECT hex(ST_SRID(GeomFromText('Point(1 0)', 20), 10))").
+          to have_result(
+                 mode == :gpkg ?
+                     '475000010A0000000101000000000000000000F03F0000000000000000' :
+                     '00010A000000000000000000F03F0000000000000000000000000000F03F00000000000000007C01000000000000000000F03F0000000000000000FE'
+             )
+
+      expect("SELECT ST_SRID(ST_SRID(GeomFromText('Point(1 0)', 20), 10))").to have_result 10
   end
 end

@@ -13,12 +13,23 @@ execute_process(
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+set(entry_points gpkg gpkg_spl3 gpkg_spl4)
+
 file(GLOB test_scripts RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *_spec.rb)
-foreach(test_script IN LISTS test_scripts)
-    add_test(
-        NAME ${test_script}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND ${RUBY_EXECUTABLE} -S bundle exec rspec ${CMAKE_CURRENT_SOURCE_DIR}/${test_script}
-    )
-    set_property( TEST ${test_script} PROPERTY ENVIRONMENT RUBY_SQLITE=${sqlite_location} GPKG_EXTENSION=${gpkgext_location} )
-endforeach(test_script)
+foreach(entry_point IN LISTS entry_points)
+  foreach(test_script IN LISTS test_scripts)
+      set(test_name ${entry_point}_${test_script})
+      add_test(
+          NAME ${test_name}
+          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+          COMMAND ${RUBY_EXECUTABLE} -S bundle exec rspec ${CMAKE_CURRENT_SOURCE_DIR}/${test_script}
+      )
+      set_property(
+          TEST ${test_name}
+          PROPERTY ENVIRONMENT
+          RUBY_SQLITE=${sqlite_location}
+          GPKG_EXTENSION=${gpkgext_location}
+          GPKG_ENTRY_POINT=${entry_point}
+      )
+  endforeach(test_script)
+endforeach(entry_point)

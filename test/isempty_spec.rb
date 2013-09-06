@@ -16,28 +16,28 @@ require_relative 'gpkg'
 
 describe 'ST_IsEmpty' do
   it 'should return NULL when passed NULL' do
-    execute 'SELECT ST_IsEmpty(NULL)', :expect => nil
+    expect('SELECT ST_IsEmpty(NULL)').to have_result nil
   end
 
   it 'should return the 0 for non-empty geometry' do
-    execute "SELECT ST_IsEmpty(GeomFromText('Point(1 0)'))", :expect => 0
-    execute "SELECT ST_IsEmpty(GeomFromText('LineString(1 1, 2 2)'))", :expect => 0
-    execute "SELECT ST_IsEmpty(GeomFromText('Polygon((1 1, 2 2, 3 3))'))", :expect => 0
-    execute "SELECT ST_IsEmpty(GeomFromText('Polygon((1 1, 2 2, 3 3), EMPTY)'))", :expect => 0
-    execute "SELECT ST_IsEmpty(GeomFromText('GeometryCollection(Point(1 0), Point EMPTY)'))", :expect => 0
+    expect("SELECT ST_IsEmpty(GeomFromText('Point(1 0)'))").to have_result 0
+    expect("SELECT ST_IsEmpty(GeomFromText('LineString(1 1, 2 2)'))").to have_result 0
+    expect("SELECT ST_IsEmpty(GeomFromText('Polygon((1 1, 2 2, 3 3))'))").to have_result 0
+    expect("SELECT ST_IsEmpty(GeomFromText('Polygon((1 1, 2 2, 3 3), EMPTY)'))").to have_result 0
+    expect("SELECT ST_IsEmpty(GeomFromText('GeometryCollection(Point(1 0), Point EMPTY)'))").to have_result 0
   end
 
   it 'should return the 1 for empty geometry' do
-    execute "SELECT ST_IsEmpty(GeomFromText('Point empty'))", :expect => 1
-    execute "SELECT ST_IsEmpty(GeomFromText('LineString empty'))", :expect => 1
-    execute "SELECT ST_IsEmpty(GeomFromText('Polygon empty'))", :expect => 1
-    execute "SELECT ST_IsEmpty(GeomFromText('MultiPoint empty'))", :expect => 1
-    execute "SELECT ST_IsEmpty(GeomFromText('MultiLineString empty'))", :expect => 1
-    execute "SELECT ST_IsEmpty(GeomFromText('MultiPolygon empty'))", :expect => 1
-    execute "SELECT ST_IsEmpty(GeomFromText('GeometryCollection empty'))", :expect => 1
+    expect("SELECT ST_IsEmpty(GeomFromText('Point empty'))").to have_result 1
+    expect("SELECT ST_IsEmpty(GeomFromText('LineString empty'))").to have_result 1
+    expect("SELECT ST_IsEmpty(GeomFromText('Polygon empty'))").to have_result 1
+    expect("SELECT ST_IsEmpty(GeomFromText('MultiPoint empty'))").to have_result 1
+    expect("SELECT ST_IsEmpty(GeomFromText('MultiLineString empty'))").to have_result 1
+    expect("SELECT ST_IsEmpty(GeomFromText('MultiPolygon empty'))").to have_result 1
+    expect("SELECT ST_IsEmpty(GeomFromText('GeometryCollection empty'))").to have_result 1
   end
 
   it 'should raise an error on invalid input' do
-    execute "SELECT ST_IsEmpty(x'FFFFFFFFFF'))", :expect => :error
+    expect("SELECT ST_IsEmpty(x'FFFFFFFFFF'))").to raise_sql_error
   end
 end
