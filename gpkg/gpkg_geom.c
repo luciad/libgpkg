@@ -26,10 +26,10 @@
 
 #define CHECK_ENV_COMP(gpb, comp, error) \
     if (gpb->envelope.has_env_##comp) { \
-        if ((gpb->empty && (!fp_isnan(gpb->envelope.min_##comp) || !fp_isnan(gpb->envelope.max_##comp))) || gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
-            if (error) error_append(error, "GPB envelope min" #comp " > max" #comp ": [min: %f, max: %f]", gpb->envelope.min_##comp, gpb->envelope.max_##comp);\
-            return SQLITE_IOERR;\
-        }\
+      if ((gpb->empty && (!fp_isnan(gpb->envelope.min_##comp) || !fp_isnan(gpb->envelope.max_##comp))) || gpb->envelope.min_##comp > gpb->envelope.max_##comp) {\
+          if (error) error_append(error, "GPB envelope min" #comp " > max" #comp ": [min: %g, max: %g]", gpb->envelope.min_##comp, gpb->envelope.max_##comp);\
+          return SQLITE_IOERR;\
+      }\
     }
 #define CHECK_ENV(gpb, error) CHECK_ENV_COMP(gpb, x, error) CHECK_ENV_COMP(gpb, y, error) CHECK_ENV_COMP(gpb, z, error) CHECK_ENV_COMP(gpb, m, error)
 
