@@ -1,6 +1,12 @@
 cmake_minimum_required( VERSION 2.8.11 )
 project ( libgpkg )
 
+set ( gpkg_VERSION_MAJOR 0 )
+set ( gpkg_VERSION_MINOR 8 )
+set ( gpkg_VERSION_PATCH 0 )
+set ( gpkg_BUILD_VERSION "${gpkg_VERSION_MAJOR}.${gpkg_VERSION_MINOR}.${gpkg_VERSION_PATCH}" )
+set ( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
+
 option(GPKG_TEST "Enable Testing?" OFF)
 option(GPKG_COVERAGE "Enable Code coverage?" OFF)
 option(GPKG_GEOS "Enable GEOS-based geometry functions?" OFF)
@@ -17,12 +23,6 @@ if(DOXYGEN_FOUND)
                     COMMENT "Generating API documentation with Doxygen" VERBATIM
   )
 endif(DOXYGEN_FOUND)
-
-set ( gpkg_VERSION_MAJOR 0 )
-set ( gpkg_VERSION_MINOR 8 )
-set ( gpkg_VERSION_PATCH 0 )
-set ( gpkg_BUILD_VERSION "${gpkg_VERSION_MAJOR}.${gpkg_VERSION_MINOR}.${gpkg_VERSION_PATCH}" )
-set ( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
 
 add_subdirectory( gpkg )
 add_subdirectory( shell )

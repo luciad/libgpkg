@@ -1,21 +1,24 @@
+#
+# Required CMake modules
+#
+include(CheckIncludeFile)
+include(CheckFunctionExists)
+
+#
+# Static and shared library version of sqlite3.
+# libgpkg is not linked against this version of sqlite3, it is only used to:
+# - provide the sqlite3 and sqlite3ext headers
+# - provide a sqlite3 binary with a known configuration for the unit tests
+#
 add_library ( sqlite_static STATIC sqlite3.c )
 set_target_properties( sqlite_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE OUTPUT_NAME "sqlite3" )
+set_target_properties( sqlite_static PROPERTIES LIBRARY_OUTPUT_DIRECTORY static )
 
 add_library ( sqlite_shared SHARED sqlite3.c )
 set_target_properties( sqlite_shared PROPERTIES OUTPUT_NAME "sqlite3" )
-
-if ( WIN32 )
-  set_target_properties ( sqlite_static PROPERTIES PREFIX "" )
-  set_target_properties ( sqlite_shared PROPERTIES PREFIX "" )
-endif()
-
-set_target_properties( sqlite_static PROPERTIES LIBRARY_OUTPUT_DIRECTORY static )
 set_target_properties( sqlite_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY shared )
 
 add_definitions ( -D_HAVE_SQLITE_CONFIG_H=1 )
-
-include(CheckIncludeFile)
-include(CheckFunctionExists)
 
 check_include_file(stdint.h HAVE_STDINT_H)
 check_include_file(inttype.h HAVE_INTTYPES_H)
@@ -46,3 +49,14 @@ endif()
 
 configure_file ( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
+
+#
+# Strip 'lib' prefix when compiling for windows
+#
+if ( WIN32 )
+  set_target_properties ( sqlite_static PROPERTIES PREFIX "" )
+  set_target_properties ( sqlite_shared PROPERTIES PREFIX "" )
+endif()
+
+
+

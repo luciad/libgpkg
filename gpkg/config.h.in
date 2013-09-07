@@ -1,1 +1,5 @@
 #define LIBGPKG_VERSION "@gpkg_VERSION_MAJOR@.@gpkg_VERSION_MINOR@.@gpkg_VERSION_PATCH@"
+
+#cmakedefine TLS_USE_THREAD
+#cmakedefine TLS_USE_DECLSPEC_THREAD
+#cmakedefine TLS_USE_PTHREAD
