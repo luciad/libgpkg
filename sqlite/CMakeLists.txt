@@ -11,7 +11,7 @@ include(CheckFunctionExists)
 # - provide a sqlite3 binary with a known configuration for the unit tests
 #
 add_library ( sqlite_static STATIC sqlite3.c )
-set_target_properties( sqlite_static PROPERTIES POSITION_INDEPENDENT_CODE TRUE OUTPUT_NAME "sqlite3" )
+set_target_properties( sqlite_static PROPERTIES OUTPUT_NAME "sqlite3" )
 set_target_properties( sqlite_static PROPERTIES LIBRARY_OUTPUT_DIRECTORY static )
 
 add_library ( sqlite_shared SHARED sqlite3.c )

@@ -46,7 +46,6 @@ set_target_properties(
   gpkg_static PROPERTIES
   OUTPUT_NAME "gpkg"
   PUBLIC_HEADER gpkg.h
-  POSITION_INDEPENDENT_CODE TRUE
 )
 
 #
@@ -67,7 +66,6 @@ if (NOT GPKG_GEOM_FUNC)
       message( WARNING "GEOS is licensed under LGPL 2.1" )
 
       add_library ( gpkg_geom STATIC geom_func_geos.c )
-      set_target_properties( gpkg_geom PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
       include_directories( GEOS_INCLUDE_DIR )
 
       set(GPKG_GEOM_FUNC "GEOS")
@@ -77,7 +75,6 @@ endif()
 
 if(NOT GPKG_GEOM_FUNC)
   add_library ( gpkg_geom STATIC geom_func_null.c )
-  set_target_properties( gpkg_geom PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
   set(GPKG_GEOM_FUNC "NONE")
 endif()
 
@@ -89,7 +86,7 @@ target_link_libraries ( gpkg_static gpkg_geom ${GEOS_LIBRARY} )
 #
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
   add_definitions( -DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\) )
-  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -fvisibility=hidden -std=c99 -pedantic" )
 endif()
 
 if ( MSVC )
