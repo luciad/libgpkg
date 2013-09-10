@@ -15,7 +15,7 @@ before_install:
 before_script:
  - mkdir build
  - cd build
- - cmake -DGPKG_TEST:BOOL=on -DGPKG_COVERAGE:BOOL=on ..
+ - cmake -DGPKG_GEOS:BOOL=on -DGPKG_TEST:BOOL=on -DGPKG_COVERAGE:BOOL=on ..
 
 script: make && make test
 

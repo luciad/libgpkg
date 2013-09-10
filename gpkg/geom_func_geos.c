@@ -164,7 +164,10 @@ static GEOSGeometry *get_geos_geom( sqlite3_context *context, const geos_context
 GEOS_FUNC1(isSimple)
 GEOS_FUNC1(isRing)
 
+#if GEOS_CAPI_VERSION_MINOR >= 7
 GEOS_FUNC1(isClosed)
+#endif
+
 GEOS_FUNC1(isValid)
 
 GEOS_FUNC2(Disjoint)
@@ -174,8 +177,10 @@ GEOS_FUNC2(Within)
 GEOS_FUNC2(Contains)
 GEOS_FUNC2(Overlaps)
 GEOS_FUNC2(Equals)
-GEOS_FUNC2(Covers)
-GEOS_FUNC2(CoveredBy)
+#if GEOS_CAPI_VERSION_MINOR >= 8
+  GEOS_FUNC2(Covers)
+  GEOS_FUNC2(CoveredBy)
+#endif
 
 GEOS_FUNC1_DBL(Area)
 GEOS_FUNC1_DBL(Length)
@@ -195,7 +200,10 @@ void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
   REG_FUNC(ST, Area, 1, ctx, error);
   REG_FUNC(ST, Length, 1, ctx, error);
 
+#if GEOS_CAPI_VERSION_MINOR >= 7
   REG_FUNC(ST, isClosed, 1, ctx, error);
+#endif
+
   REG_FUNC(ST, isSimple, 1, ctx, error);
   REG_FUNC(ST, isRing, 1, ctx, error);
   REG_FUNC(ST, isValid, 1, ctx, error);
@@ -207,8 +215,11 @@ void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
   REG_FUNC(ST, Contains, 2, ctx, error);
   REG_FUNC(ST, Overlaps, 2, ctx, error);
   REG_FUNC(ST, Equals, 2, ctx, error);
+
+#if GEOS_CAPI_VERSION_MINOR >= 8
   REG_FUNC(ST, Covers, 2, ctx, error);
   REG_FUNC(ST, CoveredBy, 2, ctx, error);
+#endif
   
   REG_FUNC(ST, Distance, 2, ctx, error);
   REG_FUNC(ST, HausdorffDistance, 2, ctx, error);
