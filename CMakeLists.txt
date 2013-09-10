@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 2.8.11 )
+cmake_minimum_required( VERSION 2.8.7 )
 project ( libgpkg )
 
 set ( gpkg_VERSION_MAJOR 0 )

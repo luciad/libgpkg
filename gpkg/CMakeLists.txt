@@ -6,14 +6,15 @@ set ( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" )
 #
 # Common objects for static and shared library
 #
-add_library (
-  gpkg_obj OBJECT
+set(
+  GPKG_SOURCE_FILES
   binstream.c
   blobio.c
   check.c
   error.c
   fp.c
   geomio.c
+  gpkg.c
   gpkg_db.c
   gpkg_geom.c
   sql.c
@@ -24,7 +25,6 @@ add_library (
   wkb.c
   wkt.c
 )
-set_target_properties( gpkg_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_definitions( -DGPKG_HAVE_CONFIG_H )
 
@@ -41,17 +41,18 @@ include_directories( "${PROJECT_SOURCE_DIR}/sqlite" ${CMAKE_CURRENT_BINARY_DIR} 
 #
 # Static library of libgpkg
 #
-add_library ( gpkg_static STATIC $<TARGET_OBJECTS:gpkg_obj> gpkg.c )
+add_library ( gpkg_static STATIC ${GPKG_SOURCE_FILES} )
 set_target_properties(
   gpkg_static PROPERTIES
   OUTPUT_NAME "gpkg"
   PUBLIC_HEADER gpkg.h
+  POSITION_INDEPENDENT_CODE TRUE
 )
 
 #
 # SQLite loadable extension version of libgpkg
 #
-add_library ( gpkg_ext MODULE $<TARGET_OBJECTS:gpkg_obj> gpkg.c )
+add_library ( gpkg_ext MODULE ${GPKG_SOURCE_FILES} gpkg.c )
 set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 
 #
