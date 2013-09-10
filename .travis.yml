@@ -1,0 +1,18 @@
+language: c
+
+rvm:
+  - "1.9.3"
+
+compiler:
+  - gcc
+
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install libgeos-dev
+
+before_script:
+ - mkdir build
+ - cd build
+ - cmake -DGPKG_GEOS:BOOL=on -DGPKG_TEST:BOOL=on -DGPKG_COVERAGE:BOOL=on ..
+
+script: make && make test
