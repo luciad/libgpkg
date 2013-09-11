@@ -17,6 +17,7 @@
 #include "spatialdb_internal.h"
 #include "gpkg_geom.h"
 #include "sqlite.h"
+#include "gpkg_check.h"
 
 #define N NULL_VALUE
 #define D(v) DOUBLE_VALUE(v)
@@ -176,8 +177,19 @@ static int init(sqlite3 *db, const char *db_name, error_t *error) {
   return init_database(db, db_name, gpkg_tables, error);
 }
 
-static int check(sqlite3 *db, const char *db_name, error_t *error) {
-  return check_database(db, db_name, gpkg_tables, error);
+static int check(sqlite3 *db, const char *db_name, int detailed_check, error_t *error) {
+  int result =  check_database(db, db_name, gpkg_tables, error);
+
+  if (detailed_check) {
+    if (result == SQLITE_OK) {
+      result = check_integrity(db, db_name, error);
+    }
+    if (result == SQLITE_OK) {
+      result = gpkg_check_database(db, db_name, gpkg_tables, error);
+    }
+  }
+
+  return result;
 }
 
 static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, error_t *error) {

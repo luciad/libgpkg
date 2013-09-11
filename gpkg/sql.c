@@ -92,7 +92,7 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
   int stmt_res = sqlite3_step(stmt);
   if (stmt_res == SQLITE_DONE) {
     if (nodata != NULL) {
-      int callback_res = nodata(stmt, data);
+      int callback_res = nodata(db, stmt, data);
       if (callback_res != SQLITE_ABORT) {
         stmt_res = callback_res;
       }
@@ -104,7 +104,7 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
       }
     } else {
       while (stmt_res == SQLITE_ROW) {
-        int callback_res = row(stmt, data);
+        int callback_res = row(db, stmt, data);
         if (callback_res == SQLITE_ABORT) {
           stmt_res = SQLITE_DONE;
         } else if (callback_res != SQLITE_OK) {
@@ -124,7 +124,7 @@ static int sql_stmt_exec(sqlite3 *db, sql_callback row, sql_callback nodata, voi
   return result;
 }
 
-static int row_string(sqlite3_stmt *stmt, void *data) {
+static int row_string(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   char **out = (char **)data;
   int col_count = sqlite3_column_count(stmt);
   if (col_count > 0) {
@@ -145,7 +145,7 @@ static int row_string(sqlite3_stmt *stmt, void *data) {
   }
 }
 
-static int nodata_string(sqlite3_stmt *stmt, void *out) {
+static int nodata_string(sqlite3 *db, sqlite3_stmt *stmt, void *out) {
   *((char **)out) = NULL;
   return SQLITE_ABORT;
 }
@@ -158,7 +158,7 @@ int sql_exec_for_string(sqlite3 *db, char **out, char *sql, ...) {
   return result;
 }
 
-static int row_int(sqlite3_stmt *stmt, void *data) {
+static int row_int(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   int col_count = sqlite3_column_count(stmt);
   if (col_count > 0) {
     *((int *)data) = sqlite3_column_int(stmt, 0);
@@ -168,7 +168,7 @@ static int row_int(sqlite3_stmt *stmt, void *data) {
   }
 }
 
-static int nodata_int(sqlite3_stmt *stmt, void *data) {
+static int nodata_int(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   *((int *)data) = 0;
   return SQLITE_ABORT;
 }
@@ -181,7 +181,7 @@ int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...) {
   return result;
 }
 
-static int row_double(sqlite3_stmt *stmt, void *data) {
+static int row_double(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   int col_count = sqlite3_column_count(stmt);
   if (col_count > 0) {
     *((double *)data) = sqlite3_column_double(stmt, 0);
@@ -191,7 +191,7 @@ static int row_double(sqlite3_stmt *stmt, void *data) {
   }
 }
 
-static int nodata_double(sqlite3_stmt *stmt, void *data) {
+static int nodata_double(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   *((double *)data) = 0.0;
   return SQLITE_ABORT;
 }
@@ -204,7 +204,7 @@ int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...) {
   return result;
 }
 
-static int abort_after_first_row(sqlite3_stmt *stmt, void *data) {
+static int abort_after_first_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   return SQLITE_ABORT;
 }
 
@@ -232,12 +232,12 @@ int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data
   return result;
 }
 
-static int sql_check_table_exists_nodata(sqlite3_stmt *stmt, void *data) {
+static int sql_check_table_exists_nodata(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   *((int *) data) = 0;
   return SQLITE_ABORT;
 }
 
-static int sql_check_table_exists_row(sqlite3_stmt *stmt, void *data) {
+static int sql_check_table_exists_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   *((int *) data) = 1;
   return SQLITE_ABORT;
 }
@@ -268,7 +268,7 @@ typedef struct {
   const table_info_t *table_info;
 } check_cols_data;
 
-static int sql_check_cols_row(sqlite3_stmt *stmt, void *data) {
+static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   check_cols_data *check = (check_cols_data *)data;
   error_t *error = check->error;
   int *found = check->cols_found;
@@ -756,4 +756,8 @@ int sql_commit(sqlite3 *db, char *name) {
 
 int sql_rollback(sqlite3 *db, char *name) {
   return sql_exec(db, "ROLLBACK TO SAVEPOINT %Q", name);
+}
+
+int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql) {
+  return sql_stmt_init(stmt, db, sql);
 }

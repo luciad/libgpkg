@@ -369,16 +369,29 @@ static void GPKG_SpatialDBType(sqlite3_context *context, int nbArgs, sqlite3_val
 static void GPKG_CheckSpatialMetaData(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_SPATIALDB_ARG(spatialdb);
   FUNCTION_TEXT_ARG(db_name);
+  FUNCTION_INT_ARG(check);
+  FUNCTION_INT_ARG(type);
   FUNCTION_START(context);
+
+  check = 0;
 
   FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
   if (nbArgs == 0) {
     FUNCTION_SET_TEXT_ARG(db_name, "main");
-  } else {
+  } else if (nbArgs == 1) {
+    FUNCTION_GET_TYPE(type, 0);
+    if (type == SQLITE_TEXT) {
+      FUNCTION_GET_TEXT_ARG(context, db_name, 0);
+    } else {
+      FUNCTION_SET_TEXT_ARG(db_name, "main");
+      FUNCTION_GET_INT_ARG(check, 0);
+    }
+  }  else {
     FUNCTION_GET_TEXT_ARG(context, db_name, 0);
+    FUNCTION_GET_INT_ARG(check, 1);
   }
 
-  FUNCTION_RESULT = spatialdb->check_meta(FUNCTION_DB_HANDLE, db_name, &FUNCTION_ERROR);
+  FUNCTION_RESULT = spatialdb->check_meta(FUNCTION_DB_HANDLE, db_name, check, &FUNCTION_ERROR);
   if (FUNCTION_RESULT == SQLITE_OK) {
     sqlite3_result_null(context);
   }
@@ -386,6 +399,8 @@ static void GPKG_CheckSpatialMetaData(sqlite3_context *context, int nbArgs, sqli
   FUNCTION_END(context);
   FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
   FUNCTION_FREE_TEXT_ARG(db_name);
+  FUNCTION_FREE_INT_ARG(check);
+  FUNCTION_FREE_INT_ARG(type);
 }
 
 static void GPKG_InitSpatialMetaData(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
@@ -586,7 +601,7 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
   const spatialdb_t **schema = &schemas[0];
   while (*schema != NULL) {
     error_reset(&error);
-    (*schema)->check_meta(db, "main", &error);
+    (*schema)->check_meta(db, "main", 0, &error);
     if (error_count(&error) == 0) {
       break;
     } else {
@@ -656,6 +671,7 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   REG_FUNC(GPKG, IsAssignable, 2, spatialdb, &error);
   REG_FUNC(GPKG, CheckSpatialMetaData, 0, spatialdb, &error);
   REG_FUNC(GPKG, CheckSpatialMetaData, 1, spatialdb, &error);
+  REG_FUNC(GPKG, CheckSpatialMetaData, 2, spatialdb, &error);
   REG_FUNC(GPKG, InitSpatialMetaData, 0, spatialdb, &error);
   REG_FUNC(GPKG, InitSpatialMetaData, 1, spatialdb, &error);
   REG_FUNC(GPKG, AddGeometryColumn, 4, spatialdb, &error);

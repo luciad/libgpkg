@@ -19,7 +19,7 @@
 #include "spatialdb_internal.h"
 #include "tls.h"
 
-static void geom_null_msg_handler(const char* fmt, ...) {
+static void geom_null_msg_handler(const char *fmt, ...) {
 }
 
 GPKG_TLS_KEY(last_geos_error)
@@ -43,7 +43,7 @@ static void geom_get_geos_error(error_t *error) {
   }
 }
 
-static void geom_tls_msg_handler(const char* fmt, ...) {
+static void geom_tls_msg_handler(const char *fmt, ...) {
   geom_clear_geos_error();
 
   int result;
@@ -143,7 +143,7 @@ typedef struct {
   const spatialdb_t *spatialdb;
 } geos_context_t;
 
-static GEOSGeometry *get_geos_geom( sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error ) {
+static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
   geom_blob_header_t header;
 
   uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
@@ -188,7 +188,7 @@ GEOS_FUNC1_DBL(Length)
 GEOS_FUNC2_DBL(Distance)
 GEOS_FUNC2_DBL(HausdorffDistance)
 
-void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
+void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
   GPKG_TLS_KEY_CREATE(last_geos_error);
   GEOSContextHandle_t geos_handle = initGEOS_r(geom_null_msg_handler, geom_tls_msg_handler);
@@ -220,7 +220,7 @@ void geom_func_init(sqlite3*db, const spatialdb_t *spatialdb, error_t *error) {
   REG_FUNC(ST, Covers, 2, ctx, error);
   REG_FUNC(ST, CoveredBy, 2, ctx, error);
 #endif
-  
+
   REG_FUNC(ST, Distance, 2, ctx, error);
   REG_FUNC(ST, HausdorffDistance, 2, ctx, error);
 }

@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <stdio.h>
 #include "check.h"
 #include "sql.h"
 
-static int integrity_check_row(sqlite3_stmt *stmt, void *data) {
+static int integrity_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   const char *row = (const char *)sqlite3_column_text(stmt, 0);
   if (sqlite3_strnicmp(row, "ok", 3) != 0) {
     error_append((error_t *)data, "integrity: %s", row);
@@ -24,12 +25,56 @@ static int integrity_check_row(sqlite3_stmt *stmt, void *data) {
   return SQLITE_OK;
 }
 
-static int integrity_check(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
+static int integrity_check(sqlite3 *db, const char *db_name, error_t *error) {
   return sql_exec_stmt(db, integrity_check_row, NULL, error, "PRAGMA integrity_check");
 }
 
-static int table_definitions(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
+static int foreign_key_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
+  char* table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 0));
+  char* rowId = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 1));
+  char* referred = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
+  char* index = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 3));
+
+  error_append((error_t *)data, "Reference error in table=%s, rowId=%s, referred table=%s, index foreign key=%s",
+               table, rowId, referred, index);
+  sqlite3_free(table);
+  sqlite3_free(rowId);
+  sqlite3_free(referred);
+  sqlite3_free(index);
+
+  return SQLITE_OK;
+}
+
+static int foreign_key_check(sqlite3 *db, const char *db_name, error_t *error) {
+  return sql_exec_stmt(db, foreign_key_check_row, NULL, error,
+                       "PRAGMA foreign_key_check");
+}
+
+typedef int(*check_func)(sqlite3 *db, const char *db_name, error_t *error);
+
+static check_func checks[] = {
+  integrity_check,
+  foreign_key_check,
+  NULL
+};
+
+int check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
   int result = SQLITE_OK;
+
+  check_func *current_func = checks;
+  while (*current_func != NULL) {
+    result = (*current_func)(db, db_name, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    current_func++;
+  }
+
+  return result;
+}
+
+int check_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
+int result = SQLITE_OK;
 
   const table_info_t *const *table = tables;
   while (*table != NULL) {
@@ -38,29 +83,6 @@ static int table_definitions(sqlite3 *db, const char *db_name, const table_info_
       break;
     }
     table++;
-  }
-
-  return result;
-}
-
-typedef int(*check_func)(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error);
-
-static check_func checks[] = {
-  integrity_check,
-  table_definitions,
-  NULL
-};
-
-int check_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
-  int result = SQLITE_OK;
-
-  check_func *current_func = checks;
-  while (*current_func != NULL) {
-    result = (*current_func)(db, db_name, tables, error);
-    if (result != SQLITE_OK) {
-      break;
-    }
-    current_func++;
   }
 
   return result;

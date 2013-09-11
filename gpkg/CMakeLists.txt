@@ -24,6 +24,7 @@ set(
   strbuf.c
   wkb.c
   wkt.c
+  gpkg_check.c
 )
 
 add_definitions( -DGPKG_HAVE_CONFIG_H )

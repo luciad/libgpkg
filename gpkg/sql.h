@@ -252,7 +252,7 @@ int sql_exec_all(sqlite3 *db, char *sql, ...);
  *         SQLITE_ABORT to abort iterating; sql_exec_stmt returns with SQLITE_OK
  *         A SQLite error code to abort iterating; sql_exec_stmt returns with the return value of this function
  */
-typedef int(*sql_callback)(sqlite3_stmt *stmt, void *data);
+typedef int(*sql_callback)(sqlite3 *db, sqlite3_stmt *stmt, void *data);
 
 /**
  * Executes a SQL statement. The SQL statement can be a printf style format pattern.
@@ -335,6 +335,8 @@ int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_
  *         A SQLite error code otherwise
  */
 int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
+
+int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql);
 
 /** @} */
 
