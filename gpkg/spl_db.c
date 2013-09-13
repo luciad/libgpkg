@@ -465,6 +465,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
   int result = SQLITE_OK;
   char *index_table_name = NULL;
   int exists = 0;
+  char *id_column_name = NULL;
 
   index_table_name = sqlite3_mprintf("idx_%s_%s", table_name, column_name);
   if (index_table_name == NULL) {
@@ -495,6 +496,17 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
   if (!exists) {
     error_append(error, "Table %s.%s does not exist", db_name, table_name);
+    goto exit;
+  }
+
+  result = sql_find_integer_primary_key(db, &id_column_name, db_name, table_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not check table %s.%s for single integer primary key: %s", db_name, table_name, sqlite3_errmsg(db));
+    goto exit;
+  }
+
+  if (id_column_name == NULL) {
+    error_append(error, "Table %s.%s does not have a primary key consisting of one integer column", db_name, table_name);
     goto exit;
   }
 
@@ -554,10 +566,10 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db,
              "CREATE TRIGGER \"%w\".\"gii_%w_%w\" AFTER INSERT ON \"%w\"\n"
              "BEGIN\n"
-             "  SELECT RTreeAlign(\"%w\", NEW.rowid, NEW.\"%w\");\n"
+             "  SELECT RTreeAlign(\"%w\", NEW.\"%w\", NEW.\"%w\");\n"
              "END;",
              db_name, table_name, column_name, table_name,
-             index_table_name, column_name
+             index_table_name, id_column_name, column_name
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not create rtree insert trigger: %s", sqlite3_errmsg(db));
@@ -568,11 +580,11 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db,
              "CREATE TRIGGER \"%w\".\"giu_%w_%w\" AFTER UPDATE ON \"%w\"\n"
              "BEGIN\n"
-             "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
-             "  SELECT RTreeAlign(\"%w\", NEW.rowid, NEW.\"%w\");\n"
+             "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
+             "  SELECT RTreeAlign(\"%w\", NEW.\"%w\", NEW.\"%w\");\n"
              "END;",
              db_name, table_name, column_name, table_name,
-             index_table_name, column_name
+             index_table_name, id_column_name, column_name
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not create rtree update trigger: %s", sqlite3_errmsg(db));
@@ -583,10 +595,10 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db,
              "CREATE TRIGGER \"%w\".\"gid_%w_%w\" AFTER DELETE ON \"%w\"\n"
              "BEGIN\n"
-             "  DELETE FROM \"%w\" WHERE id = OLD.rowid;\n"
+             "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
              "END;",
              db_name, table_name, column_name, table_name, column_name, column_name,
-             index_table_name
+             index_table_name, id_column_name
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not create rtree delete trigger: %s", sqlite3_errmsg(db));
@@ -596,10 +608,10 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
   result = sql_exec(
              db,
              "INSERT OR REPLACE INTO \"%w\".\"%w\" (id, minx, maxx, miny, maxy) "
-             "  SELECT rowid, ST_MinX(\"%w\"), ST_MaxX(\"%w\"), ST_MinY(\"%w\"), ST_MaxY(\"%w\") FROM \"%w\".\"%w\""
+             "  SELECT \"%w\", ST_MinX(\"%w\"), ST_MaxX(\"%w\"), ST_MinY(\"%w\"), ST_MaxY(\"%w\") FROM \"%w\".\"%w\""
              "  WHERE \"%w\" NOTNULL AND NOT ST_IsEmpty(\"%w\")",
              db_name, index_table_name,
-             column_name, column_name, column_name, column_name, db_name, table_name,
+             id_column_name, column_name, column_name, column_name, column_name, db_name, table_name,
              column_name, column_name
            );
   if (result != SQLITE_OK) {
@@ -609,11 +621,12 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
 exit:
   sqlite3_free(index_table_name);
+  sqlite3_free(id_column_name);
   return result;
 }
 
 /*
- * (indx_table_name text, rowid int, geometry blob)
+ * (indx_table_name text, \"%w\" int, geometry blob)
  */
 static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_SPATIALDB_ARG(spatialdb);

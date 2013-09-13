@@ -232,6 +232,39 @@ int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data
   return result;
 }
 
+struct integer_pk {
+  int pk_column_count;
+  char *column_name;
+};
+
+int sql_find_integer_primary_key_row(sqlite3_stmt *stmt, void *data) {
+  struct integer_pk *pk = (struct integer_pk *)data;
+  // 0 index
+  // 1 column name
+  // 2 type
+  // 3 not null
+  // 4 default
+  // 5 primary key
+  if ( sqlite3_column_int(stmt, 5) != 0 ) {
+    pk->pk_column_count++;
+
+    sqlite3_free(pk->column_name);
+    pk->column_name = NULL;
+    pk->column_name = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 1));
+  }
+}
+
+int sql_find_integer_primary_key(sqlite3 *db, char **out, const char* db_name, const char* table_name) {
+  struct integer_pk pk = { 0, NULL };
+  int result = sql_exec_stmt(db, sql_find_integer_primary_key_row, NULL, &pk, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_name);
+  if ( pk.pk_column_count == 1 ) {
+    *out = pk.column_name;
+  } else {
+    *out = NULL;
+  }
+  return result;
+}
+
 static int sql_check_table_exists_nodata(sqlite3_stmt *stmt, void *data) {
   *((int *) data) = 0;
   return SQLITE_ABORT;
