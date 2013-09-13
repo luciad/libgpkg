@@ -299,8 +299,6 @@ int sql_exec_for_int(sqlite3 *db, int *out, char *sql, ...);
  */
 int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...);
 
-int sql_find_integer_primary_key(sqlite3 *db, char**out, const char* db_name, const char* table_name);
-
 /**
  * Checks if a table exists in the database.
  * @param db the SQLite database context

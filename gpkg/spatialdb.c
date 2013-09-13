@@ -532,18 +532,21 @@ static void GPKG_CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite
   FUNCTION_SPATIALDB_ARG(spatialdb);
   FUNCTION_TEXT_ARG(db_name);
   FUNCTION_TEXT_ARG(table_name);
-  FUNCTION_TEXT_ARG(column_name);
+  FUNCTION_TEXT_ARG(geometry_column_name);
+  FUNCTION_TEXT_ARG(id_column_name);
   FUNCTION_START(context);
 
   FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
-  if (nbArgs == 3) {
+  if (nbArgs == 4) {
     FUNCTION_GET_TEXT_ARG(context, db_name, 0);
     FUNCTION_GET_TEXT_ARG(context, table_name, 1);
-    FUNCTION_GET_TEXT_ARG(context, column_name, 2);
+    FUNCTION_GET_TEXT_ARG(context, geometry_column_name, 2);
+    FUNCTION_GET_TEXT_ARG(context, id_column_name, 3);
   } else {
     FUNCTION_SET_TEXT_ARG(db_name, "main");
     FUNCTION_GET_TEXT_ARG(context, table_name, 0);
-    FUNCTION_GET_TEXT_ARG(context, column_name, 1);
+    FUNCTION_GET_TEXT_ARG(context, geometry_column_name, 1);
+    FUNCTION_GET_TEXT_ARG(context, id_column_name, 2);
   }
 
   if (spatialdb->create_spatial_index == NULL) {
@@ -555,7 +558,7 @@ static void GPKG_CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite
 
   FUNCTION_RESULT = spatialdb->init_meta(FUNCTION_DB_HANDLE, db_name, &FUNCTION_ERROR);
   if (FUNCTION_RESULT == SQLITE_OK) {
-    FUNCTION_RESULT = spatialdb->create_spatial_index(FUNCTION_DB_HANDLE, db_name, table_name, column_name, &FUNCTION_ERROR);
+    FUNCTION_RESULT = spatialdb->create_spatial_index(FUNCTION_DB_HANDLE, db_name, table_name, geometry_column_name, id_column_name, &FUNCTION_ERROR);
   }
 
   FUNCTION_END_TRANSACTION(__create_spatial_index);
@@ -568,7 +571,8 @@ static void GPKG_CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite
   FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
   FUNCTION_FREE_TEXT_ARG(db_name);
   FUNCTION_FREE_TEXT_ARG(table_name);
-  FUNCTION_FREE_TEXT_ARG(column_name);
+  FUNCTION_FREE_TEXT_ARG(geometry_column_name);
+  FUNCTION_FREE_TEXT_ARG(id_column_name);
 }
 
 const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
@@ -664,8 +668,8 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   REG_FUNC(GPKG, AddGeometryColumn, 7, spatialdb, &error);
   REG_FUNC(GPKG, CreateTilesTable, 1, spatialdb, &error);
   REG_FUNC(GPKG, CreateTilesTable, 2, spatialdb, &error);
-  REG_FUNC(GPKG, CreateSpatialIndex, 2, spatialdb, &error);
   REG_FUNC(GPKG, CreateSpatialIndex, 3, spatialdb, &error);
+  REG_FUNC(GPKG, CreateSpatialIndex, 4, spatialdb, &error);
   REG_FUNC(GPKG, SpatialDBType, 0, spatialdb, &error);
 
   geom_func_init(db, spatialdb, &error);

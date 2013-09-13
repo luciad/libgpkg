@@ -461,13 +461,12 @@ static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, e
   return wkb_read_geometry(stream, WKB_SPATIALITE, consumer, error);
 }
 
-static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, error_t *error) {
+static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *geometry_column_name, const char *id_column_name, error_t *error) {
   int result = SQLITE_OK;
   char *index_table_name = NULL;
   int exists = 0;
-  char *id_column_name = NULL;
 
-  index_table_name = sqlite3_mprintf("idx_%s_%s", table_name, column_name);
+  index_table_name = sqlite3_mprintf("idx_%s_%s", table_name, geometry_column_name);
   if (index_table_name == NULL) {
     result = SQLITE_NOMEM;
     goto exit;
@@ -499,34 +498,23 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
     goto exit;
   }
 
-  result = sql_find_integer_primary_key(db, &id_column_name, db_name, table_name);
-  if (result != SQLITE_OK) {
-    error_append(error, "Could not check table %s.%s for single integer primary key: %s", db_name, table_name, sqlite3_errmsg(db));
-    goto exit;
-  }
-
-  if (id_column_name == NULL) {
-    error_append(error, "Table %s.%s does not have a primary key consisting of one integer column", db_name, table_name);
-    goto exit;
-  }
-
   int geom_col_count = 0;
-  result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".geometry_columns WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q", db_name, table_name, column_name);
+  result = sql_exec_for_int(db, &geom_col_count, "SELECT count(*) FROM \"%w\".geometry_columns WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q", db_name, table_name, geometry_column_name);
   if (result != SQLITE_OK) {
-    error_append(error, "Could not check if column %s.%s.%s exists in %s.geometry_columns: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+    error_append(error, "Could not check if column %s.%s.%s exists in %s.geometry_columns: %s", db_name, table_name, geometry_column_name, db_name, sqlite3_errmsg(db));
     goto exit;
   }
 
   if (geom_col_count == 0) {
-    error_append(error, "Column %s.%s.%s is not registered in %s.geometry_columns", db_name, table_name, column_name, db_name);
+    error_append(error, "Column %s.%s.%s is not registered in %s.geometry_columns", db_name, table_name, geometry_column_name, db_name);
     goto exit;
   }
 
   int spatial_index_updates = 0;
   result = sql_exec_for_int(db, &spatial_index_updates,
-                            "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, column_name);
+                            "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, geometry_column_name);
   if (result != SQLITE_OK) {
-    error_append(error, "Could not set spatial index enabled flag for column %s.%s.%s: %s", db_name, table_name, column_name, db_name, sqlite3_errmsg(db));
+    error_append(error, "Could not set spatial index enabled flag for column %s.%s.%s: %s", db_name, table_name, geometry_column_name, db_name, sqlite3_errmsg(db));
     goto exit;
   }
 
@@ -540,19 +528,19 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
     error_append(error, "Could not drop old rtree table %s.%s: %s", db_name, index_table_name, sqlite3_errmsg(db));
     goto exit;
   }
-  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"gii_%w_%w\"", db_name, table_name, column_name);
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"gii_%w_%w\"", db_name, table_name, geometry_column_name);
   if (result != SQLITE_OK) {
-    error_append(error, "Could not drop old rtree insert trigger %s.gii_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    error_append(error, "Could not drop old rtree insert trigger %s.gii_%s_%s: %s", db_name, table_name, geometry_column_name, sqlite3_errmsg(db));
     goto exit;
   }
-  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"giu_%w_%w\"", db_name, table_name, column_name);
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"giu_%w_%w\"", db_name, table_name, geometry_column_name);
   if (result != SQLITE_OK) {
-    error_append(error, "Could not drop old rtree update trigger %s.gii_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    error_append(error, "Could not drop old rtree update trigger %s.gii_%s_%s: %s", db_name, table_name, geometry_column_name, sqlite3_errmsg(db));
     goto exit;
   }
-  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"gid_%w_%w\"", db_name, table_name, column_name);
+  result = sql_exec(db, "DROP TRIGGER IF EXISTS \"%w\".\"gid_%w_%w\"", db_name, table_name, geometry_column_name);
   if (result != SQLITE_OK) {
-    error_append(error, "Could not drop old rtree delete trigger %s.gii_%s_%s: %s", db_name, table_name, column_name, sqlite3_errmsg(db));
+    error_append(error, "Could not drop old rtree delete trigger %s.gii_%s_%s: %s", db_name, table_name, geometry_column_name, sqlite3_errmsg(db));
     goto exit;
   }
 
@@ -568,8 +556,8 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              "BEGIN\n"
              "  SELECT RTreeAlign(\"%w\", NEW.\"%w\", NEW.\"%w\");\n"
              "END;",
-             db_name, table_name, column_name, table_name,
-             index_table_name, id_column_name, column_name
+             db_name, table_name, geometry_column_name, table_name,
+             index_table_name, id_column_name, geometry_column_name
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not create rtree insert trigger: %s", sqlite3_errmsg(db));
@@ -583,8 +571,8 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
              "  SELECT RTreeAlign(\"%w\", NEW.\"%w\", NEW.\"%w\");\n"
              "END;",
-             db_name, table_name, column_name, table_name,
-             index_table_name, id_column_name, column_name
+             db_name, table_name, geometry_column_name, table_name,
+             index_table_name, id_column_name, geometry_column_name
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not create rtree update trigger: %s", sqlite3_errmsg(db));
@@ -597,7 +585,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              "BEGIN\n"
              "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
              "END;",
-             db_name, table_name, column_name, table_name, column_name, column_name,
+             db_name, table_name, geometry_column_name, table_name, geometry_column_name, geometry_column_name,
              index_table_name, id_column_name
            );
   if (result != SQLITE_OK) {
@@ -611,8 +599,8 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              "  SELECT \"%w\", ST_MinX(\"%w\"), ST_MaxX(\"%w\"), ST_MinY(\"%w\"), ST_MaxY(\"%w\") FROM \"%w\".\"%w\""
              "  WHERE \"%w\" NOTNULL AND NOT ST_IsEmpty(\"%w\")",
              db_name, index_table_name,
-             id_column_name, column_name, column_name, column_name, column_name, db_name, table_name,
-             column_name, column_name
+             id_column_name, geometry_column_name, geometry_column_name, geometry_column_name, geometry_column_name, db_name, table_name,
+             geometry_column_name, geometry_column_name
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not populate rtree: %s", sqlite3_errmsg(db));
@@ -621,7 +609,6 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
 exit:
   sqlite3_free(index_table_name);
-  sqlite3_free(id_column_name);
   return result;
 }
 

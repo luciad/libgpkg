@@ -33,7 +33,7 @@ typedef struct spatialdb {
   void(*writer_destroy)(geom_blob_writer_t *writer, int free_data);
   int(*add_geometry_column)(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error);
   int(*create_tiles_table)(sqlite3 *db, const char *db_name, const char *table_name, error_t *error);
-  int(*create_spatial_index)(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, error_t *error);
+  int(*create_spatial_index)(sqlite3 *db, const char *db_name, const char *table_name, const char *geometry_column_name, const char *id_column_name, error_t *error);
   int(*fill_envelope)(binstream_t *stream, geom_envelope_t *envelope, error_t *error);
   int(*read_geometry_header)(binstream_t *stream, geom_header_t *header, error_t *error);
   int(*read_geometry)(binstream_t *stream, geom_consumer_t const *consumer, error_t *error);

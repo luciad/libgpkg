@@ -55,7 +55,7 @@ If the database type cannot be determined, GeoPackage will be used.
 - CheckSpatialMetadata([database_name text])
 - AddGeometryColumn([database_name text], table_name text, column_name text, geometry_type text, srid integer, [z integer, m integer])
 - CreateTilesTable([database_name  text], table_name text)
-- CreateSpatialIndex([database_name text], table_name text, geometry_column text)
+- CreateSpatialIndex([database_name text], table_name text, geometry_column text, id_column text)
 
 # Compilation
 
