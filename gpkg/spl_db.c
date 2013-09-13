@@ -235,14 +235,14 @@ static int spl4_add_geometry_column(sqlite3 *db, const char *db_name, const char
     error_append(error, "Invalid geometry type: %s", geom_type);
     return result;
   }
-  
+
   const char *normalized_geom_type;
   result = geom_type_name(geom_type_enum, &normalized_geom_type);
   if (result != SQLITE_OK) {
     error_append(error, "Invalid geometry type: %s", geom_type);
     return result;
   }
-  
+
   if (z < 0 || z > 2) {
     error_append(error, "Invalid Z flag value: %d", z);
     return result;
