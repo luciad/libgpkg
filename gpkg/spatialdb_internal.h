@@ -191,4 +191,6 @@
     REGISTER_FUNCTION(name, prefix##_##function, args, config, error);                                                 \
     REGISTER_FUNCTION(prefix##_##name, prefix##_##function, args, config, error)
 
+#define FUNCTION_GET_TYPE(arg, ix) arg = sqlite3_value_type(args[ix])
+
 #endif

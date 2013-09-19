@@ -110,7 +110,7 @@ static int spl3_init(sqlite3 *db, const char *db_name, error_t *error) {
   return init_database(db, db_name, spl3_tables, error);
 }
 
-static int spl3_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int spl3_check(sqlite3 *db, const char *db_name, int check, error_t *error) {
   return check_database(db, db_name, spl3_tables, error);
 }
 
@@ -118,7 +118,7 @@ static int spl4_init(sqlite3 *db, const char *db_name, error_t *error) {
   return init_database(db, db_name, spl4_tables, error);
 }
 
-static int spl4_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int spl4_check(sqlite3 *db, const char *db_name, int check, error_t *error) {
   return check_database(db, db_name, spl4_tables, error);
 }
 

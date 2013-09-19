@@ -126,9 +126,11 @@ int strbuf_vappend(strbuf_t *buffer, const char *msg, va_list args) {
     }
   }
 
-  memmove(buffer->buffer + buffer->length, formatted, formatted_len);
-  buffer->length += formatted_len;
-  buffer->buffer[buffer->length] = 0;
+  if (formatted_len > 0) {
+    memmove(buffer->buffer + buffer->length, formatted, formatted_len);
+    buffer->length += formatted_len;
+    buffer->buffer[buffer->length] = 0;
+  }
 
 exit:
   sqlite3_free(formatted);

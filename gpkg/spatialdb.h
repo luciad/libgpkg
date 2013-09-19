@@ -25,7 +25,7 @@ typedef struct spatialdb {
   const char *name;
   void(*init)(sqlite3 *db, const struct spatialdb *spatialDb, error_t *error);
   int(*init_meta)(sqlite3 *db, const char *db_name, error_t *error);
-  int(*check_meta)(sqlite3 *db, const char *db_name, error_t *error);
+  int(*check_meta)(sqlite3 *db, const char *db_name, int detailed_check,  error_t *error);
   int(*write_blob_header)(binstream_t *stream, geom_blob_header_t *header, error_t *error);
   int(*read_blob_header)(binstream_t *stream, geom_blob_header_t *header, error_t *error);
   int(*writer_init)(geom_blob_writer_t *writer);
