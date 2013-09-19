@@ -9,7 +9,9 @@ LOCAL_SRC_FILES := \
     gpkg/error.c \
     gpkg/fp.c \
     gpkg/geomio.c \
+    gpkg/geom_func_null.c \
     gpkg/gpkg.c \
+    gpkg/gpkg_check.c \
     gpkg/gpkg_db.c \
     gpkg/gpkg_geom.c \
     gpkg/spatialdb.c \
