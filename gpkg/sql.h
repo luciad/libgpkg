@@ -193,6 +193,17 @@ typedef struct {
   const size_t nRows;
 } table_info_t;
 
+typedef struct {
+  int id;
+  int seq;
+  const char *table;
+  const char *from_column;
+  const char *to_column;
+  const char *on_update;
+  const char *on_delete;
+  const char *match;
+} foreign_key_info_t;
+
 /**
  * Begins a named SQLite transaction. See the documentation on SQLite savepoints for more details.
  * @param db the SQLite database context
@@ -311,6 +322,18 @@ int sql_exec_for_double(sqlite3 *db, double *out, char *sql, ...);
 int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_name, int *exists);
 
 /**
+ * Checks if a column exists in the given table of the database.
+ * @param db the SQLite database context
+ * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
+ * @param table_name the name of the table to check.
+ * @param column_name the name of the column to check.
+ * @param[out] exists on success, exists will be set to 1 if the given table has a column with the given name or to 0 otherwise
+ * @return SQLITE_OK if the column check was successful\n
+ *         A SQLite error code otherwise
+ */
+int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, int *exists);
+
+/**
  * Checks if a table matches the given table specification.
  * @param db the SQLite database context
  * @param db_name the name of the attached database to use. This can be 'main', 'temp' or any attached database.
@@ -321,6 +344,12 @@ int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_n
  *         A SQLite error code otherwise
  */
 int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
+
+int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, error_t *error);
+
+void sql_foreign_key_info_init(foreign_key_info_t *info);
+
+void sql_foreign_key_info_destroy(foreign_key_info_t *info);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is

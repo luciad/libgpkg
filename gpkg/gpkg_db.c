@@ -185,7 +185,7 @@ static int check(sqlite3 *db, const char *db_name, int detailed_check, error_t *
       result = check_integrity(db, db_name, error);
     }
     if (result == SQLITE_OK) {
-      result = gpkg_check_database(db, db_name, gpkg_tables, error);
+      result = gpkg_check_database(db, db_name, error);
     }
   }
 

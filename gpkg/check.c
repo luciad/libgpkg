@@ -29,25 +29,51 @@ static int integrity_check(sqlite3 *db, const char *db_name, error_t *error) {
   return sql_exec_stmt(db, integrity_check_row, NULL, error, "PRAGMA integrity_check");
 }
 
+typedef struct {
+  const char *db_name;
+  error_t *error;
+} foreign_key_check_data;
+
 static int foreign_key_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
-  char* table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 0));
-  char* rowId = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 1));
-  char* referred = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
-  char* index = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 3));
+  int result = SQLITE_OK;
+  foreign_key_check_data *d = (foreign_key_check_data *)data;
+  foreign_key_info_t info;
+  char *value = NULL;
 
-  error_append((error_t *)data, "Reference error in table=%s, rowId=%s, referred table=%s, index foreign key=%s",
-               table, rowId, referred, index);
+  sql_foreign_key_info_init(&info);
+
+  char *table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 0));
+  sqlite3_int64 rowId = sqlite3_column_int64(stmt, 1);
+  char *referred_table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
+  int foreign_key_index = sqlite3_column_int(stmt, 3);
+
+  result = sql_foreign_key_info(db, d->db_name, table, foreign_key_index, &info, d->error);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  result = sql_exec_for_string(db, &value, "SELECT \"%w\" FROM \"%w\".\"%w\" WHERE ROWID = %d", info.from_column, d->db_name, table, rowId);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  error_append(d->error, "%s: foreign key from '%s' to '%s.%s' failed for value '%s'", table, info.from_column, referred_table, info.to_column, value);
+
+exit:
+  sql_foreign_key_info_destroy(&info);
   sqlite3_free(table);
-  sqlite3_free(rowId);
-  sqlite3_free(referred);
-  sqlite3_free(index);
+  sqlite3_free(referred_table);
+  sqlite3_free(value);
 
-  return SQLITE_OK;
+  return result;
 }
 
 static int foreign_key_check(sqlite3 *db, const char *db_name, error_t *error) {
-  return sql_exec_stmt(db, foreign_key_check_row, NULL, error,
-                       "PRAGMA foreign_key_check");
+  foreign_key_check_data data = {
+    db_name,
+    error
+  };
+  return sql_exec_stmt(db, foreign_key_check_row, NULL, &data, "PRAGMA foreign_key_check");
 }
 
 typedef int(*check_func)(sqlite3 *db, const char *db_name, error_t *error);
@@ -74,7 +100,7 @@ int check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
 }
 
 int check_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error) {
-int result = SQLITE_OK;
+  int result = SQLITE_OK;
 
   const table_info_t *const *table = tables;
   while (*table != NULL) {

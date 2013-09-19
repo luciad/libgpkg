@@ -20,6 +20,6 @@
 #include "error.h"
 #include "sql.h"
 
-int gpkg_check_database(sqlite3 *db, const char *db_name, const table_info_t *const *tables, error_t *error);
+int gpkg_check_database(sqlite3 *db, const char *db_name, error_t *error);
 
 #endif
