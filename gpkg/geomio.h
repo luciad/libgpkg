@@ -18,6 +18,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "error.h"
 
 /**
  * @addtogroup geomio Geometry I/O
@@ -111,6 +112,9 @@ typedef enum {
   GEOM_XYZM
 } coord_type_t;
 
+/**
+ * The maximum number of ordinates per coordinate.
+ */
 #define GEOM_MAX_COORD_SIZE 4
 
 /**
@@ -194,27 +198,27 @@ typedef struct geom_consumer_t {
    * @param consumer the geometry consumer
    * @return SQLITE_OK or an error code
    */
-  int (*begin)(const struct geom_consumer_t *consumer);
+  int (*begin)(const struct geom_consumer_t *consumer, error_t *error);
   /**
    * Called at the beginning of a root geometry.
    * @param consumer the geometry consumer
    * @return SQLITE_OK or an error code
    */
-  int (*end)(const struct geom_consumer_t *consumer);
+  int (*end)(const struct geom_consumer_t *consumer, error_t *error);
   /**
    * Called at the beginning of each individual geometry including the root.
    * @param consumer the geometry consumer
    * @param header the geometry header
    * @return SQLITE_OK or an error code
    */
-  int (*begin_geometry)(const struct geom_consumer_t *consumer, const geom_header_t *header);
+  int (*begin_geometry)(const struct geom_consumer_t *consumer, const geom_header_t *header, error_t *error);
   /**
    * Called at the end of each individual geometry including the root.
    * @param consumer the geometry consumer
    * @param header the geometry header
    * @return SQLITE_OK or an error code
    */
-  int (*end_geometry)(const struct geom_consumer_t *consumer, const geom_header_t *header);
+  int (*end_geometry)(const struct geom_consumer_t *consumer, const geom_header_t *header, error_t *error);
   /**
    * Called zero or more times per geometry to pass coordinates to the geometry consumer.
    * @param consumer the geometry consumer
@@ -223,7 +227,7 @@ typedef struct geom_consumer_t {
    * @param coords the coordinate array. This array contains (point_count * header->coord_size) values.
    * @return SQLITE_OK or an error code
    */
-  int (*coordinates)(const struct geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords);
+  int (*coordinates)(const struct geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, error_t *error);
 } geom_consumer_t;
 
 /**
@@ -237,11 +241,11 @@ typedef struct geom_consumer_t {
  */
 void geom_consumer_init(
   geom_consumer_t *consumer,
-  int (*begin)(const geom_consumer_t *),
-  int (*end)(const geom_consumer_t *),
-  int (*begin_geometry)(const geom_consumer_t *, const geom_header_t *),
-  int (*end_geometry)(const geom_consumer_t *, const geom_header_t *),
-  int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords)
+  int (*begin)(const geom_consumer_t *, error_t *),
+  int (*end)(const geom_consumer_t *, error_t *),
+  int (*begin_geometry)(const geom_consumer_t *, const geom_header_t *, error_t *),
+  int (*end_geometry)(const geom_consumer_t *, const geom_header_t *, error_t *),
+  int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords, error_t *)
 );
 
 /**
@@ -261,6 +265,7 @@ int geom_type_name(geom_type_t geom_type, const char **geom_type_name);
 /**
  * Returns the coordinate type as a string.
  * @param coord_type the coordinate type constant
+ * @param[out] coord_type_name a pointer to a char* value which will be written to
  * @return the coordinate type string
  */
 int geom_coord_type_name(coord_type_t coord_type, const char **coord_type_name);

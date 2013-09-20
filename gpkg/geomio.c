@@ -19,33 +19,33 @@
 #include "sqlite.h"
 #include "geomio.h"
 
-static int geom_begin(const geom_consumer_t *consumer) {
+static int geom_begin(const geom_consumer_t *consumer, error_t *error) {
   return SQLITE_OK;
 }
 
-static int geom_end(const geom_consumer_t *consumer) {
+static int geom_end(const geom_consumer_t *consumer, error_t *error) {
   return SQLITE_OK;
 }
 
-static int geom_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
+static int geom_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
   return SQLITE_OK;
 }
 
-static int geom_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header) {
+static int geom_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
   return SQLITE_OK;
 }
 
-static int geom_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords) {
+static int geom_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, error_t *error) {
   return SQLITE_OK;
 }
 
 void geom_consumer_init(
   geom_consumer_t *consumer,
-  int (*begin)(const geom_consumer_t *),
-  int (*end)(const geom_consumer_t *),
-  int (*begin_geometry)(const geom_consumer_t *, const geom_header_t *),
-  int (*end_geometry)(const geom_consumer_t *, const geom_header_t *),
-  int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords)
+  int (*begin)(const geom_consumer_t *, error_t *),
+  int (*end)(const geom_consumer_t *, error_t *),
+  int (*begin_geometry)(const geom_consumer_t *, const geom_header_t *, error_t *),
+  int (*end_geometry)(const geom_consumer_t *, const geom_header_t *, error_t *),
+  int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords, error_t *)
 ) {
   consumer->begin = begin != NULL ? begin : geom_begin;
   consumer->end = end != NULL ? end : geom_end;

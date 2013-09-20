@@ -35,9 +35,7 @@ add_definitions( -DGPKG_HAVE_CONFIG_H )
 include( UseTLS )
 check_tls()
 
-configure_file ( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
-
-include_directories( "${PROJECT_SOURCE_DIR}/sqlite" ${CMAKE_CURRENT_BINARY_DIR} )
+include_directories( "${PROJECT_SOURCE_DIR}/sqlite" )
 
 #
 # Static library of libgpkg
@@ -58,29 +56,25 @@ set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 #
 # Geometry functions library
 #
-set(GPKG_GEOM_FUNC "")
+if (GPKG_GEOS)
+  find_package ( GEOS )
+  if (GEOS_FOUND)
+    message( WARNING "GEOS is licensed under LGPL 2.1" )
 
-if (NOT GPKG_GEOM_FUNC)
-  if (GPKG_GEOS)
-    find_package ( GEOS )
-    if (GEOS_FOUND)
-      message( WARNING "GEOS is licensed under LGPL 2.1" )
+    add_library ( gpkg_geom STATIC geos_context.c geos_geom_func.c geos_geom_io.c )
+    include_directories( GEOS_INCLUDE_DIR )
 
-      add_library ( gpkg_geom STATIC geom_func_geos.c )
-      include_directories( GEOS_INCLUDE_DIR )
-
-      set(GPKG_GEOM_FUNC "GEOS")
-    endif()
+    set(GPKG_HAVE_GEOM_FUNC "GEOS")
   endif()
 endif()
 
-if(NOT GPKG_GEOM_FUNC)
-  add_library ( gpkg_geom STATIC geom_func_null.c )
-  set(GPKG_GEOM_FUNC "NONE")
+if(GPKG_HAVE_GEOM_FUNC)
+  target_link_libraries ( gpkg_ext gpkg_geom ${GEOS_LIBRARY} )
+  target_link_libraries ( gpkg_static gpkg_geom ${GEOS_LIBRARY} )
 endif()
 
-target_link_libraries ( gpkg_ext gpkg_geom ${GEOS_LIBRARY} )
-target_link_libraries ( gpkg_static gpkg_geom ${GEOS_LIBRARY} )
+configure_file ( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
 #
 # Compiler specific settings

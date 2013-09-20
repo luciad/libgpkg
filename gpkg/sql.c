@@ -298,9 +298,6 @@ static int sql_foreign_key_info_row(sqlite3 *db, sqlite3_stmt *stmt, void *data)
     d->info->table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
     d->info->from_column = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 3));
     d->info->to_column = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 4));
-    d->info->on_update = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 5));
-    d->info->on_delete = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 6));
-    d->info->match = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 7));
     return SQLITE_ABORT;
   } else {
     return SQLITE_OK;
@@ -334,9 +331,6 @@ void sql_foreign_key_info_destroy(foreign_key_info_t *info) {
   sqlite3_free((void *)info->table);
   sqlite3_free((void *)info->from_column);
   sqlite3_free((void *)info->to_column);
-  sqlite3_free((void *)info->on_update);
-  sqlite3_free((void *)info->on_delete);
-  sqlite3_free((void *)info->match);
   memset(info, 0, sizeof(foreign_key_info_t));
 }
 

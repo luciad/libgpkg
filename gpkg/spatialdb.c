@@ -18,6 +18,9 @@
 #include "binstream.h"
 #include "blobio.h"
 #include "check.h"
+#ifdef GPKG_HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "geomio.h"
 #include "geom_func.h"
 #include "sql.h"
@@ -724,7 +727,9 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   REG_FUNC(GPKG, CreateSpatialIndex, 4, spatialdb, &error);
   REG_FUNC(GPKG, SpatialDBType, 0, spatialdb, &error);
 
+#ifdef GPKG_HAVE_GEOM_FUNC
   geom_func_init(db, spatialdb, &error);
+#endif
 
   int result;
   if (error_count(&error) == 0) {

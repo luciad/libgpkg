@@ -193,17 +193,6 @@ typedef struct {
   const size_t nRows;
 } table_info_t;
 
-typedef struct {
-  int id;
-  int seq;
-  const char *table;
-  const char *from_column;
-  const char *to_column;
-  const char *on_update;
-  const char *on_delete;
-  const char *match;
-} foreign_key_info_t;
-
 /**
  * Begins a named SQLite transaction. See the documentation on SQLite savepoints for more details.
  * @param db the SQLite database context
@@ -344,6 +333,32 @@ int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_
  *         A SQLite error code otherwise
  */
 int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
+
+/**
+ * A description of a foreign key reference in a table.
+ */
+typedef struct {
+  /**
+   * The index of the foreign key in the table.
+   */
+  int id;
+  /**
+   * The column sequence number within the foreign key.
+   */
+  int seq;
+  /**
+   * The name of the table that contains the foreign key.
+   */
+  const char *table;
+  /**
+   * The name of the column in the source table.
+   */
+  const char *from_column;
+  /**
+   * The name of the column in the target table.
+   */
+  const char *to_column;
+} foreign_key_info_t;
 
 int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, error_t *error);
 

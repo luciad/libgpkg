@@ -16,6 +16,10 @@
 #ifndef GPKG_TLS_H
 #define GPKG_TLS_H
 
+#ifdef GPKG_HAVE_CONFIG_H
+  #include "config.h"
+#endif
+
 #if defined(TLS_USE_THREAD)
   #define GPKG_TLS_KEY(name) static __thread void *name;
   #define GPKG_TLS_KEY_CREATE(name) do {} while(0)

@@ -13,46 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <geos_c.h>
 #include <stdio.h>
+#include "geos_context.h"
+#include "geos_geom_io.h"
 #include "geom_func.h"
 #include "spatialdb_internal.h"
-#include "tls.h"
-
-static void geom_null_msg_handler(const char *fmt, ...) {
-}
-
-GPKG_TLS_KEY(last_geos_error)
-
-static void geom_clear_geos_error() {
-  char *err = GPKG_TLS_GET(last_geos_error);
-  if (err != NULL) {
-    sqlite3_free(err);
-    GPKG_TLS_SET(last_geos_error, NULL);
-  }
-}
-
-static void geom_get_geos_error(error_t *error) {
-  char *err = GPKG_TLS_GET(last_geos_error);
-  if (err != NULL) {
-    error_append(error, err);
-    sqlite3_free(err);
-    GPKG_TLS_SET(last_geos_error, NULL);
-  } else {
-    error_append(error, "GEOS error");
-  }
-}
-
-static void geom_tls_msg_handler(const char *fmt, ...) {
-  geom_clear_geos_error();
-
-  int result;
-  va_list args;
-  va_start(args, fmt);
-  char *err = sqlite3_vmprintf(fmt, args);
-  GPKG_TLS_SET(last_geos_error, err);
-  va_end(args);
-}
 
 #define GEOS_START(context) \
   const geos_context_t *geos_context = (const geos_context_t *)sqlite3_user_data(context); \
@@ -72,7 +37,7 @@ static void geom_tls_msg_handler(const char *fmt, ...) {
   }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1);\
   if (result == 2) {\
-    geom_get_geos_error(&error);\
+    geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   } else {\
     sqlite3_result_int(context, result);\
@@ -90,7 +55,7 @@ static void geom_tls_msg_handler(const char *fmt, ...) {
   }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
   if (result == 2) {\
-    geom_get_geos_error(&error);\
+    geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   } else {\
     sqlite3_result_int(context, result);\
@@ -111,7 +76,7 @@ static void geom_tls_msg_handler(const char *fmt, ...) {
   if (result == 1) {\
     sqlite3_result_double(context, val);\
   } else {\
-    geom_get_geos_error(&error);\
+    geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   }\
   GEOS_FREE_GEOM( g1 );\
@@ -130,7 +95,7 @@ static void geom_tls_msg_handler(const char *fmt, ...) {
   if (result == 1) {\
     sqlite3_result_double(context, val);\
   } else {\
-    geom_get_geos_error(&error);\
+    geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   }\
   GEOS_FREE_GEOM( g1 );\
@@ -139,7 +104,6 @@ static void geom_tls_msg_handler(const char *fmt, ...) {
 
 typedef struct {
   GEOSContextHandle_t geos_handle;
-  GEOSWKBReader *wkbreader;
   const spatialdb_t *spatialdb;
 } geos_context_t;
 
@@ -152,12 +116,16 @@ static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_
   binstream_t stream;
   binstream_init(&stream, blob, blob_length);
 
+  geos_writer_t writer;
+  geos_writer_init(&writer, geos_context->geos_handle);
+
   geos_context->spatialdb->read_blob_header(&stream, &header, error);
-  geom_clear_geos_error();
-  GEOSGeometry *g = GEOSWKBReader_read_r(geos_context->geos_handle, geos_context->wkbreader, binstream_data(&stream), binstream_available(&stream));
-  if (g == NULL) {
-    geom_get_geos_error(error);
-  }
+  geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
+
+  GEOSGeometry *g = geos_writer_getgeometry(&writer);
+
+  geos_writer_destroy(&writer, 0);
+
   return g;
 }
 
@@ -189,12 +157,11 @@ GEOS_FUNC2_DBL(Distance)
 GEOS_FUNC2_DBL(HausdorffDistance)
 
 void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
+  printf("geom_func_init\n");
   geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
-  GPKG_TLS_KEY_CREATE(last_geos_error);
-  GEOSContextHandle_t geos_handle = initGEOS_r(geom_null_msg_handler, geom_tls_msg_handler);
+  GEOSContextHandle_t geos_handle = geom_geos_init();
 
   ctx->geos_handle = geos_handle;
-  ctx->wkbreader = GEOSWKBReader_create_r(geos_handle);
   ctx->spatialdb = spatialdb;
 
   REG_FUNC(ST, Area, 1, ctx, error);

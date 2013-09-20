@@ -82,6 +82,8 @@ int binstream_init_growable(binstream_t *stream, size_t initial_cap);
  * Destroys the given stream.
  *
  * @param stream the stream to destroy
+ * @param free_data determines if 0 the internal buffer of the stream will not be freed and should be freed using
+                    sqlite3_free later. Otherwise the buffer is freed by this function.
  */
 void binstream_destroy(binstream_t *stream, int free_data);
 
