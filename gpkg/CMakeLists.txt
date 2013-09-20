@@ -10,7 +10,6 @@ set(
   GPKG_SOURCE_FILES
   binstream.c
   blobio.c
-  check.c
   error.c
   fp.c
   geomio.c
@@ -24,7 +23,6 @@ set(
   strbuf.c
   wkb.c
   wkt.c
-  gpkg_check.c
 )
 
 add_definitions( -DGPKG_HAVE_CONFIG_H )

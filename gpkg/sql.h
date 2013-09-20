@@ -332,39 +332,9 @@ int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_
  * @return SQLITE_OK if the table was checked successfully\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int must_exist, error_t *error);
 
-/**
- * A description of a foreign key reference in a table.
- */
-typedef struct {
-  /**
-   * The index of the foreign key in the table.
-   */
-  int id;
-  /**
-   * The column sequence number within the foreign key.
-   */
-  int seq;
-  /**
-   * The name of the table that contains the foreign key.
-   */
-  const char *table;
-  /**
-   * The name of the column in the source table.
-   */
-  const char *from_column;
-  /**
-   * The name of the column in the target table.
-   */
-  const char *to_column;
-} foreign_key_info_t;
-
-int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, error_t *error);
-
-void sql_foreign_key_info_init(foreign_key_info_t *info);
-
-void sql_foreign_key_info_destroy(foreign_key_info_t *info);
+int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is

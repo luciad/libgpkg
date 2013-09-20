@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "check.h"
 #include "spatialdb_internal.h"
 #include "spl_geom.h"
+#include "sql.h"
 #include "sqlite.h"
 #include "blobio.h"
 #include "geomio.h"
@@ -107,19 +107,71 @@ static const table_info_t *const spl4_tables[] = {
 };
 
 static int spl3_init(sqlite3 *db, const char *db_name, error_t *error) {
-  return init_database(db, db_name, spl3_tables, error);
+  int result = SQLITE_OK;
+  const table_info_t *const *table = spl3_tables;
+
+  while (*table != NULL) {
+    result = sql_init_table(db, db_name, *table, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  if (result == SQLITE_OK && error_count(error) > 0) {
+    return SQLITE_ERROR;
+  } else {
+    return result;
+  }
 }
 
 static int spl3_check(sqlite3 *db, const char *db_name, int check, error_t *error) {
-  return check_database(db, db_name, spl3_tables, error);
+  int result = SQLITE_OK;
+
+  const table_info_t *const *table = spl3_tables;
+  while (*table != NULL) {
+    result = sql_check_table(db, db_name, *table, 1, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  return result;
 }
 
 static int spl4_init(sqlite3 *db, const char *db_name, error_t *error) {
-  return init_database(db, db_name, spl4_tables, error);
+  int result = SQLITE_OK;
+  const table_info_t *const *table = spl4_tables;
+
+  while (*table != NULL) {
+    result = sql_init_table(db, db_name, *table, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  if (result == SQLITE_OK && error_count(error) > 0) {
+    return SQLITE_ERROR;
+  } else {
+    return result;
+  }
 }
 
 static int spl4_check(sqlite3 *db, const char *db_name, int check, error_t *error) {
-  return check_database(db, db_name, spl4_tables, error);
+  int result = SQLITE_OK;
+
+  const table_info_t *const *table = spl4_tables;
+  while (*table != NULL) {
+    result = sql_check_table(db, db_name, *table, 1, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  return result;
 }
 
 static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, error_t *error) {

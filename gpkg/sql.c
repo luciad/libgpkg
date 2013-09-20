@@ -282,58 +282,6 @@ int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_
   return result;
 }
 
-typedef struct {
-  foreign_key_info_t *info;
-  int index;
-  int found;
-} sql_foreign_key_info_data;
-
-static int sql_foreign_key_info_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
-  sql_foreign_key_info_data *d = (sql_foreign_key_info_data *)data;
-  int index = sqlite3_column_int(stmt, 0);
-  if (index == d->index) {
-    d->found = 1;
-    d->info->id = index;
-    d->info->seq = sqlite3_column_int(stmt, 1);
-    d->info->table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
-    d->info->from_column = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 3));
-    d->info->to_column = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 4));
-    return SQLITE_ABORT;
-  } else {
-    return SQLITE_OK;
-  }
-}
-
-int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, error_t *error) {
-  sql_foreign_key_info_data data;
-  memset(&data, 0, sizeof(sql_foreign_key_info_data));
-  data.info = info;
-  data.index = index;
-  data.found = 0;
-
-  int result = sql_exec_stmt(
-                 db, sql_foreign_key_info_row, NULL, &data,
-                 "PRAGMA \"%w\".foreign_key_list(\"%w\")", db_name, table_name
-               );
-  if (result == SQLITE_OK && !data.found) {
-    error_append(error, "Could not find foreign key in table %s with index %d", table_name, index);
-    result = SQLITE_ERROR;
-  }
-
-  return result;
-}
-
-void sql_foreign_key_info_init(foreign_key_info_t *info) {
-  memset(info, 0, sizeof(foreign_key_info_t));
-}
-
-void sql_foreign_key_info_destroy(foreign_key_info_t *info) {
-  sqlite3_free((void *)info->table);
-  sqlite3_free((void *)info->from_column);
-  sqlite3_free((void *)info->to_column);
-  memset(info, 0, sizeof(foreign_key_info_t));
-}
-
 static int sql_count_columns(const table_info_t *table_info) {
   int nColumns = 0;
   const column_info_t *column = table_info->columns;
@@ -787,7 +735,7 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
   return result;
 }
 
-static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int create, error_t *error) {
+static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int create, int must_exist, error_t *error) {
   if (error == NULL) {
     return SQLITE_MISUSE;
   }
@@ -806,7 +754,7 @@ static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_in
         result = sql_check_data(db, db_name, table_info, error);
       }
     } else {
-      if (create == 0) {
+      if (!create && must_exist) {
         error_append(error, "Table %s.%s does not exist", db_name, table_info->name);
       } else {
         result = sql_create_table(db, db_name, table_info, error);
@@ -821,12 +769,12 @@ static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_in
   return result;
 }
 
-int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
-  return sql_init_check_table(db, db_name, table_info, 0, error);
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int must_exist, error_t *error) {
+  return sql_init_check_table(db, db_name, table_info, 0, must_exist, error);
 }
 
 int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
-  return sql_init_check_table(db, db_name, table_info, 1, error);
+  return sql_init_check_table(db, db_name, table_info, 1, 0, error);
 }
 
 int sql_begin(sqlite3 *db, char *name) {
@@ -843,4 +791,137 @@ int sql_rollback(sqlite3 *db, char *name) {
 
 int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql) {
   return sql_stmt_init(stmt, db, sql);
+}
+
+static int sql_integrity_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
+  const char *row = (const char *)sqlite3_column_text(stmt, 0);
+  if (sqlite3_strnicmp(row, "ok", 3) != 0) {
+    error_append((error_t *)data, "integrity: %s", row);
+  }
+  return SQLITE_OK;
+}
+
+static int sql_integrity_check(sqlite3 *db, const char *db_name, error_t *error) {
+  return sql_exec_stmt(db, sql_integrity_check_row, NULL, error, "PRAGMA integrity_check");
+}
+
+typedef struct {
+  int id;
+  int seq;
+  const char *table;
+  const char *from_column;
+  const char *to_column;
+} foreign_key_info_t;
+
+typedef struct {
+  foreign_key_info_t *info;
+  int index;
+  int found;
+} sql_foreign_key_info_data;
+
+static int sql_foreign_key_info_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
+  sql_foreign_key_info_data *d = (sql_foreign_key_info_data *)data;
+  int index = sqlite3_column_int(stmt, 0);
+  if (index == d->index) {
+    d->found = 1;
+    d->info->id = index;
+    d->info->seq = sqlite3_column_int(stmt, 1);
+    d->info->table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
+    d->info->from_column = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 3));
+    d->info->to_column = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 4));
+    return SQLITE_ABORT;
+  } else {
+    return SQLITE_OK;
+  }
+}
+
+static int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, error_t *error) {
+  sql_foreign_key_info_data data;
+  memset(&data, 0, sizeof(sql_foreign_key_info_data));
+  data.info = info;
+  data.index = index;
+  data.found = 0;
+
+  int result = sql_exec_stmt(
+                 db, sql_foreign_key_info_row, NULL, &data,
+                 "PRAGMA \"%w\".foreign_key_list(\"%w\")", db_name, table_name
+               );
+  if (result == SQLITE_OK && !data.found) {
+    error_append(error, "Could not find foreign key in table %s with index %d", table_name, index);
+    result = SQLITE_ERROR;
+  }
+
+  return result;
+}
+
+typedef struct {
+  const char *db_name;
+  error_t *error;
+} foreign_key_check_data;
+
+static int sql_foreign_key_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
+  int result = SQLITE_OK;
+  foreign_key_check_data *d = (foreign_key_check_data *)data;
+  foreign_key_info_t info;
+  char *value = NULL;
+
+  memset(&info, 0, sizeof(foreign_key_info_t));
+
+  char *table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 0));
+  sqlite3_int64 rowId = sqlite3_column_int64(stmt, 1);
+  char *referred_table = sqlite3_mprintf("%s", sqlite3_column_text(stmt, 2));
+  int foreign_key_index = sqlite3_column_int(stmt, 3);
+
+  result = sql_foreign_key_info(db, d->db_name, table, foreign_key_index, &info, d->error);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  result = sql_exec_for_string(db, &value, "SELECT \"%w\" FROM \"%w\".\"%w\" WHERE ROWID = %d", info.from_column, d->db_name, table, rowId);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  error_append(d->error, "%s: foreign key from '%s' to '%s.%s' failed for value '%s'", table, info.from_column, referred_table, info.to_column, value);
+
+exit:
+  sqlite3_free((void *)info.table);
+  sqlite3_free((void *)info.from_column);
+  sqlite3_free((void *)info.to_column);
+  sqlite3_free(table);
+  sqlite3_free(referred_table);
+  sqlite3_free(value);
+
+  return result;
+}
+
+static int sql_foreign_key_check(sqlite3 *db, const char *db_name, error_t *error) {
+  foreign_key_check_data data = {
+    db_name,
+    error
+  };
+  return sql_exec_stmt(db, sql_foreign_key_check_row, NULL, &data, "PRAGMA foreign_key_check");
+}
+
+typedef int(*check_func)(sqlite3 *db, const char *db_name, error_t *error);
+
+static check_func checks[] = {
+  sql_integrity_check,
+  sql_foreign_key_check,
+  NULL
+};
+
+int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
+  int result = SQLITE_OK;
+
+  check_func *current_func = checks;
+  while (*current_func != NULL) {
+    result = (*current_func)(db, db_name, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    current_func++;
+  }
+
+  return result;
 }
