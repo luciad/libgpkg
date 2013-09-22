@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include "binstream.h"
 #include "blobio.h"
-#include "check.h"
 #ifdef GPKG_HAVE_CONFIG_H
 #include "config.h"
 #endif
