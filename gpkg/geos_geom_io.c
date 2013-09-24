@@ -169,13 +169,17 @@ static int geos_end_geometry(const struct geom_consumer_t *consumer, const geom_
         geom = GEOSGeom_createCollection_r(writer->context, GEOS_GEOMETRYCOLLECTION, childGeom, childCount);
       }
       break;
-    default:
-      return SQLITE_ERROR;
   }
 
   if (geom == NULL) {
     geom_geos_get_error(error);
     result = SQLITE_ERROR;
+    if (childData->type == GEOMETRIES) {
+      GEOSGeometry **childGeom = (GEOSGeometry **)childData->data;
+      for (int i = 0; i < childCount; i++) {
+        GEOSGeom_destroy_r(writer->context, childGeom[i]);
+      }
+    }
   }
 
   sqlite3_free(childData->data);
@@ -219,14 +223,27 @@ int geos_writer_init(geos_writer_t *writer, GEOSContextHandle_t context) {
 }
 
 void geos_writer_destroy(geos_writer_t *writer, int free_data) {
+  if (writer == NULL) {
+    return;
+  }
+
   if (free_data && writer->geometry != NULL) {
     GEOSGeom_destroy_r(writer->context, writer->geometry);
     writer->geometry = NULL;
   }
 
   for (int i = 0; i < GEOM_MAX_DEPTH; i++) {
-    sqlite3_free(writer->childData[i].data);
-    writer->childData[i].data = NULL;
+    geos_data_t *childData = &writer->childData[i];
+    if (childData->data != NULL) {
+      if (childData->type == GEOMETRIES) {
+        GEOSGeometry **childGeom = (GEOSGeometry **)childData->data;
+        for (int i = 0; i < childData->count; i++) {
+          GEOSGeom_destroy_r(writer->context, childGeom[i]);
+        }
+      }
+      sqlite3_free(childData->data);
+      childData->data = NULL;
+    }
   }
 }
 
@@ -240,18 +257,17 @@ GEOSGeometry *geos_writer_getgeometry(geos_writer_t *writer) {
 
 #define COORD_BATCH_SIZE 10
 
-int geos_read_coordseq(GEOSContextHandle_t geos, geom_header_t *header, const GEOSCoordSequence *coordseq, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_coordseq(GEOSContextHandle_t geos, geom_header_t *header, const GEOSCoordSequence *coordseq, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   double coord[2 * COORD_BATCH_SIZE];
-  unsigned int ix = 0;
   uint32_t remaining;
   GEOSCoordSeq_getSize_r(geos, coordseq, &remaining);
 
   while (remaining > 0) {
     uint32_t points_to_read = (remaining > COORD_BATCH_SIZE ? COORD_BATCH_SIZE : remaining);
-    for (int i = 0; i < points_to_read; i++) {
-      GEOSCoordSeq_getX_r(geos, coordseq, ix, &coord[ix++]);
-      GEOSCoordSeq_getY_r(geos, coordseq, ix, &coord[ix++]);
+    for (int i = 0, ix = 0; i < points_to_read; i++, ix += 2) {
+      GEOSCoordSeq_getX_r(geos, coordseq, i, &coord[ix]);
+      GEOSCoordSeq_getY_r(geos, coordseq, i, &coord[ix + 1]);
     }
 
     result = consumer->coordinates(consumer, header, points_to_read, coord, error);
@@ -265,7 +281,7 @@ int geos_read_coordseq(GEOSContextHandle_t geos, geom_header_t *header, const GE
   return result;
 }
 
-int geos_read_point(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_point(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_POINT,
@@ -274,12 +290,12 @@ int geos_read_point(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_con
   };
 
   consumer->begin_geometry(consumer, &header, error);
-  geos_read_coordseq(geos, &header, GEOSGeom_getCoordSeq_r(geos, geom), consumer, error);
+  read_geos_coordseq(geos, &header, GEOSGeom_getCoordSeq_r(geos, geom), consumer, error);
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_linestring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_linestring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_LINESTRING,
@@ -288,12 +304,12 @@ int geos_read_linestring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geo
   };
 
   consumer->begin_geometry(consumer, &header, error);
-  geos_read_coordseq(geos, &header, GEOSGeom_getCoordSeq_r(geos, geom), consumer, error);
+  read_geos_coordseq(geos, &header, GEOSGeom_getCoordSeq_r(geos, geom), consumer, error);
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_linearring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_linearring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_LINEARRING,
@@ -302,12 +318,12 @@ int geos_read_linearring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geo
   };
 
   consumer->begin_geometry(consumer, &header, error);
-  geos_read_coordseq(geos, &header, GEOSGeom_getCoordSeq_r(geos, geom), consumer, error);
+  read_geos_coordseq(geos, &header, GEOSGeom_getCoordSeq_r(geos, geom), consumer, error);
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_polygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_polygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_POLYGON,
@@ -317,10 +333,10 @@ int geos_read_polygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_c
 
   consumer->begin_geometry(consumer, &header, error);
   if (!GEOSisEmpty_r(geos, geom)) {
-    geos_read_linearring(geos, GEOSGetExteriorRing_r(geos, geom), consumer, error);
+    read_geos_linearring(geos, GEOSGetExteriorRing_r(geos, geom), consumer, error);
     int ring_count = GEOSGetNumInteriorRings_r(geos, geom);
     for (int i = 0; i < ring_count; i++) {
-      geos_read_linearring(geos, GEOSGetInteriorRingN_r(geos, geom, i), consumer, error);
+      read_geos_linearring(geos, GEOSGetInteriorRingN_r(geos, geom, i), consumer, error);
     }
   }
 
@@ -328,7 +344,7 @@ int geos_read_polygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_c
   return result;
 }
 
-int geos_read_multipoint(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_multipoint(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_MULTIPOINT,
@@ -339,14 +355,14 @@ int geos_read_multipoint(GEOSContextHandle_t geos, const GEOSGeometry *geom, geo
   consumer->begin_geometry(consumer, &header, error);
   int point_count = GEOSGetNumGeometries_r(geos, geom);
   for (int i = 0; i < point_count; i++) {
-    geos_read_point(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
+    read_geos_point(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
   }
 
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_multilinestring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_multilinestring(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_MULTILINESTRING,
@@ -357,14 +373,14 @@ int geos_read_multilinestring(GEOSContextHandle_t geos, const GEOSGeometry *geom
   consumer->begin_geometry(consumer, &header, error);
   int point_count = GEOSGetNumGeometries_r(geos, geom);
   for (int i = 0; i < point_count; i++) {
-    geos_read_linestring(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
+    read_geos_linestring(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
   }
 
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_multipolygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_multipolygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_MULTIPOLYGON,
@@ -375,16 +391,16 @@ int geos_read_multipolygon(GEOSContextHandle_t geos, const GEOSGeometry *geom, g
   consumer->begin_geometry(consumer, &header, error);
   int point_count = GEOSGetNumGeometries_r(geos, geom);
   for (int i = 0; i < point_count; i++) {
-    geos_read_polygon(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
+    read_geos_polygon(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
   }
 
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error);
+static int read_geos_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error);
 
-int geos_read_geometrycollection(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_geometrycollection(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int result = SQLITE_OK;
   geom_header_t header = {
     GEOM_GEOMETRYCOLLECTION,
@@ -395,32 +411,54 @@ int geos_read_geometrycollection(GEOSContextHandle_t geos, const GEOSGeometry *g
   consumer->begin_geometry(consumer, &header, error);
   int point_count = GEOSGetNumGeometries_r(geos, geom);
   for (int i = 0; i < point_count; i++) {
-    geos_read_geometry(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
+    read_geos_geometry(geos, GEOSGetGeometryN_r(geos, geom, i), consumer, error);
   }
 
   consumer->end_geometry(consumer, &header, error);
   return result;
 }
 
-int geos_read_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+static int read_geos_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
   int type = GEOSGeomTypeId_r(geos, geom);
   if (type == GEOS_POINT) {
-    return geos_read_point(geos, geom, consumer, error);
+    return read_geos_point(geos, geom, consumer, error);
   } else if (type == GEOS_LINESTRING) {
-    return geos_read_linestring(geos, geom, consumer, error);
+    return read_geos_linestring(geos, geom, consumer, error);
   } else if (type == GEOS_LINEARRING) {
-    return geos_read_linearring(geos, geom, consumer, error);
+    return read_geos_linearring(geos, geom, consumer, error);
   } else if (type == GEOS_POLYGON) {
-    return geos_read_polygon(geos, geom, consumer, error);
+    return read_geos_polygon(geos, geom, consumer, error);
   } else if (type == GEOS_MULTIPOINT) {
-    return geos_read_multipoint(geos, geom, consumer, error);
+    return read_geos_multipoint(geos, geom, consumer, error);
   } else if (type == GEOS_MULTILINESTRING) {
-    return geos_read_multilinestring(geos, geom, consumer, error);
+    return read_geos_multilinestring(geos, geom, consumer, error);
   } else if (type == GEOS_MULTIPOLYGON) {
-    return geos_read_multipolygon(geos, geom, consumer, error);
+    return read_geos_multipolygon(geos, geom, consumer, error);
   } else if (type == GEOS_GEOMETRYCOLLECTION) {
-    return geos_read_geometrycollection(geos, geom, consumer, error);
+    return read_geos_geometrycollection(geos, geom, consumer, error);
   } else {
     return SQLITE_ERROR;
   }
+}
+
+int geos_read_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error) {
+  int result;
+
+  result = consumer->begin(consumer, error);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  result = read_geos_geometry(geos, geom, consumer, error);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+  result = consumer->end(consumer, error);
+  if (result != SQLITE_OK) {
+    goto exit;
+  }
+
+exit:
+  return result;
 }

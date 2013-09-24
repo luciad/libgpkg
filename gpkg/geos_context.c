@@ -21,7 +21,7 @@ void geom_geos_get_error(error_t *error) {
     sqlite3_free(err);
     GPKG_TLS_SET(last_geos_error, NULL);
   } else {
-    error_append(error, "GEOS error");
+    error_append(error, "Unknown GEOS error");
   }
 }
 

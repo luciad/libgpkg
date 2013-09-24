@@ -24,6 +24,7 @@
   char error_buffer[256];\
   error_t error;\
   error_init_fixed(&error, error_buffer, 256)
+#define GEOS_CONTEXT geos_context
 #define GEOS_HANDLE geos_context->geos_handle
 #define GEOS_GET_GEOM(args, i) get_geos_geom( context, geos_context, args[i], &error )
 #define GEOS_FREE_GEOM(geom) GEOSGeom_destroy_r( geos_context->geos_handle, geom )
@@ -102,6 +103,44 @@
   GEOS_FREE_GEOM( g2 );\
 }
 
+#define GEOS_FUNC1_GEOM(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
+  GEOS_START(context);\
+  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  if (g1 == NULL) {\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
+  GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1);\
+  if (result != NULL) {\
+    set_geos_geom_result(context, GEOS_CONTEXT, result, &error);\
+    GEOS_FREE_GEOM( result );\
+  } else {\
+    geom_geos_get_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
+  }\
+  GEOS_FREE_GEOM( g1 );\
+}
+
+#define GEOS_FUNC2_GEOM(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
+  GEOS_START(context);\
+  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
+  if (g1 == NULL || g2 == NULL) {\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
+  GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
+  if (result != NULL) {\
+    set_geos_geom_result(context, GEOS_CONTEXT, result, &error);\
+    GEOS_FREE_GEOM( result );\
+  } else {\
+    geom_geos_get_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
+  }\
+  GEOS_FREE_GEOM( g1 );\
+  GEOS_FREE_GEOM( g2 );\
+}
+
 typedef struct {
   GEOSContextHandle_t geos_handle;
   const spatialdb_t *spatialdb;
@@ -123,10 +162,21 @@ static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_
   geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
 
   GEOSGeometry *g = geos_writer_getgeometry(&writer);
-
-  geos_writer_destroy(&writer, 0);
-
+  geos_writer_destroy(&writer, g == NULL);
   return g;
+}
+
+static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, error_t *error) {
+  geom_blob_writer_t writer;
+  geos_context->spatialdb->writer_init_srid( &writer, GEOSGetSRID_r(geos_context->geos_handle, geom) );
+
+  geos_read_geometry(geos_context->geos_handle, geom, geom_blob_writer_geom_consumer(&writer), error);
+
+  sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), geom_blob_writer_length(&writer), sqlite3_free);
+
+  geos_context->spatialdb->writer_destroy( &writer, 0 );
+
+  return SQLITE_OK;
 }
 
 GEOS_FUNC1(isSimple)
@@ -156,8 +206,16 @@ GEOS_FUNC1_DBL(Length)
 GEOS_FUNC2_DBL(Distance)
 GEOS_FUNC2_DBL(HausdorffDistance)
 
+GEOS_FUNC1_GEOM(Boundary)
+GEOS_FUNC1_GEOM(ConvexHull)
+GEOS_FUNC1_GEOM(Envelope)
+
+GEOS_FUNC2_GEOM(Difference)
+GEOS_FUNC2_GEOM(SymDifference)
+GEOS_FUNC2_GEOM(Intersection)
+GEOS_FUNC2_GEOM(Union)
+
 void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
-  printf("geom_func_init\n");
   geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
   GEOSContextHandle_t geos_handle = geom_geos_init();
 
@@ -190,4 +248,13 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
 
   REG_FUNC(ST, Distance, 2, ctx, error);
   REG_FUNC(ST, HausdorffDistance, 2, ctx, error);
+
+  REG_FUNC(ST, Boundary, 1, ctx, error);
+  REG_FUNC(ST, ConvexHull, 1, ctx, error);
+  REG_FUNC(ST, Envelope, 1, ctx, error);
+
+  REG_FUNC(ST, Difference, 2, ctx, error);
+  REG_FUNC(ST, SymDifference, 2, ctx, error);
+  REG_FUNC(ST, Intersection, 2, ctx, error);
+  REG_FUNC(ST, Union, 2, ctx, error);
 }
