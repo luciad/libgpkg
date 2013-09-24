@@ -197,6 +197,24 @@ static void ST_GeometryType(sqlite3_context *context, int nbArgs, sqlite3_value 
   FUNCTION_FREE_WKB_ARG(wkb);
 }
 
+typedef struct {
+  uint8_t *data;
+  int length;
+} geom_blob_auxdata;
+
+static geom_blob_auxdata *geom_blob_auxdata_malloc() {
+  return (geom_blob_auxdata*)sqlite3_malloc(sizeof(geom_blob_auxdata));
+}
+
+static void geom_blob_auxdata_free(void* auxdata) {
+  if ( auxdata != NULL ) {
+    geom_blob_auxdata *geom = (geom_blob_auxdata*)auxdata;
+    sqlite3_free(geom->data);
+    geom->data = NULL;
+    sqlite3_free(geom);
+  }
+}
+
 static void ST_AsBinary(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   FUNCTION_SPATIALDB_ARG(spatialdb);
   FUNCTION_GEOM_ARG(geomblob);
@@ -218,24 +236,41 @@ static void ST_GeomFromWKB(sqlite3_context *context, int nbArgs, sqlite3_value *
   FUNCTION_INT_ARG(srid);
 
   FUNCTION_START_STATIC(context, 256);
-  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
-  FUNCTION_GET_STREAM_ARG_UNSAFE(context, wkb, 0);
 
-  geom_blob_writer_t writer;
-  if (nbArgs == 2) {
-    FUNCTION_GET_INT_ARG(srid, 1);
-    spatialdb->writer_init_srid(&writer, srid);
-  } else {
-    FUNCTION_SET_INT_ARG(srid, -1);
-    spatialdb->writer_init(&writer);
-  }
+  geom_blob_auxdata *geom = (geom_blob_auxdata*)sqlite3_get_auxdata(context, 0);
 
-  FUNCTION_RESULT = wkb_read_geometry(&wkb, WKB_ISO, geom_blob_writer_geom_consumer(&writer), &FUNCTION_ERROR);
-  if (FUNCTION_RESULT == SQLITE_OK) {
-    sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), (int) geom_blob_writer_length(&writer), sqlite3_free);
-    spatialdb->writer_destroy(&writer, 0);
+  if (geom == NULL) {
+    FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
+    FUNCTION_GET_STREAM_ARG_UNSAFE(context, wkb, 0);
+
+    geom_blob_writer_t writer;
+    if (nbArgs == 2) {
+      FUNCTION_GET_INT_ARG(srid, 1);
+      spatialdb->writer_init_srid(&writer, srid);
+    } else {
+      FUNCTION_SET_INT_ARG(srid, -1);
+      spatialdb->writer_init(&writer);
+    }
+
+    FUNCTION_RESULT = wkb_read_geometry(&wkb, WKB_ISO, geom_blob_writer_geom_consumer(&writer), &FUNCTION_ERROR);
+    if (FUNCTION_RESULT == SQLITE_OK) {
+      uint8_t *data = geom_blob_writer_getdata(&writer);
+      int length = (int) geom_blob_writer_length(&writer);
+      sqlite3_result_blob(context, data, length, SQLITE_TRANSIENT);
+      spatialdb->writer_destroy(&writer, 0);
+
+      geom = geom_blob_auxdata_malloc();
+      if (geom != NULL) {
+        geom->data = data;
+        geom->length = length;
+        sqlite3_set_auxdata(context, 0, geom, geom_blob_auxdata_free);
+      }
+      spatialdb->writer_destroy(&writer, 0);
+    } else {
+      spatialdb->writer_destroy(&writer, 1);
+    }
   } else {
-    spatialdb->writer_destroy(&writer, 1);
+    sqlite3_result_blob(context, geom->data, geom->length, SQLITE_TRANSIENT);
   }
 
   FUNCTION_END(context);
@@ -277,24 +312,40 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
   FUNCTION_INT_ARG(srid);
 
   FUNCTION_START_STATIC(context, 256);
-  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
-  FUNCTION_GET_TEXT_ARG_UNSAFE(wkt, 0);
 
-  geom_blob_writer_t writer;
-  if (nbArgs == 2) {
-    FUNCTION_GET_INT_ARG(srid, 1);
-    spatialdb->writer_init_srid(&writer, srid);
-  } else {
-    FUNCTION_SET_INT_ARG(srid, -1);
-    spatialdb->writer_init(&writer);
-  }
+  geom_blob_auxdata *geom = (geom_blob_auxdata*)sqlite3_get_auxdata(context, 0);
 
-  FUNCTION_RESULT = wkt_read_geometry(wkt, FUNCTION_TEXT_ARG_LENGTH(wkt), geom_blob_writer_geom_consumer(&writer), &FUNCTION_ERROR);
-  if (FUNCTION_RESULT == SQLITE_OK) {
-    sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), (int) geom_blob_writer_length(&writer), sqlite3_free);
-    spatialdb->writer_destroy(&writer, 0);
+  if (geom == NULL) {
+    FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
+    FUNCTION_GET_TEXT_ARG_UNSAFE(wkt, 0);
+
+    geom_blob_writer_t writer;
+    if (nbArgs == 2) {
+      FUNCTION_GET_INT_ARG(srid, 1);
+      spatialdb->writer_init_srid(&writer, srid);
+    } else {
+      FUNCTION_SET_INT_ARG(srid, -1);
+      spatialdb->writer_init(&writer);
+    }
+
+    FUNCTION_RESULT = wkt_read_geometry(wkt, FUNCTION_TEXT_ARG_LENGTH(wkt), geom_blob_writer_geom_consumer(&writer), &FUNCTION_ERROR);
+    if (FUNCTION_RESULT == SQLITE_OK) {
+      uint8_t *data = geom_blob_writer_getdata(&writer);
+      int length = (int) geom_blob_writer_length(&writer);
+      sqlite3_result_blob(context, data, length, SQLITE_TRANSIENT);
+      spatialdb->writer_destroy(&writer, 0);
+
+      geom = geom_blob_auxdata_malloc();
+      if (geom != NULL) {
+        geom->data = data;
+        geom->length = length;
+        sqlite3_set_auxdata(context, 0, geom, geom_blob_auxdata_free);
+      }
+    } else {
+      spatialdb->writer_destroy(&writer, 1);
+    }
   } else {
-    spatialdb->writer_destroy(&writer, 1);
+    sqlite3_result_blob(context, geom->data, geom->length, SQLITE_TRANSIENT);
   }
 
   FUNCTION_END(context);
