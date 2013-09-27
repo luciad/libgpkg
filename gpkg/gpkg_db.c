@@ -66,6 +66,7 @@ static column_info_t gpkg_extensions_columns[] = {
   {"table_name", "text", N, SQL_UNIQUE(1), NULL},
   {"column_name", "text", N, SQL_UNIQUE(1), NULL},
   {"extension_name", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"scope", "text", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_extensions = {
@@ -75,7 +76,7 @@ static table_info_t gpkg_extensions = {
 };
 
 static column_info_t gpkg_geometry_columns_columns[] = {
-  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY,  "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
+  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY | SQL_UNIQUE(1),  "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
   {"column_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
   {"geometry_type", "text", N, SQL_NOT_NULL, NULL},
   {"srs_id", "integer", N, SQL_NOT_NULL, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
@@ -688,8 +689,8 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
   result = sql_exec(
              db,
-             "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name) VALUES (\"%w\", \"%w\", \"%w\")",
-             db_name, table_name, geometry_column_name, "gpkg_rtree_index"
+             "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name, scope) VALUES (\"%w\", \"%w\", \"%w\", \"%w\")",
+             db_name, table_name, geometry_column_name, "gpkg_rtree_index", "write-only"
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not register rtree usage in gpkg_extensions: %s", sqlite3_errmsg(db));
