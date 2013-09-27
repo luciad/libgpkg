@@ -324,37 +324,63 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   if (index != -1) {
     char *type = (char *)sqlite3_column_text(stmt, 2);
     if (sqlite3_strnicmp(table_info->columns[index].type, type, strlen(table_info->columns[index].type) + 1) != 0) {
-      if (error) {
-        error_append(error, "Column %s.%s has incorrect type (expected: %s, actual: %s)\n", table_info->name, name, table_info->columns[index].type, type);
-      }
+      error_append(error, "Column %s.%s has incorrect type (expected: %s, actual: %s)", table_info->name, name, table_info->columns[index].type, type);
     }
 
     int not_null = sqlite3_column_int(stmt, 3);
     if (not_null != 0 && (table_info->columns[index].flags & SQL_NOT_NULL) == 0) {
-      if (error) {
-        error_append(error, "Column %s.%s should not have 'not null' constraint\n", table_info->name, name);
-      }
+      error_append(error, "Column %s.%s should not have 'not null' constraint\n", table_info->name, name);
     } else if (not_null == 0 && table_info->columns[index].flags & SQL_NOT_NULL) {
-      if (error) {
-        error_append(error, "Column %s.%s should have 'not null' constraint\n", table_info->name, name);
+      error_append(error, "Column %s.%s should have 'not null' constraint", table_info->name, name);
+    }
+
+    value_t default_value = table_info->columns[index].default_value;
+    if (default_value.type == VALUE_TEXT) {
+      char *expected = sqlite3_mprintf( "'%s'", VALUE_AS_TEXT(default_value) );
+      const char *actual = (const char *)sqlite3_column_text(stmt, 4);
+      if (sqlite3_strnicmp(expected, actual, strlen(expected) + 1) != 0) {
+        error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was '%s'", table_info->name, name, expected, actual);
+      }
+      sqlite3_free(expected);
+    }
+    else if (default_value.type == VALUE_FUNC) {
+      char *expected = sqlite3_mprintf( VALUE_AS_TEXT(default_value) );
+      const char *actual = (const char *)sqlite3_column_text(stmt, 4);
+      if (sqlite3_strnicmp(expected, actual, strlen(expected) + 1) != 0) {
+        error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was '%s'", table_info->name, name, expected, actual);
+      }
+      sqlite3_free(expected);
+    }
+    else if (default_value.type == VALUE_INTEGER) {
+      int expected = VALUE_AS_INT(default_value);
+      int actual = sqlite3_column_int(stmt, 4);
+      if (actual != expected) {
+        error_append(error, "Column %s.%s has incorrect default value: expected %d but was %d", table_info->name, name, expected, actual);
+      }
+    }
+    else if (default_value.type == VALUE_DOUBLE) {
+      double expected = VALUE_AS_DOUBLE(default_value);
+      double actual = sqlite3_column_double(stmt, 4);
+      if (actual != expected) {
+        error_append(error, "Column %s.%s has incorrect default value: expected %f but was %f", table_info->name, name, expected, actual);
+      }
+    }
+    else if (default_value.type == VALUE_NULL) {
+      if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
+        const char *actual = (const char *)sqlite3_column_text(stmt, 4);
+        error_append(error, "Column %s.%s has incorrect default value: expected NULL but was %s", table_info->name, name, actual);
       }
     }
 
     int pk = sqlite3_column_int(stmt, 5);
     if (pk != 0 && (table_info->columns[index].flags & SQL_PRIMARY_KEY) == 0) {
-      if (error) {
-        error_append(error, "Column %s.%s should not be part of primary key\n", table_info->name, name);
-      }
+      error_append(error, "Column %s.%s should not be part of primary key", table_info->name, name);
     } else if (pk == 0 && table_info->columns[index].flags & SQL_PRIMARY_KEY) {
-      if (error) {
-        error_append(error, "Column %s.%s should be part of primary key\n", table_info->name, name);
-      }
+      error_append(error, "Column %s.%s should be part of primary key", table_info->name, name);
     }
     found[index] = 1;
   } else {
-    if (error) {
-      error_append(error, "Redundant column %s.%s\n", table_info->name, name);
-    }
+    error_append(error, "Redundant column %s.%s", table_info->name, name);
   }
 
   return SQLITE_OK;
@@ -604,7 +630,7 @@ exit:
 }
 
 #define SQL_CONSTRAINT_IX(flags) ( (flags >> 4) & 0xF)
-#define SQL_IS_CONSTRAINT(flags, mask, ix) ((flags & mask) && (SQL_CONSTRAINT_IX(flags) == ix))
+#define SQL_IS_CONSTRAINT(flags, mask, ix) ((flags & mask) && (ix == -1 || SQL_CONSTRAINT_IX(flags) == ix))
 
 static void appendTableConstraint(const table_info_t *table_info, strbuf_t *sql, int constraint_mask, int constraint_idx) {
   char *constraint_name;
@@ -714,7 +740,7 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
   }
 
   if (pk_count > 1) {
-    appendTableConstraint(table_info, &sql, SQL_PRIMARY_KEY_MASK, 0);
+    appendTableConstraint(table_info, &sql, SQL_PRIMARY_KEY_MASK, -1);
   }
 
   if (max_uk > 0) {
@@ -753,8 +779,8 @@ static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_in
       if (result == SQLITE_OK) {
         result = sql_check_data(db, db_name, table_info, error);
       }
-    } else {
-      if (!create && must_exist) {
+    } else if (must_exist) {
+      if (!create) {
         error_append(error, "Table %s.%s does not exist", db_name, table_info->name);
       } else {
         result = sql_create_table(db, db_name, table_info, error);
@@ -774,7 +800,7 @@ int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_
 }
 
 int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
-  return sql_init_check_table(db, db_name, table_info, 1, 0, error);
+  return sql_init_check_table(db, db_name, table_info, 1, 1, error);
 }
 
 int sql_begin(sqlite3 *db, char *name) {
