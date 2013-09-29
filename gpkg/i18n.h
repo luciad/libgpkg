@@ -14,3 +14,4 @@ i18n_locale_t *i18n_new_locale( const char *locale_name );
 void i18n_free_locale( i18n_locale_t *locale );
 
 #endif
+

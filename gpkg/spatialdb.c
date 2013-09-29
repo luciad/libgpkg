@@ -32,8 +32,8 @@
 SQLITE_EXTENSION_INIT1
 
 typedef struct {
-  const spatialdb *spatialdb;
-  i18n_locale *wkt_locale; 
+  const spatialdb_t *spatialdb;
+  i18n_locale_t *wkt_locale; 
 } spatialdb_context_t;
 
 #define ST_MIN_MAX(name, check, field) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) { \
