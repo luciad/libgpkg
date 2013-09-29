@@ -6,7 +6,7 @@ function(check_tls)
   if( NOT ___TLS )
     message( STATUS "Checking if __thread is supported" )
     check_c_source_compiles(
-      "__thread int i; int main(int argc, char **argv() { return 1; }"
+      "__thread int i; int main(int argc, char **argv) { return 1; }"
       TLS_USE_THREAD
     )
     set( ___TLS ${TLS_USE_THREAD} )
@@ -21,7 +21,7 @@ function(check_tls)
   if( NOT ___TLS )
     message( STATUS "Checking if __declspec( thread ) is supported" )
     check_c_source_compiles(
-      "__declspec( thread ) int i; int main(int argc, char **argv() { return 1; }"
+      "__declspec( thread ) int i; int main(int argc, char **argv) { return 1; }"
       TLS_USE_DECLSPEC_THREAD
     )
     set( ___TLS ${TLS_USE_DECLSPEC_THREAD} )

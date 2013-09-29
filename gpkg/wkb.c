@@ -56,7 +56,7 @@ static int fill_gpb_envelope_coordinates(const geom_consumer_t *consumer, const 
   if (header->coord_type == GEOM_XY) {
     env->has_env_x = 1;
     env->has_env_y = 1;
-    for (int i = 0, off = 0; i < point_count; i++) {
+    for (size_t i = 0, off = 0; i < point_count; i++) {
       MINMAXCOORD(x)
       MINMAXCOORD(y)
     }
@@ -64,7 +64,7 @@ static int fill_gpb_envelope_coordinates(const geom_consumer_t *consumer, const 
     env->has_env_x = 1;
     env->has_env_y = 1;
     env->has_env_z = 1;
-    for (int i = 0, off = 0; i < point_count; i++) {
+    for (size_t i = 0, off = 0; i < point_count; i++) {
       MINMAXCOORD(x)
       MINMAXCOORD(y)
       MINMAXCOORD(z)
@@ -73,7 +73,7 @@ static int fill_gpb_envelope_coordinates(const geom_consumer_t *consumer, const 
     env->has_env_x = 1;
     env->has_env_y = 1;
     env->has_env_m = 1;
-    for (int i = 0, off = 0; i < point_count; i++) {
+    for (size_t i = 0, off = 0; i < point_count; i++) {
       MINMAXCOORD(x)
       MINMAXCOORD(y)
       MINMAXCOORD(m)
@@ -83,7 +83,7 @@ static int fill_gpb_envelope_coordinates(const geom_consumer_t *consumer, const 
     env->has_env_y = 1;
     env->has_env_z = 1;
     env->has_env_m = 1;
-    for (int i = 0, off = 0; i < point_count; i++) {
+    for (size_t i = 0, off = 0; i < point_count; i++) {
       MINMAXCOORD(x)
       MINMAXCOORD(y)
       MINMAXCOORD(z)
@@ -245,7 +245,7 @@ static int read_point(binstream_t *stream, wkb_dialect dialect, const geom_consu
   uint32_t coord_size = header->coord_size;
   double coord[GEOM_MAX_COORD_SIZE];
   int allnan = 1;
-  for (int i = 0; i < coord_size; i++) {
+  for (uint32_t i = 0; i < coord_size; i++) {
     result = binstream_read_double(stream, &coord[i]);
     if (result != SQLITE_OK) {
       if (error) {
@@ -273,7 +273,7 @@ static int read_points(binstream_t *stream, wkb_dialect dialect, const geom_cons
   while (remaining > 0) {
     uint32_t points_to_read = (remaining > COORD_BATCH_SIZE ? COORD_BATCH_SIZE : remaining);
     uint32_t coords_to_read = points_to_read * header->coord_size;
-    for (int i = 0; i < coords_to_read; i++) {
+    for (uint32_t i = 0; i < coords_to_read; i++) {
       result = binstream_read_double(stream, &coord[i]);
       if (result != SQLITE_OK) {
         if (error) {
@@ -347,7 +347,7 @@ static int read_polygon(binstream_t *stream, wkb_dialect dialect, const geom_con
     return SQLITE_IOERR;
   }
 
-  for (int i = 0; i < ring_count; i++) {
+  for (uint32_t i = 0; i < ring_count; i++) {
     if (read_linearring(stream, dialect, consumer, header, error) != SQLITE_OK) {
       return SQLITE_IOERR;
     }
@@ -367,7 +367,7 @@ static int read_multipoint(binstream_t *stream, wkb_dialect dialect, const geom_
   }
 
   geom_header_t point_header;
-  for (int i = 0; i < point_count; i++) {
+  for (uint32_t i = 0; i < point_count; i++) {
     if (read_wkb_geometry_header(stream, dialect, &point_header, error) != SQLITE_OK) {
       return SQLITE_IOERR;
     }
@@ -393,7 +393,7 @@ static int read_multilinestring(binstream_t *stream, wkb_dialect dialect, const 
   }
 
   geom_header_t linestring_header;
-  for (int i = 0; i < linestring_count; i++) {
+  for (uint32_t i = 0; i < linestring_count; i++) {
     if (read_wkb_geometry_header(stream, dialect, &linestring_header, error) != SQLITE_OK) {
       return SQLITE_IOERR;
     }
@@ -419,7 +419,7 @@ static int read_multipolygon(binstream_t *stream, wkb_dialect dialect, const geo
   }
 
   geom_header_t polygon_header;
-  for (int i = 0; i < polygon_count; i++) {
+  for (uint32_t i = 0; i < polygon_count; i++) {
     if (read_wkb_geometry_header(stream, dialect, &polygon_header, error) != SQLITE_OK) {
       return SQLITE_IOERR;
     }
@@ -445,7 +445,7 @@ static int read_geometrycollection(binstream_t *stream, wkb_dialect dialect, con
   }
 
   geom_header_t geometry_header;
-  for (int i = 0; i < geometry_count; i++) {
+  for (uint32_t i = 0; i < geometry_count; i++) {
     if (read_wkb_geometry_header(stream, dialect, &geometry_header, error) != SQLITE_OK) {
       return SQLITE_IOERR;
     }
@@ -685,7 +685,7 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
       }
     } else {
       if (children == 0) {
-        for (int i = 0; i < header->coord_size; i++) {
+        for (uint32_t i = 0; i < header->coord_size; i++) {
           result = binstream_write_double(stream, fp_nan());
           if (result != SQLITE_OK) {
             goto exit;

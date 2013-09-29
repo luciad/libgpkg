@@ -153,7 +153,7 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 
   if (header->geom_type == GEOM_POINT) {
     int allnan = 1;
-    for (int i = 0; i < header->coord_size; i++) {
+    for (uint32_t i = 0; i < header->coord_size; i++) {
       allnan &= fp_isnan(coords[i]);
     }
     if (allnan) {
@@ -169,21 +169,21 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
         if (coord < spb->envelope.min_##coord) spb->envelope.min_##coord = coord; \
         if (coord > spb->envelope.max_##coord) spb->envelope.max_##coord = coord;
     case GEOM_XYZ:
-      for (int i = 0; i < point_count; i++) {
+      for (size_t i = 0; i < point_count; i++) {
         MIN_MAX(x)
         MIN_MAX(y)
         MIN_MAX(z)
       }
       break;
     case GEOM_XYM:
-      for (int i = 0; i < point_count; i++) {
+      for (size_t i = 0; i < point_count; i++) {
         MIN_MAX(x)
         MIN_MAX(y)
         MIN_MAX(m)
       }
       break;
     case GEOM_XYZM:
-      for (int i = 0; i < point_count; i++) {
+      for (size_t i = 0; i < point_count; i++) {
         MIN_MAX(x)
         MIN_MAX(y)
         MIN_MAX(z)
@@ -191,7 +191,7 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
       }
       break;
     default:
-      for (int i = 0; i < point_count; i++) {
+      for (size_t i = 0; i < point_count; i++) {
         MIN_MAX(x)
         MIN_MAX(y)
       }
