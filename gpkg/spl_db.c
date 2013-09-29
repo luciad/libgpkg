@@ -188,7 +188,6 @@ static int spl3_writer_init(geom_blob_writer_t *writer) {
 
 static int spl3_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
   int result;
-  geom_type_t geom_type_enum;
 
   const char *normalized_geom_type;
   result = geom_normalized_type_name(geom_type, &normalized_geom_type);
@@ -421,7 +420,7 @@ static int spl4_add_geometry_column(sqlite3 *db, const char *db_name, const char
  * (geometry blob, geometry_type int, srid int);
  */
 static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-  FUNCTION_SPATIALDB_ARG(spatialdb);
+  const spatialdb_t *spatialdb;
   FUNCTION_WKB_ARG(wkb);
   FUNCTION_TEXT_ARG(expected_geometry_type_text);
   FUNCTION_INT_ARG(expected_geometry_type_int);
@@ -430,7 +429,7 @@ static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlit
   geom_header_t expected;
 
   FUNCTION_START_STATIC(context, 256);
-  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
+  spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
 
   if (nbArgs == 3) {
     FUNCTION_GET_INT_ARG(expected_geometry_type_int, 1);
@@ -493,7 +492,6 @@ static void GPKG_GeometryConstraints(sqlite3_context *context, int nbArgs, sqlit
   sqlite3_result_int(context, 1);
 
   FUNCTION_END(context);
-  FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
   FUNCTION_FREE_WKB_ARG(wkb);
   FUNCTION_FREE_TEXT_ARG(expected_geometry_type_text);
   FUNCTION_FREE_INT_ARG(expected_geometry_type_int);
@@ -668,13 +666,13 @@ exit:
  * (indx_table_name text, \"%w\" int, geometry blob)
  */
 static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-  FUNCTION_SPATIALDB_ARG(spatialdb);
+  const spatialdb_t *spatialdb;
   FUNCTION_TEXT_ARG(index_table_name);
   FUNCTION_TEXT_ARG(row_id);
   FUNCTION_GEOM_ARG(geom);
 
   FUNCTION_START_STATIC(context, 256);
-  FUNCTION_GET_SPATIALDB_ARG(context, spatialdb);
+  spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
   FUNCTION_GET_TEXT_ARG(context, index_table_name, 0);
   FUNCTION_GET_TEXT_ARG(context, row_id, 1);
   FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geom, 2);
@@ -686,7 +684,6 @@ static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value 
   );
 
   FUNCTION_END(context);
-  FUNCTION_FREE_SPATIALDB_ARG(spatialdb);
   FUNCTION_FREE_TEXT_ARG(index_table_name);
   FUNCTION_FREE_TEXT_ARG(row_id);
   FUNCTION_FREE_GEOM_ARG(geom);

@@ -1,6 +1,12 @@
 cmake_minimum_required( VERSION 2.8.7 )
 project ( libgpkg )
 
+#
+# Required CMake modules
+#
+include(CheckIncludeFile)
+include(CheckFunctionExists)
+
 set ( gpkg_VERSION_MAJOR 0 )
 set ( gpkg_VERSION_MINOR 8 )
 set ( gpkg_VERSION_PATCH 0 )

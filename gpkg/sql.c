@@ -478,7 +478,7 @@ static int sql_check_data(sqlite3 *db, const char *db_name, const table_info_t *
     goto exit;
   }
 
-  for (int rIx = 0; rIx < table_info->nRows; rIx++) {
+  for (size_t rIx = 0; rIx < table_info->nRows; rIx++) {
     const value_t *row = table_info->rows + (rIx * nColumns);
     result = sql_stmt_bind(stmt, row, nColumns);
     if (result != SQLITE_OK) {
@@ -578,7 +578,7 @@ static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t 
 
   int nColumns = sql_count_columns(table_info);
 
-  for (int rIx = 0; rIx < table_info->nRows; rIx++) {
+  for (size_t rIx = 0; rIx < table_info->nRows; rIx++) {
     const value_t *row = table_info->rows + (rIx * nColumns);
     result = sql_stmt_bind(stmt, row, nColumns);
     if (result != SQLITE_OK) {

@@ -75,10 +75,6 @@
         }                                                                                                              \
     } while(0)
 
-#define FUNCTION_SPATIALDB_ARG(name) const spatialdb_t *name = NULL
-#define FUNCTION_GET_SPATIALDB_ARG(context, name) name = (const spatialdb_t *)sqlite3_user_data(context)
-#define FUNCTION_FREE_SPATIALDB_ARG(arg) FUNCTION_NOOP
-
 #define FUNCTION_INT_ARG(arg) int32_t arg = 0
 #define FUNCTION_GET_INT_ARG(arg, ix) arg = sqlite3_value_int(args[ix])
 #define FUNCTION_SET_INT_ARG(arg, val) arg = val

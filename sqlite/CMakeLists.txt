@@ -1,10 +1,4 @@
 #
-# Required CMake modules
-#
-include(CheckIncludeFile)
-include(CheckFunctionExists)
-
-#
 # Static and shared library version of sqlite3.
 # libgpkg is not linked against this version of sqlite3, it is only used to:
 # - provide the sqlite3 and sqlite3ext headers

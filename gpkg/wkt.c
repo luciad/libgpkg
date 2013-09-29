@@ -111,7 +111,7 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 
   int offset = 0;
   if (header->coord_size == 2) {
-    for (int i = 0; i < point_count; i++) {
+    for (size_t i = 0; i < point_count; i++) {
       double x = coords[offset++];
       double y = coords[offset++];
 
@@ -127,7 +127,7 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
       }
     }
   } else if (header->coord_size == 3) {
-    for (int i = 0; i < point_count; i++) {
+    for (size_t i = 0; i < point_count; i++) {
       double x = coords[offset++];
       double y = coords[offset++];
       double zm = coords[offset++];
@@ -143,7 +143,7 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
       }
     }
   } else if (header->coord_size == 4) {
-    for (int i = 0; i < point_count; i++) {
+    for (size_t i = 0; i < point_count; i++) {
       double x = coords[offset++];
       double y = coords[offset++];
       double z = coords[offset++];
@@ -240,13 +240,15 @@ typedef struct {
   int token_length;
   wkt_token token;
   double token_value;
+  i18n_locale_t *locale;
 } wkt_tokenizer_t;
 
-static void wkt_tokenizer_init(wkt_tokenizer_t *tok, const char *data, size_t length) {
+static void wkt_tokenizer_init(wkt_tokenizer_t *tok, const char *data, size_t length, i18n_locale_t *locale) {
   tok->start = data;
   tok->position = data;
   tok->token_position = 0;
   tok->end = data + length;
+  tok->locale = locale;
 }
 
 static void wkt_tokenizer_error(wkt_tokenizer_t *tok, error_t *error, const char *msg) {
@@ -315,7 +317,7 @@ static void wkt_tokenizer_next(wkt_tokenizer_t *tok) {
       return;
     } else if (('0' <= c && c <= '9') || c == '-' || c == '+') {
       char *tok_end = NULL;
-      tok->token_value = strtod(start, &tok_end);
+      tok->token_value = i18n_strtod(start, &tok_end, tok->locale);
       if (tok_end == NULL) {
         tok->token_length = 0;
         goto error;
@@ -360,7 +362,7 @@ static int wkt_read_point(wkt_tokenizer_t *tok, const geom_header_t *header, con
   int result = SQLITE_OK;
   double coords[GEOM_MAX_COORD_SIZE];
 
-  for (int i = 0; i < header->coord_size; i++) {
+  for (uint32_t i = 0; i < header->coord_size; i++) {
     if (tok->token != WKT_NUMBER) {
       if (error) {
         wkt_tokenizer_error(tok, error, "Expected number");
@@ -392,7 +394,7 @@ static int wkt_read_points(wkt_tokenizer_t *tok, const geom_header_t *header, co
 
   int more_coords;
   do {
-    for (int i = 0; i < header->coord_size; i++) {
+    for (uint32_t i = 0; i < header->coord_size; i++) {
       if (tok->token != WKT_NUMBER) {
         if (error) {
           wkt_tokenizer_error(tok, error, "Expected number");
@@ -850,7 +852,7 @@ exit:
   return result;
 }
 
-int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, error_t *error) {
+int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, i18n_locale_t *locale, error_t *error) {
   int result = SQLITE_OK;
 
   result = consumer->begin(consumer, error);
@@ -859,7 +861,7 @@ int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *co
   }
 
   wkt_tokenizer_t tok;
-  wkt_tokenizer_init(&tok, data, length);
+  wkt_tokenizer_init(&tok, data, length, locale);
   wkt_tokenizer_next(&tok);
 
   result = wkt_read_geometry_tagged_text(&tok, NULL, consumer, error);

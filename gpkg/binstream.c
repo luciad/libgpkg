@@ -354,7 +354,7 @@ int binstream_write_ndouble(binstream_t *stream, const double *val, size_t count
   if (result != SQLITE_OK) {
     return result;
   }
-  for (int i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; i++) {
     binstream_write_u64_unchecked(stream, fp_double_to_uint64(val[i]));
   }
   return SQLITE_OK;

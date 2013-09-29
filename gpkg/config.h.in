@@ -5,3 +5,6 @@
 #cmakedefine TLS_USE_PTHREAD
 
 #cmakedefine GPKG_HAVE_GEOM_FUNC
+
+#cmakedefine HAVE_LOCALE_H
+#cmakedefine HAVE_XLOCALE_H
