@@ -79,7 +79,7 @@ static table_info_t gpkg_extensions = {
 static column_info_t gpkg_geometry_columns_columns[] = {
   {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY | SQL_UNIQUE(1),  "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
   {"column_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"geometry_type", "text", N, SQL_NOT_NULL, NULL},
+  {"geometry_type_name", "text", N, SQL_NOT_NULL, NULL},
   {"srs_id", "integer", N, SQL_NOT_NULL, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
   {"z", "integer", N, SQL_NOT_NULL, NULL},
   {"m", "integer", N, SQL_NOT_NULL, NULL},
@@ -91,7 +91,22 @@ static table_info_t gpkg_geometry_columns = {
   NULL, 0
 };
 
-static column_info_t gpkg_tile_matrix_metadata_columns[] = {
+static column_info_t gpkg_tile_matrix_set_columns[] = {
+  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
+  {"srs_id", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+  {"min_x", "double", N, SQL_NOT_NULL, NULL},
+  {"min_y", "double", N, SQL_NOT_NULL, NULL},
+  {"max_x", "double", N, SQL_NOT_NULL, NULL},
+  {"max_y", "double", N, SQL_NOT_NULL, NULL},
+  {NULL, NULL, N, 0, NULL}
+};
+static table_info_t gpkg_tile_matrix_set = {
+  "gpkg_tile_matrix_set",
+  gpkg_tile_matrix_set_columns,
+  NULL, 0
+};
+
+static column_info_t gpkg_tile_matrix_columns[] = {
   {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
   {"zoom_level", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
   {"matrix_width", "integer", N, SQL_NOT_NULL, NULL},
@@ -102,9 +117,9 @@ static column_info_t gpkg_tile_matrix_metadata_columns[] = {
   {"pixel_y_size", "double", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
-static table_info_t gpkg_tile_matrix_metadata = {
-  "gpkg_tile_matrix_metadata",
-  gpkg_tile_matrix_metadata_columns,
+static table_info_t gpkg_tile_matrix = {
+  "gpkg_tile_matrix",
+  gpkg_tile_matrix_columns,
   NULL, 0
 };
 
@@ -124,11 +139,29 @@ static column_info_t gpkg_data_columns_columns[] = {
   {"title", "text", N, 0, NULL},
   {"description", "text", N, 0, NULL},
   {"mime_type", "text", N, 0, NULL},
+  {"constraint_name", "text", N, 0, NULL},
+  {"constraint_type", "text", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_data_columns = {
   "gpkg_data_columns",
   gpkg_data_columns_columns,
+  NULL, 0
+};
+
+static column_info_t gpkg_data_column_constraints_columns[] = {
+  {"constraint_name", "text", N, SQL_NOT_NULL, NULL},
+  {"constraint_type", "text", N, SQL_NOT_NULL, NULL},
+  {"value", "text", N, 0, NULL},
+  {"min", "numeric", N, 0, NULL},
+  {"minIsInclusive", "integer", N, 0, NULL},
+  {"max", "numeric", N, 0, NULL},
+  {"maxIsInclusive", "integer", N, 0, NULL},
+  {NULL, NULL, N, 0, NULL}
+};
+static table_info_t gpkg_data_column_constraints = {
+  "gpkg_data_column_constraints",
+  gpkg_data_column_constraints_columns,
   NULL, 0
 };
 
@@ -167,10 +200,12 @@ static const table_info_t *const gpkg_tables[] = {
   &gpkg_extensions,
   &gpkg_spatial_ref_sys,
   &gpkg_data_columns,
+  &gpkg_data_column_constraints,
   &gpkg_metadata,
   &gpkg_metadata_reference,
   &gpkg_geometry_columns,
-  &gpkg_tile_matrix_metadata,
+  &gpkg_tile_matrix_set,
+  &gpkg_tile_matrix,
   NULL
 };
 
@@ -347,6 +382,9 @@ static int check(sqlite3 *db, const char *db_name, int detailed_check, error_t *
     result = sql_check_table(db, db_name, &gpkg_data_columns, 0, error);
   }
   if (result == SQLITE_OK) {
+    result = sql_check_table(db, db_name, &gpkg_data_column_constraints, 0, error);
+  }
+  if (result == SQLITE_OK) {
     result = sql_check_table(db, db_name, &gpkg_metadata, 0, error);
   }
   if (result == SQLITE_OK) {
@@ -363,7 +401,8 @@ static int check(sqlite3 *db, const char *db_name, int detailed_check, error_t *
     int tiles = 0;
     result = sql_exec_for_int(db, &tiles, "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'tiles'", db_name);
     if (result == SQLITE_OK) {
-      result = sql_check_table(db, db_name, &gpkg_tile_matrix_metadata, tiles > 0, error);
+      result = sql_check_table(db, db_name, &gpkg_tile_matrix_set, tiles > 0, error);
+      result = sql_check_table(db, db_name, &gpkg_tile_matrix, tiles > 0, error);
     }
   }
 
@@ -453,7 +492,7 @@ static int add_geometry_column(sqlite3 *db, const char *db_name, const char *tab
     return result;
   }
 
-  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (table_name, column_name, geometry_type, srs_id, z, m) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name, "gpkg_geometry_columns", table_name, column_name,
+  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (table_name, column_name, geometry_type_name, srs_id, z, m) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name, "gpkg_geometry_columns", table_name, column_name,
                     normalized_geom_type, srs_id, z, m);
   if (result != SQLITE_OK) {
     error_append(error, sqlite3_errmsg(db));
