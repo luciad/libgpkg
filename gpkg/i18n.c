@@ -44,6 +44,9 @@ void i18n_free_locale( i18n_locale_t *locale ) {
 
 #else
 
+#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
+
 #ifdef GPKG_HAVE_CONFIG_H
 #include "config.h"
 #endif
