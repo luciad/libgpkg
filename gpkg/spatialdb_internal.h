@@ -171,14 +171,4 @@
 
 #define FUNCTION_GET_TYPE(arg, ix) arg = sqlite3_value_type(args[ix])
 
-#define REGISTER_FUNCTION(db, name, function, args, config, destroy, error)                                                \
-    do {                                                                                                               \
-        int function##result = sqlite3_create_function_v2(                                                             \
-            db, name, args, SQLITE_UTF8, (void *) config, function, NULL, NULL, destroy                                \
-        );                                                                                                             \
-        if (function##result != SQLITE_OK) {                                                                           \
-            error_append(error, "Error registering function %s/%d: %s", name, args, sqlite3_errmsg(db));               \
-        }                                                                                                              \
-    } while(0)
-
 #endif

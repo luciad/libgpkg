@@ -252,7 +252,7 @@ int sql_exec_all(sqlite3 *db, char *sql, ...);
  *         SQLITE_ABORT to abort iterating; sql_exec_stmt returns with SQLITE_OK
  *         A SQLite error code to abort iterating; sql_exec_stmt returns with the return value of this function
  */
-typedef int(*sql_callback)(sqlite3 *db, sqlite3_stmt *stmt, void *data);
+typedef int(sql_callback)(sqlite3 *db, sqlite3_stmt *stmt, void *data);
 
 /**
  * Executes a SQL statement. The SQL statement can be a printf style format pattern.
@@ -264,7 +264,7 @@ typedef int(*sql_callback)(sqlite3 *db, sqlite3_stmt *stmt, void *data);
  * @return SQLITE_OK if the SQL statement was executed successfully\n
  *         A SQLite error code otherwise
  */
-int sql_exec_stmt(sqlite3 *db, sql_callback row, sql_callback nodata, void *data, char *sql, ...);
+int sql_exec_stmt(sqlite3 *db, sql_callback *row, sql_callback *nodata, void *data, char *sql, ...);
 
 /**
  * Executes a SQL statement that is expected to return a single string value. The SQL statement can be a printf style
@@ -352,7 +352,9 @@ int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_i
 
 int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql);
 
-int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, void *config, void (*destroy)(void*), error_t *error);
+typedef void(sql_function)(sqlite3_context*,int,sqlite3_value**);
+
+int sql_create_function(sqlite3 *db, const char *name, sql_function *function, int args, void *user_data, void (*destroy)(void*), error_t *error);
 
 /** @} */
 

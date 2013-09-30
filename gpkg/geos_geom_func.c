@@ -19,6 +19,7 @@
 #include "geos_geom_io.h"
 #include "geom_func.h"
 #include "spatialdb_internal.h"
+#include "sql.h"
 
 #define GEOS_START(context) \
   const geos_context_t *geos_context = (const geos_context_t *)sqlite3_user_data(context); \
@@ -252,14 +253,15 @@ GEOS_FUNC2_GEOM(SymDifference)
 GEOS_FUNC2_GEOM(Intersection)
 GEOS_FUNC2_GEOM(Union)
 
-static void geos_context_destroy(void *user_data) {
-  geos_context_t *ctx = user_data;
-  if (ctx != NULL) {
-    geom_geos_destroy(ctx->geos_handle);
-    ctx->geos_handle = NULL;
-    sqlite3_free(ctx);
-  }
-}
+#define STR(x) #x
+
+#define GEOS_FUNCTION(db, prefix, name, nbArgs, ctx, error)                                                            \
+  do {                                                                                                                 \
+    geos_context_acquire(ctx);                                                                                         \
+    sql_create_function(db, STR(name), prefix##_##name, nbArgs, ctx, (void(*)(void*))geos_context_release, error);     \
+    geos_context_acquire(ctx);                                                                                         \
+    sql_create_function(db, STR(prefix##_##name), prefix##_##name, nbArgs, ctx, (void(*)(void*))geos_context_release, error);\
+  } while (0)
 
 void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   geos_context_t *ctx = geos_context_init(spatialdb);
@@ -268,129 +270,41 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
     return;
   }
 
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Area", ST_Area, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Area", ST_Area, 1, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Length", ST_Length, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Length", ST_Length, 1, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, Area, 1, ctx, error);
+  GEOS_FUNCTION(db, ST, Length, 1, ctx, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 7
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_isClosed", ST_isClosed, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "isClosed", ST_isClosed, 1, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, isClosed, 1, ctx, error);
 #endif
 
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_isSimple", ST_isSimple, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "isSimple", ST_isSimple, 1, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, isSimple, 1, ctx, error);
+  GEOS_FUNCTION(db, ST, isRing, 1, ctx, error);
+  GEOS_FUNCTION(db, ST, isValid, 1, ctx, error);
 
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_isRing", ST_isRing, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "isRing", ST_isRing, 1, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_isValid", ST_isValid, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "isValid", ST_isValid, 1, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Disjoint", ST_Disjoint, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Disjoint", ST_Disjoint, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Touches", ST_Touches, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Touches", ST_Touches, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Crosses", ST_Crosses, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Crosses", ST_Crosses, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Within", ST_Within, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Within", ST_Within, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Contains", ST_Contains, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Contains", ST_Contains, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Overlaps", ST_Overlaps, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Overlaps", ST_Overlaps, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Equals", ST_Equals, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Equals", ST_Equals, 2, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, Disjoint, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Touches, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Crosses, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Within, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Contains, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Overlaps, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Equals, 2, ctx, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 8
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Covers", ST_Covers, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Covers", ST_Covers, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_CoveredBy", ST_CoveredBy, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "CoveredBy", ST_CoveredBy, 2, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, Covers, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, CoveredBy, 2, ctx, error);
 #endif
 
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Distance", ST_Distance, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Distance", ST_Distance, 2, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, Distance, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, HausdorffDistance, 2, ctx, error);
 
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_HausdorffDistance", ST_HausdorffDistance, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "HausdorffDistance", ST_HausdorffDistance, 2, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, Boundary, 1, ctx, error);
+  GEOS_FUNCTION(db, ST, ConvexHull, 1, ctx, error);
+  GEOS_FUNCTION(db, ST, Envelope, 1, ctx, error);
 
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Boundary", ST_Boundary, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Boundary", ST_Boundary, 1, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_ConvexHull", ST_ConvexHull, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ConvexHull", ST_ConvexHull, 1, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Envelope", ST_Envelope, 1, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Envelope", ST_Envelope, 1, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Difference", ST_Difference, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Difference", ST_Difference, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_SymDifference", ST_SymDifference, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "SymDifference", ST_SymDifference, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Intersection", ST_Intersection, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Intersection", ST_Intersection, 2, ctx, (void(*)(void*))geos_context_release, error);
-
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "ST_Union", ST_Union, 2, ctx, (void(*)(void*))geos_context_release, error);
-  geos_context_acquire(ctx);
-  REGISTER_FUNCTION(db, "Union", ST_Union, 2, ctx, (void(*)(void*))geos_context_release, error);
+  GEOS_FUNCTION(db, ST, Difference, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, SymDifference, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Intersection, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Union, 2, ctx, error);
 
   geos_context_release(ctx);
 }
