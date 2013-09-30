@@ -28,15 +28,22 @@ describe 'AddGeometryColumn' do
 
   it 'should support all geometry types' do
     expect('SELECT InitSpatialMetadata()').to have_result nil
-    expect('CREATE TABLE test (id int)').to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom1', 'point', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom2', 'polygon', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom3', 'linestring', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom4', 'multipoint', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom5', 'multipolygon', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom6', 'multilinestring', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom7', 'geometrycollection', 0, 0, 0)").to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom8', 'geometry', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test1 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test1', 'geom1', 'point', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test2 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test2', 'geom2', 'polygon', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test3 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test3', 'geom3', 'linestring', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test4 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test4', 'geom4', 'multipoint', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test5 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test5', 'geom5', 'multipolygon', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test6 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test6', 'geom6', 'multilinestring', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test7 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test7', 'geom7', 'geometrycollection', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test8 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test8', 'geom8', 'geometry', 0, 0, 0)").to have_result nil
 
     expect('test').to have_table_schema(
                           'id' => {:index => 0, :type => 'int', :not_null => false, :default => nil, :primary_key => false},
