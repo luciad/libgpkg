@@ -52,3 +52,7 @@ GEOSContextHandle_t geom_geos_init() {
   GPKG_TLS_KEY_CREATE(last_geos_error);
   return initGEOS_r(geom_null_msg_handler, geom_tls_msg_handler);
 }
+
+void geom_geos_destroy(GEOSContextHandle_t geos) {
+  finishGEOS_r(geos);
+}

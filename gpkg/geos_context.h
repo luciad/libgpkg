@@ -12,4 +12,6 @@ void geom_geos_get_error(error_t *error);
 
 GEOSContextHandle_t geom_geos_init();
 
+void geom_geos_destroy(GEOSContextHandle_t geos);
+
 #endif

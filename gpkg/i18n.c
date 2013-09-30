@@ -14,7 +14,7 @@ double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
   return _strtod_l(nptr, endptr, locale->locale);
 }
 
-i18n_locale_t *i18n_new_locale( const char *locale_name ) {
+i18n_locale_t *i18n_locale_init( const char *locale_name ) {
   _locale_t locale;
   i18n_locale_t *locale_struct;
 
@@ -33,7 +33,7 @@ i18n_locale_t *i18n_new_locale( const char *locale_name ) {
   return locale_struct;
 }
 
-void i18n_free_locale( i18n_locale_t *locale ) {
+void i18n_locale_destroy( i18n_locale_t *locale ) {
   if (locale != NULL) {
     _free_locale(locale->locale);
     locale->locale = NULL;
@@ -70,7 +70,7 @@ double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
   return strtod_l(nptr, endptr, locale->locale);
 }
 
-i18n_locale_t *i18n_new_locale( const char *locale_name ) {
+i18n_locale_t *i18n_locale_init( const char *locale_name ) {
   locale_t locale;
   i18n_locale_t *locale_struct;
 
@@ -89,7 +89,7 @@ i18n_locale_t *i18n_new_locale( const char *locale_name ) {
   return locale_struct;
 }
 
-void i18n_free_locale( i18n_locale_t *locale ) {
+void i18n_locale_destroy( i18n_locale_t *locale ) {
   if (locale != NULL) {
     freelocale(locale->locale);
     locale->locale = NULL;

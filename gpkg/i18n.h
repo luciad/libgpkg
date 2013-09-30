@@ -9,9 +9,9 @@ double i18n_strtod(
    i18n_locale_t *locale
 );
 
-i18n_locale_t *i18n_new_locale( const char *locale_name );
+i18n_locale_t *i18n_locale_init( const char *locale_name );
 
-void i18n_free_locale( i18n_locale_t *locale );
+void i18n_locale_destroy( i18n_locale_t *locale );
 
 #endif
 

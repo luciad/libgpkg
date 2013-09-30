@@ -169,24 +169,16 @@
 
 #define FUNCTION_FREE_WKB_ARG(arg) FUNCTION_FREE_GEOM_ARG(arg##_geom)
 
-#define REGISTER_FUNCTION(name, function, args, config, error)                                                         \
+#define FUNCTION_GET_TYPE(arg, ix) arg = sqlite3_value_type(args[ix])
+
+#define REGISTER_FUNCTION(name, function, args, config, destroy, error)                                                \
     do {                                                                                                               \
-        int name##result = sqlite3_create_function_v2(                                                                 \
-            db, #name, args, SQLITE_UTF8, (void *) config, function, NULL, NULL, NULL                                  \
+        int function##result = sqlite3_create_function_v2(                                                             \
+            db, name, args, SQLITE_UTF8, (void *) config, function, NULL, NULL, destroy                                \
         );                                                                                                             \
-        if (name##result != SQLITE_OK) {                                                                               \
-            error_append(error, "Error registering function %s/%d: %s", #name, args, sqlite3_errmsg(db));              \
+        if (function##result != SQLITE_OK) {                                                                           \
+            error_append(error, "Error registering function %s/%d: %s", name, args, sqlite3_errmsg(db));               \
         }                                                                                                              \
     } while(0)
-
-#define REG_FUNC(prefix, name, args, config, error)                                                                    \
-    REGISTER_FUNCTION(name, prefix##_##name, args, config, error);                                                     \
-    REGISTER_FUNCTION(prefix##_##name, prefix##_##name, args, config, error)
-
-#define REG_ALIAS(prefix, name, function, args, config, error)                                                         \
-    REGISTER_FUNCTION(name, prefix##_##function, args, config, error);                                                 \
-    REGISTER_FUNCTION(prefix##_##name, prefix##_##function, args, config, error)
-
-#define FUNCTION_GET_TYPE(arg, ix) arg = sqlite3_value_type(args[ix])
 
 #endif

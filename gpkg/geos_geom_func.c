@@ -215,46 +215,107 @@ GEOS_FUNC2_GEOM(SymDifference)
 GEOS_FUNC2_GEOM(Intersection)
 GEOS_FUNC2_GEOM(Union)
 
-void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
+static void geos_context_destroy(void *user_data) {
+  geos_context_t *ctx = user_data;
+  if (ctx != NULL) {
+    geom_geos_destroy(ctx->geos_handle);
+    ctx->geos_handle = NULL;
+    sqlite3_free(ctx);
+  }
+}
+
+static void create_geos_function(sqlite3 *db, const char* name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, const spatialdb_t *spatialdb, error_t *error) {
   geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
+  if (ctx == NULL) {
+    error_append(error, "Error allocating GEOS context");
+    return;
+  }
   GEOSContextHandle_t geos_handle = geom_geos_init();
+  if (geos_handle == NULL) {
+    sqlite3_free(ctx);
+    error_append(error, "Error initializing GEOS");
+    return;
+  }
 
   ctx->geos_handle = geos_handle;
   ctx->spatialdb = spatialdb;
+  REGISTER_FUNCTION(name, function, args, ctx, geos_context_destroy, error);
+}
 
-  REG_FUNC(ST, Area, 1, ctx, error);
-  REG_FUNC(ST, Length, 1, ctx, error);
+void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
+  create_geos_function(db, "ST_Area", ST_Area, 1, spatialdb, error);
+  create_geos_function(db, "Area", ST_Area, 1, spatialdb, error);
+
+  create_geos_function(db, "ST_Length", ST_Length, 1, spatialdb, error);
+  create_geos_function(db, "Length", ST_Length, 1, spatialdb, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 7
-  REG_FUNC(ST, isClosed, 1, ctx, error);
+  create_geos_function(db, "ST_isClosed", ST_isClosed, 1, spatialdb, error);
+  create_geos_function(db, "isClosed", ST_isClosed, 1, spatialdb, error);
 #endif
 
-  REG_FUNC(ST, isSimple, 1, ctx, error);
-  REG_FUNC(ST, isRing, 1, ctx, error);
-  REG_FUNC(ST, isValid, 1, ctx, error);
+  create_geos_function(db, "ST_isSimple", ST_isSimple, 1, spatialdb, error);
+  create_geos_function(db, "isSimple", ST_isSimple, 1, spatialdb, error);
 
-  REG_FUNC(ST, Disjoint, 2, ctx, error);
-  REG_FUNC(ST, Touches, 2, ctx, error);
-  REG_FUNC(ST, Crosses, 2, ctx, error);
-  REG_FUNC(ST, Within, 2, ctx, error);
-  REG_FUNC(ST, Contains, 2, ctx, error);
-  REG_FUNC(ST, Overlaps, 2, ctx, error);
-  REG_FUNC(ST, Equals, 2, ctx, error);
+  create_geos_function(db, "ST_isRing", ST_isRing, 1, spatialdb, error);
+  create_geos_function(db, "isRing", ST_isRing, 1, spatialdb, error);
+
+  create_geos_function(db, "ST_isValid", ST_isValid, 1, spatialdb, error);
+  create_geos_function(db, "isValid", ST_isValid, 1, spatialdb, error);
+
+  create_geos_function(db, "ST_Disjoint", ST_Disjoint, 2, spatialdb, error);
+  create_geos_function(db, "Disjoint", ST_Disjoint, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Touches", ST_Touches, 2, spatialdb, error);
+  create_geos_function(db, "Touches", ST_Touches, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Crosses", ST_Crosses, 2, spatialdb, error);
+  create_geos_function(db, "Crosses", ST_Crosses, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Within", ST_Within, 2, spatialdb, error);
+  create_geos_function(db, "Within", ST_Within, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Contains", ST_Contains, 2, spatialdb, error);
+  create_geos_function(db, "Contains", ST_Contains, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Overlaps", ST_Overlaps, 2, spatialdb, error);
+  create_geos_function(db, "Overlaps", ST_Overlaps, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Equals", ST_Equals, 2, spatialdb, error);
+  create_geos_function(db, "Equals", ST_Equals, 2, spatialdb, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 8
-  REG_FUNC(ST, Covers, 2, ctx, error);
-  REG_FUNC(ST, CoveredBy, 2, ctx, error);
+  create_geos_function(db, "ST_Covers", ST_Covers, 2, spatialdb, error);
+  create_geos_function(db, "Covers", ST_Covers, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_CoveredBy", ST_CoveredBy, 2, spatialdb, error);
+  create_geos_function(db, "CoveredBy", ST_CoveredBy, 2, spatialdb, error);
 #endif
 
-  REG_FUNC(ST, Distance, 2, ctx, error);
-  REG_FUNC(ST, HausdorffDistance, 2, ctx, error);
+  create_geos_function(db, "ST_Distance", ST_Distance, 2, spatialdb, error);
+  create_geos_function(db, "Distance", ST_Distance, 2, spatialdb, error);
 
-  REG_FUNC(ST, Boundary, 1, ctx, error);
-  REG_FUNC(ST, ConvexHull, 1, ctx, error);
-  REG_FUNC(ST, Envelope, 1, ctx, error);
+  create_geos_function(db, "ST_HausdorffDistance", ST_HausdorffDistance, 2, spatialdb, error);
+  create_geos_function(db, "HausdorffDistance", ST_HausdorffDistance, 2, spatialdb, error);
 
-  REG_FUNC(ST, Difference, 2, ctx, error);
-  REG_FUNC(ST, SymDifference, 2, ctx, error);
-  REG_FUNC(ST, Intersection, 2, ctx, error);
-  REG_FUNC(ST, Union, 2, ctx, error);
+  create_geos_function(db, "ST_Boundary", ST_Boundary, 1, spatialdb, error);
+  create_geos_function(db, "Boundary", ST_Boundary, 1, spatialdb, error);
+
+  create_geos_function(db, "ST_ConvexHull", ST_ConvexHull, 1, spatialdb, error);
+  create_geos_function(db, "ConvexHull", ST_ConvexHull, 1, spatialdb, error);
+
+  create_geos_function(db, "ST_Envelope", ST_Envelope, 1, spatialdb, error);
+  create_geos_function(db, "Envelope", ST_Envelope, 1, spatialdb, error);
+
+  create_geos_function(db, "ST_Difference", ST_Difference, 2, spatialdb, error);
+  create_geos_function(db, "Difference", ST_Difference, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_SymDifference", ST_SymDifference, 2, spatialdb, error);
+  create_geos_function(db, "SymDifference", ST_SymDifference, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Intersection", ST_Intersection, 2, spatialdb, error);
+  create_geos_function(db, "Intersection", ST_Intersection, 2, spatialdb, error);
+
+  create_geos_function(db, "ST_Union", ST_Union, 2, spatialdb, error);
+  create_geos_function(db, "Union", ST_Union, 2, spatialdb, error);
 }
