@@ -690,9 +690,9 @@ static void GPKG_RTreeAlign(sqlite3_context *context, int nbArgs, sqlite3_value 
 }
 
 static void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {
-  REGISTER_FUNCTION("GeometryConstraints", GPKG_GeometryConstraints, 3, spatialDb, NULL, error);
-  REGISTER_FUNCTION("GeometryConstraints", GPKG_GeometryConstraints, 4, spatialDb, NULL, error);
-  REGISTER_FUNCTION("RTreeAlign", GPKG_RTreeAlign, 3, spatialDb, NULL, error);
+  REGISTER_FUNCTION(db, "GeometryConstraints", GPKG_GeometryConstraints, 3, spatialDb, NULL, error);
+  REGISTER_FUNCTION(db, "GeometryConstraints", GPKG_GeometryConstraints, 4, spatialDb, NULL, error);
+  REGISTER_FUNCTION(db, "RTreeAlign", GPKG_RTreeAlign, 3, spatialDb, NULL, error);
 }
 
 static const spatialdb_t SPATIALITE3 = {

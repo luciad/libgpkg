@@ -352,6 +352,8 @@ int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_i
 
 int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql);
 
+int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, void *config, void (*destroy)(void*), error_t *error);
+
 /** @} */
 
 #endif

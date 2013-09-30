@@ -951,3 +951,15 @@ int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
 
   return result;
 }
+
+int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, void *config, void (*destroy)(void*), error_t *error) {
+  int result = sqlite3_create_function_v2(
+    db, name, args, SQLITE_UTF8, (void *) config, function, NULL, NULL, destroy
+  );
+
+  if (result != SQLITE_OK) {
+    error_append(error, "Error registering function %s/%d: %s", name, args, sqlite3_errmsg(db));
+  }
+
+  return result;
+}

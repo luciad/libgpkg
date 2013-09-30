@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include <stdio.h>
+#include "atomic_ops.h"
 #include "geos_context.h"
 #include "geos_geom_io.h"
 #include "geom_func.h"
@@ -142,9 +143,45 @@
 }
 
 typedef struct {
+  volatile uint32_t ref_count;
   GEOSContextHandle_t geos_handle;
   const spatialdb_t *spatialdb;
 } geos_context_t;
+
+static geos_context_t *geos_context_init(const spatialdb_t *spatialdb) {
+  geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
+  if (ctx == NULL) {
+    return NULL;
+  }
+  
+  GEOSContextHandle_t geos_handle = geom_geos_init();
+  if (geos_handle == NULL) {
+    sqlite3_free(ctx);
+    return NULL;
+  }
+
+  ctx->ref_count = 1;
+  ctx->geos_handle = geos_handle;
+  ctx->spatialdb = spatialdb;
+  return ctx;
+}
+
+static void geos_context_acquire(geos_context_t *ctx) {
+  if (ctx) {
+    atomic_inc_uint32(&ctx->ref_count);
+  }
+}
+
+static void geos_context_release(geos_context_t *ctx) {
+  if (ctx) {
+    uint32_t newval = atomic_dec_uint32(&ctx->ref_count);
+    if (newval == 0) {
+      geom_geos_destroy(ctx->geos_handle);
+      ctx->geos_handle = NULL;
+      sqlite3_free(ctx);
+    }
+  }
+}
 
 static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
   geom_blob_header_t header;
@@ -224,98 +261,136 @@ static void geos_context_destroy(void *user_data) {
   }
 }
 
-static void create_geos_function(sqlite3 *db, const char* name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, const spatialdb_t *spatialdb, error_t *error) {
-  geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
+void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
+  geos_context_t *ctx = geos_context_init(spatialdb);
   if (ctx == NULL) {
     error_append(error, "Error allocating GEOS context");
     return;
   }
-  GEOSContextHandle_t geos_handle = geom_geos_init();
-  if (geos_handle == NULL) {
-    sqlite3_free(ctx);
-    error_append(error, "Error initializing GEOS");
-    return;
-  }
 
-  ctx->geos_handle = geos_handle;
-  ctx->spatialdb = spatialdb;
-  REGISTER_FUNCTION(name, function, args, ctx, geos_context_destroy, error);
-}
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Area", ST_Area, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Area", ST_Area, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
-  create_geos_function(db, "ST_Area", ST_Area, 1, spatialdb, error);
-  create_geos_function(db, "Area", ST_Area, 1, spatialdb, error);
-
-  create_geos_function(db, "ST_Length", ST_Length, 1, spatialdb, error);
-  create_geos_function(db, "Length", ST_Length, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Length", ST_Length, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Length", ST_Length, 1, ctx, (void(*)(void*))geos_context_release, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 7
-  create_geos_function(db, "ST_isClosed", ST_isClosed, 1, spatialdb, error);
-  create_geos_function(db, "isClosed", ST_isClosed, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_isClosed", ST_isClosed, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "isClosed", ST_isClosed, 1, ctx, (void(*)(void*))geos_context_release, error);
 #endif
 
-  create_geos_function(db, "ST_isSimple", ST_isSimple, 1, spatialdb, error);
-  create_geos_function(db, "isSimple", ST_isSimple, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_isSimple", ST_isSimple, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "isSimple", ST_isSimple, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_isRing", ST_isRing, 1, spatialdb, error);
-  create_geos_function(db, "isRing", ST_isRing, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_isRing", ST_isRing, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "isRing", ST_isRing, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_isValid", ST_isValid, 1, spatialdb, error);
-  create_geos_function(db, "isValid", ST_isValid, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_isValid", ST_isValid, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "isValid", ST_isValid, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Disjoint", ST_Disjoint, 2, spatialdb, error);
-  create_geos_function(db, "Disjoint", ST_Disjoint, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Disjoint", ST_Disjoint, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Disjoint", ST_Disjoint, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Touches", ST_Touches, 2, spatialdb, error);
-  create_geos_function(db, "Touches", ST_Touches, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Touches", ST_Touches, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Touches", ST_Touches, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Crosses", ST_Crosses, 2, spatialdb, error);
-  create_geos_function(db, "Crosses", ST_Crosses, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Crosses", ST_Crosses, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Crosses", ST_Crosses, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Within", ST_Within, 2, spatialdb, error);
-  create_geos_function(db, "Within", ST_Within, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Within", ST_Within, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Within", ST_Within, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Contains", ST_Contains, 2, spatialdb, error);
-  create_geos_function(db, "Contains", ST_Contains, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Contains", ST_Contains, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Contains", ST_Contains, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Overlaps", ST_Overlaps, 2, spatialdb, error);
-  create_geos_function(db, "Overlaps", ST_Overlaps, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Overlaps", ST_Overlaps, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Overlaps", ST_Overlaps, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Equals", ST_Equals, 2, spatialdb, error);
-  create_geos_function(db, "Equals", ST_Equals, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Equals", ST_Equals, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Equals", ST_Equals, 2, ctx, (void(*)(void*))geos_context_release, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 8
-  create_geos_function(db, "ST_Covers", ST_Covers, 2, spatialdb, error);
-  create_geos_function(db, "Covers", ST_Covers, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Covers", ST_Covers, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Covers", ST_Covers, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_CoveredBy", ST_CoveredBy, 2, spatialdb, error);
-  create_geos_function(db, "CoveredBy", ST_CoveredBy, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_CoveredBy", ST_CoveredBy, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "CoveredBy", ST_CoveredBy, 2, ctx, (void(*)(void*))geos_context_release, error);
 #endif
 
-  create_geos_function(db, "ST_Distance", ST_Distance, 2, spatialdb, error);
-  create_geos_function(db, "Distance", ST_Distance, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Distance", ST_Distance, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Distance", ST_Distance, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_HausdorffDistance", ST_HausdorffDistance, 2, spatialdb, error);
-  create_geos_function(db, "HausdorffDistance", ST_HausdorffDistance, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_HausdorffDistance", ST_HausdorffDistance, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "HausdorffDistance", ST_HausdorffDistance, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Boundary", ST_Boundary, 1, spatialdb, error);
-  create_geos_function(db, "Boundary", ST_Boundary, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Boundary", ST_Boundary, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Boundary", ST_Boundary, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_ConvexHull", ST_ConvexHull, 1, spatialdb, error);
-  create_geos_function(db, "ConvexHull", ST_ConvexHull, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_ConvexHull", ST_ConvexHull, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ConvexHull", ST_ConvexHull, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Envelope", ST_Envelope, 1, spatialdb, error);
-  create_geos_function(db, "Envelope", ST_Envelope, 1, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Envelope", ST_Envelope, 1, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Envelope", ST_Envelope, 1, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Difference", ST_Difference, 2, spatialdb, error);
-  create_geos_function(db, "Difference", ST_Difference, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Difference", ST_Difference, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Difference", ST_Difference, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_SymDifference", ST_SymDifference, 2, spatialdb, error);
-  create_geos_function(db, "SymDifference", ST_SymDifference, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_SymDifference", ST_SymDifference, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "SymDifference", ST_SymDifference, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Intersection", ST_Intersection, 2, spatialdb, error);
-  create_geos_function(db, "Intersection", ST_Intersection, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Intersection", ST_Intersection, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Intersection", ST_Intersection, 2, ctx, (void(*)(void*))geos_context_release, error);
 
-  create_geos_function(db, "ST_Union", ST_Union, 2, spatialdb, error);
-  create_geos_function(db, "Union", ST_Union, 2, spatialdb, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "ST_Union", ST_Union, 2, ctx, (void(*)(void*))geos_context_release, error);
+  geos_context_acquire(ctx);
+  REGISTER_FUNCTION(db, "Union", ST_Union, 2, ctx, (void(*)(void*))geos_context_release, error);
+
+  geos_context_release(ctx);
 }

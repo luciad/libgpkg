@@ -15,6 +15,7 @@
  */
 #include <stdint.h>
 #include <stdio.h>
+#include "atomic_ops.h"
 #include "binstream.h"
 #include "blobio.h"
 #ifdef GPKG_HAVE_CONFIG_H
@@ -303,9 +304,46 @@ static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args
 }
 
 typedef struct {
+  volatile uint32_t ref_count;
   const spatialdb_t *spatialdb;
   i18n_locale_t *locale;
 } fromtext_t;
+
+static fromtext_t *fromtext_init(const spatialdb_t *spatialdb) {
+  fromtext_t *ctx = sqlite3_malloc(sizeof(fromtext_t));
+
+  if (ctx == NULL) {
+    return NULL;
+  }
+
+  i18n_locale_t *locale = i18n_locale_init("C");
+  if (locale == NULL) {
+    sqlite3_free(ctx);
+    return NULL;
+  }
+
+  ctx->ref_count = 1;
+  ctx->locale = locale;
+  ctx->spatialdb = spatialdb;
+  return ctx;
+}
+
+static void fromtext_acquire(fromtext_t *fromtext) {
+  if (fromtext) {
+    atomic_inc_uint32(&fromtext->ref_count);
+  }
+}
+
+static void fromtext_release(fromtext_t *fromtext) {
+  if (fromtext) {
+    uint32_t newval = atomic_dec_uint32(&fromtext->ref_count);
+    if (newval == 0) {
+      i18n_locale_destroy(fromtext->locale);
+      fromtext->locale = NULL;
+      sqlite3_free(fromtext);
+    }
+  }
+}
 
 static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   fromtext_t *fromtext;
@@ -674,34 +712,6 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
   }
 }
 
-static void fromtext_destroy(void *user_data) {
-  fromtext_t *ctx = (fromtext_t *)user_data;
-  if (ctx) {
-    i18n_locale_destroy(ctx->locale);
-    ctx->locale = NULL;
-    sqlite3_free(ctx);
-  }
-}
-
-static void register_fromtext_function(sqlite3 *db, const char* name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, const spatialdb_t *spatialdb, error_t *error) {
-  fromtext_t *ctx = sqlite3_malloc(sizeof(fromtext_t));
-  if (ctx == NULL) {
-    error_append(error, "Error allocating function context");
-    return;
-  }
-
-  i18n_locale_t *locale = i18n_locale_init("C");
-  if (locale == NULL) {
-    sqlite3_free(ctx);
-    error_append(error, "Could not initialize C locale");
-    return;
-  }
-
-  ctx->locale = locale;
-  ctx->spatialdb = spatialdb;
-  REGISTER_FUNCTION(name, function, args, ctx, fromtext_destroy, error);
-}
-
 int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, const spatialdb_t *spatialdb) {
   SQLITE_EXTENSION_INIT2(pThunk)
 
@@ -764,129 +774,146 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     spatialdb->init(db, spatialdb, &error);
   }
 
-  REGISTER_FUNCTION("MinX", ST_MinX, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MinX", ST_MinX, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MinX", ST_MinX, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MinX", ST_MinX, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MaxX", ST_MaxX, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MaxX", ST_MaxX, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MaxX", ST_MaxX, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MaxX", ST_MaxX, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MinY", ST_MinY, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MinY", ST_MinY, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MinY", ST_MinY, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MinY", ST_MinY, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MaxY", ST_MaxY, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MaxY", ST_MaxY, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MaxY", ST_MaxY, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MaxY", ST_MaxY, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MinZ", ST_MinZ, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MinZ", ST_MinZ, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MinZ", ST_MinZ, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MinZ", ST_MinZ, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MaxZ", ST_MaxZ, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MaxZ", ST_MaxZ, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MaxZ", ST_MaxZ, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MaxZ", ST_MaxZ, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MinM", ST_MinM, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MinM", ST_MinM, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MinM", ST_MinM, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MinM", ST_MinM, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("MaxM", ST_MaxM, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_MaxM", ST_MaxM, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "MaxM", ST_MaxM, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_MaxM", ST_MaxM, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("SRID", ST_SRID, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_SRID", ST_SRID, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "SRID", ST_SRID, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_SRID", ST_SRID, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("SRID", ST_SRID, 2, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_SRID", ST_SRID, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "SRID", ST_SRID, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_SRID", ST_SRID, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("Is3d", ST_Is3d, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_Is3d", ST_Is3d, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "Is3d", ST_Is3d, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_Is3d", ST_Is3d, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("IsEmpty", ST_IsEmpty, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_IsEmpty", ST_IsEmpty, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "IsEmpty", ST_IsEmpty, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_IsEmpty", ST_IsEmpty, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("IsMeasured", ST_IsMeasured, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_IsMeasured", ST_IsMeasured, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "IsMeasured", ST_IsMeasured, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_IsMeasured", ST_IsMeasured, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("IsValid", ST_IsValid, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_IsValid", ST_IsValid, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "IsValid", ST_IsValid, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_IsValid", ST_IsValid, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CoordDim", ST_CoordDim, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_CoordDim", ST_CoordDim, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CoordDim", ST_CoordDim, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_CoordDim", ST_CoordDim, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("GeometryType", ST_GeometryType, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_GeometryType", ST_GeometryType, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GeometryType", ST_GeometryType, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_GeometryType", ST_GeometryType, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("AsBinary", ST_AsBinary, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_AsBinary", ST_AsBinary, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "AsBinary", ST_AsBinary, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_AsBinary", ST_AsBinary, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("GeomFromWKB", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GeomFromWKB", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GeomFromWKB", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GeomFromWKB", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("ST_GeomFromWKB", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_GeomFromWKB", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_GeomFromWKB", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_GeomFromWKB", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("WKBToSQL", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("WKBToSQL", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "WKBToSQL", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "WKBToSQL", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("ST_WKBToSQL", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_WKBToSQL", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_WKBToSQL", ST_GeomFromWKB, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_WKBToSQL", ST_GeomFromWKB, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("AsText", ST_AsText, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("ST_AsText", ST_AsText, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "AsText", ST_AsText, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "ST_AsText", ST_AsText, 1, spatialdb, NULL, &error);
 
-  register_fromtext_function(db, "WKTToSQL", ST_GeomFromText, 1, spatialdb, &error);
-  register_fromtext_function(db, "WKTToSQL", ST_GeomFromText, 2, spatialdb, &error);
-  register_fromtext_function(db, "ST_WKTToSQL", ST_GeomFromText, 1, spatialdb, &error);
-  register_fromtext_function(db, "ST_WKTToSQL", ST_GeomFromText, 2, spatialdb, &error);
+  fromtext_t *fromtext = fromtext_init(spatialdb);
+  if (fromtext != NULL) {
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "WKTToSQL", ST_GeomFromText, 1, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "WKTToSQL", ST_GeomFromText, 2, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "ST_WKTToSQL", ST_GeomFromText, 1, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "ST_WKTToSQL", ST_GeomFromText, 2, fromtext, (void(*)(void*))fromtext_release, &error);
 
-  register_fromtext_function(db, "GeomFromText", ST_GeomFromText, 1, spatialdb, &error);
-  register_fromtext_function(db, "GeomFromText", ST_GeomFromText, 2, spatialdb, &error);
-  register_fromtext_function(db, "ST_GeomFromText", ST_GeomFromText, 1, spatialdb, &error);
-  register_fromtext_function(db, "ST_GeomFromText", ST_GeomFromText, 2, spatialdb, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "GeomFromText", ST_GeomFromText, 1, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "GeomFromText", ST_GeomFromText, 2, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "ST_GeomFromText", ST_GeomFromText, 1, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "ST_GeomFromText", ST_GeomFromText, 2, fromtext, (void(*)(void*))fromtext_release, &error);
 
-  register_fromtext_function(db, "WKBFromText", ST_WKBFromText, 1, spatialdb, &error);
-  register_fromtext_function(db, "ST_WKBFromText", ST_WKBFromText, 1, spatialdb, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "WKBFromText", ST_WKBFromText, 1, fromtext, (void(*)(void*))fromtext_release, &error);
+    fromtext_acquire(fromtext);
+    REGISTER_FUNCTION(db, "ST_WKBFromText", ST_WKBFromText, 1, fromtext, (void(*)(void*))fromtext_release, &error);
 
-  REGISTER_FUNCTION("IsAssignable", GPKG_IsAssignable, 2, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_IsAssignable", GPKG_IsAssignable, 2, spatialdb, NULL, &error);
+    fromtext_release(fromtext);
+  } else {
+    error_append(&error, "Could not create fromtext function context");
+  }
 
-  REGISTER_FUNCTION("CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 0, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 0, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "IsAssignable", GPKG_IsAssignable, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_IsAssignable", GPKG_IsAssignable, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 0, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 0, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 2, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("InitSpatialMetaData", GPKG_InitSpatialMetaData, 0, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_InitSpatialMetaData", GPKG_InitSpatialMetaData, 0, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CheckSpatialMetaData", GPKG_CheckSpatialMetaData, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("InitSpatialMetaData", GPKG_InitSpatialMetaData, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_InitSpatialMetaData", GPKG_InitSpatialMetaData, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "InitSpatialMetaData", GPKG_InitSpatialMetaData, 0, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_InitSpatialMetaData", GPKG_InitSpatialMetaData, 0, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("AddGeometryColumn", GPKG_AddGeometryColumn, 4, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 4, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "InitSpatialMetaData", GPKG_InitSpatialMetaData, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_InitSpatialMetaData", GPKG_InitSpatialMetaData, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("AddGeometryColumn", GPKG_AddGeometryColumn, 5, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 5, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "AddGeometryColumn", GPKG_AddGeometryColumn, 4, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 4, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("AddGeometryColumn", GPKG_AddGeometryColumn, 6, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 6, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "AddGeometryColumn", GPKG_AddGeometryColumn, 5, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 5, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("AddGeometryColumn", GPKG_AddGeometryColumn, 7, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 7, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "AddGeometryColumn", GPKG_AddGeometryColumn, 6, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 6, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CreateTilesTable", GPKG_CreateTilesTable, 1, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CreateTilesTable", GPKG_CreateTilesTable, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "AddGeometryColumn", GPKG_AddGeometryColumn, 7, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_AddGeometryColumn", GPKG_AddGeometryColumn, 7, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CreateTilesTable", GPKG_CreateTilesTable, 2, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CreateTilesTable", GPKG_CreateTilesTable, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CreateTilesTable", GPKG_CreateTilesTable, 1, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CreateTilesTable", GPKG_CreateTilesTable, 1, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CreateSpatialIndex", GPKG_CreateSpatialIndex, 3, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CreateSpatialIndex", GPKG_CreateSpatialIndex, 3, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CreateTilesTable", GPKG_CreateTilesTable, 2, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CreateTilesTable", GPKG_CreateTilesTable, 2, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("CreateSpatialIndex", GPKG_CreateSpatialIndex, 4, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_CreateSpatialIndex", GPKG_CreateSpatialIndex, 4, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CreateSpatialIndex", GPKG_CreateSpatialIndex, 3, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CreateSpatialIndex", GPKG_CreateSpatialIndex, 3, spatialdb, NULL, &error);
 
-  REGISTER_FUNCTION("SpatialDBType", GPKG_SpatialDBType, 0, spatialdb, NULL, &error);
-  REGISTER_FUNCTION("GPKG_SpatialDBType", GPKG_SpatialDBType, 0, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "CreateSpatialIndex", GPKG_CreateSpatialIndex, 4, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_CreateSpatialIndex", GPKG_CreateSpatialIndex, 4, spatialdb, NULL, &error);
+
+  REGISTER_FUNCTION(db, "SpatialDBType", GPKG_SpatialDBType, 0, spatialdb, NULL, &error);
+  REGISTER_FUNCTION(db, "GPKG_SpatialDBType", GPKG_SpatialDBType, 0, spatialdb, NULL, &error);
 
 
 #ifdef GPKG_HAVE_GEOM_FUNC
@@ -903,5 +930,9 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     result = SQLITE_ERROR;
   }
   error_destroy(&error);
+
+  uint32_t v = 0;
+  atomic_inc_uint32(&v);
+
   return result;
 }
