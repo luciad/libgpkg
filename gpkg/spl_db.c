@@ -125,12 +125,12 @@ static int spl3_init(sqlite3 *db, const char *db_name, error_t *error) {
   }
 }
 
-static int spl3_check(sqlite3 *db, const char *db_name, int check, error_t *error) {
+static int spl3_check(sqlite3 *db, const char *db_name, int check_flags, error_t *error) {
   int result = SQLITE_OK;
 
   const table_info_t *const *table = spl3_tables;
   while (*table != NULL) {
-    result = sql_check_table(db, db_name, *table, 1, error);
+    result = sql_check_table(db, db_name, *table, check_flags | SQL_MUST_EXIST, error);
     if (result != SQLITE_OK) {
       break;
     }
@@ -159,12 +159,12 @@ static int spl4_init(sqlite3 *db, const char *db_name, error_t *error) {
   }
 }
 
-static int spl4_check(sqlite3 *db, const char *db_name, int check, error_t *error) {
+static int spl4_check(sqlite3 *db, const char *db_name, int check_flags, error_t *error) {
   int result = SQLITE_OK;
 
   const table_info_t *const *table = spl4_tables;
   while (*table != NULL) {
-    result = sql_check_table(db, db_name, *table, 1, error);
+    result = sql_check_table(db, db_name, *table, check_flags | SQL_MUST_EXIST, error);
     if (result != SQLITE_OK) {
       break;
     }

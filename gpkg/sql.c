@@ -297,6 +297,7 @@ typedef struct {
   int *cols_found;
   int nColumns;
   const table_info_t *table_info;
+  int flags;
 } check_cols_data;
 
 static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
@@ -334,41 +335,59 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
       error_append(error, "Column %s.%s should have 'not null' constraint", table_info->name, name);
     }
 
-    value_t default_value = table_info->columns[index].default_value;
-    if (default_value.type == VALUE_TEXT) {
-      char *expected = sqlite3_mprintf( "'%s'", VALUE_AS_TEXT(default_value) );
-      const char *actual = (const char *)sqlite3_column_text(stmt, 4);
-      if (sqlite3_strnicmp(expected, actual, strlen(expected) + 1) != 0) {
-        error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was '%s'", table_info->name, name, expected, actual);
+    if ( ( check->flags & SQL_CHECK_DEFAULT_VALUES ) != 0 ) {
+      value_t default_value = table_info->columns[index].default_value;
+      if (default_value.type == VALUE_TEXT) {
+        char *expected = sqlite3_mprintf( "'%s'", VALUE_AS_TEXT(default_value) );
+        if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
+          error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was NULL", table_info->name, name, expected);
+        } else {
+          const char *actual = (const char *)sqlite3_column_text(stmt, 4);
+          if (sqlite3_strnicmp(expected, actual, strlen(expected) + 1) != 0) {
+            error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was '%s'", table_info->name, name, expected, actual);
+          }
+        }
+        sqlite3_free(expected);
       }
-      sqlite3_free(expected);
-    }
-    else if (default_value.type == VALUE_FUNC) {
-      char *expected = sqlite3_mprintf( VALUE_AS_TEXT(default_value) );
-      const char *actual = (const char *)sqlite3_column_text(stmt, 4);
-      if (sqlite3_strnicmp(expected, actual, strlen(expected) + 1) != 0) {
-        error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was '%s'", table_info->name, name, expected, actual);
+      else if (default_value.type == VALUE_FUNC) {
+        char *expected = sqlite3_mprintf( VALUE_AS_TEXT(default_value) );
+        if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
+          error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was NULL", table_info->name, name, expected);
+        } else {
+          const char *actual = (const char *)sqlite3_column_text(stmt, 4);
+          if (sqlite3_strnicmp(expected, actual, strlen(expected) + 1) != 0) {
+            error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was '%s'", table_info->name, name, expected, actual);
+          }
+        }
+        sqlite3_free(expected);
       }
-      sqlite3_free(expected);
-    }
-    else if (default_value.type == VALUE_INTEGER) {
-      int expected = VALUE_AS_INT(default_value);
-      int actual = sqlite3_column_int(stmt, 4);
-      if (actual != expected) {
-        error_append(error, "Column %s.%s has incorrect default value: expected %d but was %d", table_info->name, name, expected, actual);
+      else if (default_value.type == VALUE_INTEGER) {
+        int expected = VALUE_AS_INT(default_value);
+        if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
+          error_append(error, "Column %s.%s has incorrect default value: expected %d but was NULL", table_info->name, name, expected);
+        } else {
+          int actual = sqlite3_column_int(stmt, 4);
+          if (actual != expected) {
+            error_append(error, "Column %s.%s has incorrect default value: expected %d but was %d", table_info->name, name, expected, actual);
+          }
+        }
       }
-    }
-    else if (default_value.type == VALUE_DOUBLE) {
-      double expected = VALUE_AS_DOUBLE(default_value);
-      double actual = sqlite3_column_double(stmt, 4);
-      if (actual != expected) {
-        error_append(error, "Column %s.%s has incorrect default value: expected %f but was %f", table_info->name, name, expected, actual);
+      else if (default_value.type == VALUE_DOUBLE) {
+        double expected = VALUE_AS_DOUBLE(default_value);
+        if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
+          error_append(error, "Column %s.%s has incorrect default value: expected %f but was NULL", table_info->name, name, expected);
+        } else {
+          double actual = sqlite3_column_double(stmt, 4);
+          if (actual != expected) {
+            error_append(error, "Column %s.%s has incorrect default value: expected %f but was %f", table_info->name, name, expected, actual);
+          }
+        }
       }
-    }
-    else if (default_value.type == VALUE_NULL) {
-      if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
-        const char *actual = (const char *)sqlite3_column_text(stmt, 4);
-        error_append(error, "Column %s.%s has incorrect default value: expected NULL but was %s", table_info->name, name, actual);
+      else if (default_value.type == VALUE_NULL) {
+        if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
+          const char *actual = (const char *)sqlite3_column_text(stmt, 4);
+          error_append(error, "Column %s.%s has incorrect default value: expected NULL but was %s", table_info->name, name, actual);
+        }
       }
     }
 
@@ -386,14 +405,14 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   return SQLITE_OK;
 }
 
-static int sql_check_table_schema(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
+static int sql_check_table_schema(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, error_t *error) {
   int nColumns = sql_count_columns(table_info);
   int *found = (int *)sqlite3_malloc(nColumns * sizeof(int));
   if (found == NULL) {
     return SQLITE_NOMEM;
   }
   memset(found, 0, nColumns * sizeof(int));
-  check_cols_data data = { error, found, nColumns, table_info };
+  check_cols_data data = { error, found, nColumns, table_info, check_flags };
 
   int result = sql_exec_stmt(db, sql_check_cols_row, NULL, &data, "PRAGMA \"%w\".table_info(\"%w\")", db_name, table_info->name);
 
@@ -761,7 +780,9 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
   return result;
 }
 
-static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int create, int must_exist, error_t *error) {
+#define SQL_CREATE 1
+
+static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int flags, error_t *error) {
   if (error == NULL) {
     return SQLITE_MISUSE;
   }
@@ -770,17 +791,17 @@ static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_in
   int result = sql_check_table_exists(db, db_name, table_info->name, &exists);
   if (result == SQLITE_OK) {
     if (exists) {
-      result = sql_check_table_schema(db, db_name, table_info, error);
+      result = sql_check_table_schema(db, db_name, table_info, flags, error);
 
-      if (result == SQLITE_OK && create != 0) {
+      if (result == SQLITE_OK && (flags & SQL_CREATE) != 0) {
         result = sql_insert_data(db, db_name, table_info, error);
       }
 
-      if (result == SQLITE_OK) {
+      if (result == SQLITE_OK && (flags & SQL_CHECK_DEFAULT_DATA) != 0) {
         result = sql_check_data(db, db_name, table_info, error);
       }
-    } else if (must_exist) {
-      if (!create) {
+    } else if ((flags & SQL_MUST_EXIST) != 0) {
+      if ((flags & SQL_CREATE) == 0) {
         error_append(error, "Table %s.%s does not exist", db_name, table_info->name);
       } else {
         result = sql_create_table(db, db_name, table_info, error);
@@ -795,12 +816,12 @@ static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_in
   return result;
 }
 
-int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int must_exist, error_t *error) {
-  return sql_init_check_table(db, db_name, table_info, 0, must_exist, error);
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, error_t *error) {
+  return sql_init_check_table(db, db_name, table_info, check_flags & ~SQL_CREATE, error);
 }
 
 int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
-  return sql_init_check_table(db, db_name, table_info, 1, 1, error);
+  return sql_init_check_table(db, db_name, table_info, SQL_CREATE | SQL_MUST_EXIST, error);
 }
 
 int sql_begin(sqlite3 *db, char *name) {

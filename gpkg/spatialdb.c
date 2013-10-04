@@ -465,11 +465,10 @@ static void GPKG_CheckSpatialMetaData(sqlite3_context *context, int nbArgs, sqli
   FUNCTION_INT_ARG(type);
   FUNCTION_START(context);
 
-  check = 0;
-
   spatialdb = (spatialdb_t *)sqlite3_user_data(context);
   if (nbArgs == 0) {
     FUNCTION_SET_TEXT_ARG(db_name, "main");
+    FUNCTION_SET_INT_ARG(check, 0);
   } else if (nbArgs == 1) {
     FUNCTION_GET_TYPE(type, 0);
     if (type == SQLITE_TEXT) {
@@ -481,6 +480,10 @@ static void GPKG_CheckSpatialMetaData(sqlite3_context *context, int nbArgs, sqli
   }  else {
     FUNCTION_GET_TEXT_ARG(context, db_name, 0);
     FUNCTION_GET_INT_ARG(check, 1);
+  }
+
+  if (check != 0) {
+    check = SQL_CHECK_ALL;
   }
 
   FUNCTION_RESULT = spatialdb->check_meta(FUNCTION_DB_HANDLE, db_name, check, &FUNCTION_ERROR);
@@ -683,9 +686,9 @@ static void GPKG_CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite
 }
 
 const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
-  char error_message[256];
+  char message_buffer[256];
   error_t error;
-  error_init_fixed(&error, error_message, 256);
+  error_init_fixed(&error, message_buffer, 256);
 
   const spatialdb_t *schemas[] = {
     spatialdb_geopackage_schema(),
@@ -697,7 +700,7 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
   const spatialdb_t **schema = &schemas[0];
   while (*schema != NULL) {
     error_reset(&error);
-    (*schema)->check_meta(db, "main", 0, &error);
+    (*schema)->check_meta(db, "main", SQL_CHECK_PRIMARY_KEY | SQL_CHECK_NULLABLE, &error);
     if (error_count(&error) == 0) {
       break;
     } else {

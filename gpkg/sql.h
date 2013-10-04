@@ -322,6 +322,15 @@ int sql_check_table_exists(sqlite3 *db, const char *db_name, const char *table_n
  */
 int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, int *exists);
 
+#define SQL_MUST_EXIST (1 << 1)
+#define SQL_CHECK_DEFAULT_VALUES (1 << 2)
+#define SQL_CHECK_DEFAULT_DATA (1 << 3)
+#define SQL_CHECK_PRIMARY_KEY (1 << 4)
+#define SQL_CHECK_NULLABLE (1 << 5)
+#define SQL_CHECK_ALL_DATA (1 << 6)
+
+#define SQL_CHECK_ALL (SQL_CHECK_DEFAULT_VALUES | SQL_CHECK_DEFAULT_DATA | SQL_CHECK_PRIMARY_KEY | SQL_CHECK_NULLABLE | SQL_CHECK_ALL_DATA)
+
 /**
  * Checks if a table matches the given table specification.
  * @param db the SQLite database context
@@ -332,7 +341,7 @@ int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_
  * @return SQLITE_OK if the table was checked successfully\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int must_exist, error_t *error);
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, error_t *error);
 
 int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error);
 

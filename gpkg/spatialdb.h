@@ -41,7 +41,7 @@ typedef struct spatialdb {
   /**
    * Verifies the metadata tables for this spatial database type reporting any errors to the given error object.
    */
-  int(*check_meta)(sqlite3 *db, const char *db_name, int detailed_check,  error_t *error);
+  int(*check_meta)(sqlite3 *db, const char *db_name, int check_flags,  error_t *error);
   /**
    * Writes the spatial database specific blob header to the given stream. When this function exits the stream
    * will be positioned directly after the header.

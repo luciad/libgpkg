@@ -366,47 +366,47 @@ static check_func checks[] = {
   NULL
 };
 
-static int check(sqlite3 *db, const char *db_name, int detailed_check, error_t *error) {
+static int check(sqlite3 *db, const char *db_name, int flags, error_t *error) {
   int result = SQLITE_OK;
 
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_contents, 1, error);
+    result = sql_check_table(db, db_name, &gpkg_contents, SQL_MUST_EXIST | flags, error);
   }
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_spatial_ref_sys, 1, error);
+    result = sql_check_table(db, db_name, &gpkg_spatial_ref_sys, SQL_MUST_EXIST | flags, error);
   }
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_extensions, 0, error);
+    result = sql_check_table(db, db_name, &gpkg_extensions, flags, error);
   }
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_data_columns, 0, error);
+    result = sql_check_table(db, db_name, &gpkg_data_columns, flags, error);
   }
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_data_column_constraints, 0, error);
+    result = sql_check_table(db, db_name, &gpkg_data_column_constraints, flags, error);
   }
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_metadata, 0, error);
+    result = sql_check_table(db, db_name, &gpkg_metadata, flags, error);
   }
   if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_metadata_reference, 0, error);
+    result = sql_check_table(db, db_name, &gpkg_metadata_reference, flags, error);
   }
   if (result == SQLITE_OK) {
     int features = 0;
     result = sql_exec_for_int(db, &features, "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'features'", db_name);
     if (result == SQLITE_OK) {
-      result = sql_check_table(db, db_name, &gpkg_geometry_columns, features > 0, error);
+      result = sql_check_table(db, db_name, &gpkg_geometry_columns, flags | (features > 0 ? SQL_MUST_EXIST : 0), error);
     }
   }
   if (result == SQLITE_OK) {
     int tiles = 0;
     result = sql_exec_for_int(db, &tiles, "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'tiles'", db_name);
     if (result == SQLITE_OK) {
-      result = sql_check_table(db, db_name, &gpkg_tile_matrix_set, tiles > 0, error);
-      result = sql_check_table(db, db_name, &gpkg_tile_matrix, tiles > 0, error);
+      result = sql_check_table(db, db_name, &gpkg_tile_matrix_set, flags | (tiles > 0 ? SQL_MUST_EXIST : 0), error);
+      result = sql_check_table(db, db_name, &gpkg_tile_matrix, flags | (tiles > 0 ? SQL_MUST_EXIST : 0), error);
     }
   }
 
-  if (detailed_check) {
+  if ((flags & SQL_CHECK_ALL_DATA) != 0) {
     if (result == SQLITE_OK) {
       result = sql_check_integrity(db, db_name, error);
     }
