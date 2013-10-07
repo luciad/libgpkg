@@ -169,6 +169,9 @@ static int geos_end_geometry(const struct geom_consumer_t *consumer, const geom_
         geom = GEOSGeom_createCollection_r(writer->context, GEOS_GEOMETRYCOLLECTION, childGeom, childCount);
       }
       break;
+    default:
+      geom = NULL;
+      error_append(error, "Invalid geometry type %d", header->geom_type);
   }
 
   if (geom == NULL) {
