@@ -227,6 +227,7 @@ GEOS_FUNC1(isClosed)
 GEOS_FUNC1(isValid)
 
 GEOS_FUNC2(Disjoint)
+GEOS_FUNC2(Intersects)
 GEOS_FUNC2(Touches)
 GEOS_FUNC2(Crosses)
 GEOS_FUNC2(Within)
@@ -282,6 +283,7 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   GEOS_FUNCTION(db, ST, isValid, 1, ctx, error);
 
   GEOS_FUNCTION(db, ST, Disjoint, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Intersects, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Touches, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Crosses, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Within, 2, ctx, error);
