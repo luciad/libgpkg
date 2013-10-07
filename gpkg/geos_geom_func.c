@@ -21,6 +21,80 @@
 #include "spatialdb_internal.h"
 #include "sql.h"
 
+typedef struct {
+  volatile uint32_t ref_count;
+  GEOSContextHandle_t geos_handle;
+  const spatialdb_t *spatialdb;
+} geos_context_t;
+
+static geos_context_t *geos_context_init(const spatialdb_t *spatialdb) {
+  geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
+  if (ctx == NULL) {
+    return NULL;
+  }
+
+  GEOSContextHandle_t geos_handle = geom_geos_init();
+  if (geos_handle == NULL) {
+    sqlite3_free(ctx);
+    return NULL;
+  }
+
+  ctx->ref_count = 1;
+  ctx->geos_handle = geos_handle;
+  ctx->spatialdb = spatialdb;
+  return ctx;
+}
+
+static void geos_context_acquire(geos_context_t *ctx) {
+  if (ctx) {
+    atomic_inc_uint32(&ctx->ref_count);
+  }
+}
+
+static void geos_context_release(geos_context_t *ctx) {
+  if (ctx) {
+    uint32_t newval = atomic_dec_uint32(&ctx->ref_count);
+    if (newval == 0) {
+      geom_geos_destroy(ctx->geos_handle);
+      ctx->geos_handle = NULL;
+      sqlite3_free(ctx);
+    }
+  }
+}
+
+static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
+  geom_blob_header_t header;
+
+  uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
+  size_t blob_length = (size_t) sqlite3_value_bytes(value);
+
+  binstream_t stream;
+  binstream_init(&stream, blob, blob_length);
+
+  geos_writer_t writer;
+  geos_writer_init(&writer, geos_context->geos_handle);
+
+  geos_context->spatialdb->read_blob_header(&stream, &header, error);
+  geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
+
+  GEOSGeometry *g = geos_writer_getgeometry(&writer);
+  geos_writer_destroy(&writer, g == NULL);
+  return g;
+}
+
+static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, error_t *error) {
+  geom_blob_writer_t writer;
+  geos_context->spatialdb->writer_init_srid( &writer, GEOSGetSRID_r(geos_context->geos_handle, geom) );
+
+  geos_read_geometry(geos_context->geos_handle, geom, geom_blob_writer_geom_consumer(&writer), error);
+
+  sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), geom_blob_writer_length(&writer), sqlite3_free);
+
+  geos_context->spatialdb->writer_destroy( &writer, 0 );
+
+  return SQLITE_OK;
+}
+
 #define GEOS_START(context) \
   const geos_context_t *geos_context = (const geos_context_t *)sqlite3_user_data(context); \
   char error_buffer[256];\
@@ -143,78 +217,24 @@
   GEOS_FREE_GEOM( g2 );\
 }
 
-typedef struct {
-  volatile uint32_t ref_count;
-  GEOSContextHandle_t geos_handle;
-  const spatialdb_t *spatialdb;
-} geos_context_t;
-
-static geos_context_t *geos_context_init(const spatialdb_t *spatialdb) {
-  geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
-  if (ctx == NULL) {
-    return NULL;
+static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  GEOS_START(context);
+  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );
+  GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );
+  const unsigned char *pattern = sqlite3_value_text( args[2] );
+  if (g1 == NULL || g2 == NULL) {
+    sqlite3_result_error(context, error_message(&error), -1);
+    return;
   }
-  
-  GEOSContextHandle_t geos_handle = geom_geos_init();
-  if (geos_handle == NULL) {
-    sqlite3_free(ctx);
-    return NULL;
+  char result = GEOSRelatePattern_r(GEOS_HANDLE, g1, g2, (const char *)pattern);
+  if (result == 2) {
+    geom_geos_get_error(&error);
+    sqlite3_result_error(context, error_message(&error), -1);
+  } else {
+    sqlite3_result_int(context, result);
   }
-
-  ctx->ref_count = 1;
-  ctx->geos_handle = geos_handle;
-  ctx->spatialdb = spatialdb;
-  return ctx;
-}
-
-static void geos_context_acquire(geos_context_t *ctx) {
-  if (ctx) {
-    atomic_inc_uint32(&ctx->ref_count);
-  }
-}
-
-static void geos_context_release(geos_context_t *ctx) {
-  if (ctx) {
-    uint32_t newval = atomic_dec_uint32(&ctx->ref_count);
-    if (newval == 0) {
-      geom_geos_destroy(ctx->geos_handle);
-      ctx->geos_handle = NULL;
-      sqlite3_free(ctx);
-    }
-  }
-}
-
-static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
-  geom_blob_header_t header;
-
-  uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
-  size_t blob_length = (size_t) sqlite3_value_bytes(value);
-
-  binstream_t stream;
-  binstream_init(&stream, blob, blob_length);
-
-  geos_writer_t writer;
-  geos_writer_init(&writer, geos_context->geos_handle);
-
-  geos_context->spatialdb->read_blob_header(&stream, &header, error);
-  geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
-
-  GEOSGeometry *g = geos_writer_getgeometry(&writer);
-  geos_writer_destroy(&writer, g == NULL);
-  return g;
-}
-
-static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, error_t *error) {
-  geom_blob_writer_t writer;
-  geos_context->spatialdb->writer_init_srid( &writer, GEOSGetSRID_r(geos_context->geos_handle, geom) );
-
-  geos_read_geometry(geos_context->geos_handle, geom, geom_blob_writer_geom_consumer(&writer), error);
-
-  sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), geom_blob_writer_length(&writer), sqlite3_free);
-
-  geos_context->spatialdb->writer_destroy( &writer, 0 );
-
-  return SQLITE_OK;
+  GEOS_FREE_GEOM( g1 );
+  GEOS_FREE_GEOM( g2 );
 }
 
 GEOS_FUNC1(isSimple)
@@ -290,6 +310,7 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   GEOS_FUNCTION(db, ST, Contains, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Overlaps, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Equals, 2, ctx, error);
+  GEOS_FUNCTION(db, ST, Relate, 3, ctx, error);
 
 #if GEOS_CAPI_VERSION_MINOR >= 8
   GEOS_FUNCTION(db, ST, Covers, 2, ctx, error);
