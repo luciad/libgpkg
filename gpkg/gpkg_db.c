@@ -47,7 +47,7 @@ static table_info_t gpkg_spatial_ref_sys = {
 static column_info_t gpkg_contents_columns[] = {
   {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
   {"data_type", "text", N, SQL_NOT_NULL, NULL},
-  {"identifier", "text", N, 0, NULL},
+  {"identifier", "text", N, SQL_UNIQUE(1), NULL},
   {"description", "text", T(""), 0, NULL},
   {"last_change", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
   {"min_x", "double", N, 0, NULL},
@@ -67,6 +67,7 @@ static column_info_t gpkg_extensions_columns[] = {
   {"table_name", "text", N, SQL_UNIQUE(1), NULL},
   {"column_name", "text", N, SQL_UNIQUE(1), NULL},
   {"extension_name", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"definition", "text", N, SQL_NOT_NULL, NULL},
   {"scope", "text", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
@@ -140,7 +141,6 @@ static column_info_t gpkg_data_columns_columns[] = {
   {"description", "text", N, 0, NULL},
   {"mime_type", "text", N, 0, NULL},
   {"constraint_name", "text", N, 0, NULL},
-  {"constraint_type", "text", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_data_columns = {
@@ -150,9 +150,9 @@ static table_info_t gpkg_data_columns = {
 };
 
 static column_info_t gpkg_data_column_constraints_columns[] = {
-  {"constraint_name", "text", N, SQL_NOT_NULL, NULL},
-  {"constraint_type", "text", N, SQL_NOT_NULL, NULL},
-  {"value", "text", N, 0, NULL},
+  {"constraint_name", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"constraint_type", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"value", "text", N, SQL_UNIQUE(1), NULL},
   {"min", "numeric", N, 0, NULL},
   {"minIsInclusive", "integer", N, 0, NULL},
   {"max", "numeric", N, 0, NULL},
@@ -729,8 +729,8 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
   result = sql_exec(
              db,
-             "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name, scope) VALUES (\"%w\", \"%w\", \"%w\", \"%w\")",
-             db_name, table_name, geometry_column_name, "gpkg_rtree_index", "write-only"
+             "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name, definition, scope) VALUES (\"%w\", \"%w\", \"%w\", \"%w\")",
+             db_name, table_name, geometry_column_name, "gpkg_rtree_index", "GeoPackage 1.0 Specification Annex M", "write-only"
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not register rtree usage in gpkg_extensions: %s", sqlite3_errmsg(db));
