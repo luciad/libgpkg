@@ -22,6 +22,9 @@ check_function_exists(gmtime_r HAVE_GMTIME_R)
 check_function_exists(localtime_r HAVE_LOCALTIME_R)
 check_function_exists(posix_fallocate HAVE_POSIX_FALLOCATE)
 check_function_exists(usleep HAVE_USLEEP)
+check_function_exists(fdatasync HAVE_FDATASYNC)
+check_function_exists(fullfsync HAVE_FULLFSYNC)
+check_function_exists(strerror_r HAVE_STRERROR_R)
 
 set ( SQLITE_ENABLE_RTREE 1 )
 
