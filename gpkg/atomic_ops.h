@@ -2,6 +2,7 @@
 #define GPKG_ATOMIC_H
 
 #include <stdint.h>
+#include <Windows.h>
 
 #ifndef __has_builtin
   #define __has_builtin(x) 0
