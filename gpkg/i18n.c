@@ -18,7 +18,7 @@ i18n_locale_t *i18n_locale_init( const char *locale_name ) {
   _locale_t locale;
   i18n_locale_t *locale_struct;
 
-  locale_struct = (i18n_locale_t *)sqlite3_malloc(sizeof( i18n_locale ));
+  locale_struct = (i18n_locale_t *)sqlite3_malloc(sizeof( i18n_locale_t ));
   if (locale_struct == NULL) {
     return NULL;
   }
