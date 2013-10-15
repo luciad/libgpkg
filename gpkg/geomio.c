@@ -269,8 +269,6 @@ int geom_is_assignable(geom_type_t expected_type, geom_type_t actual_type) {
       }
     }
   }
-
-  return 0;
 }
 
 void geom_envelope_init(geom_envelope_t *envelope) {

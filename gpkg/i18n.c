@@ -103,6 +103,7 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
 #include <stdlib.h>
 
 struct i18n_locale {
+  int dummy;
 };
 
 double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
@@ -110,13 +111,10 @@ double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
 }
 
 i18n_locale_t *i18n_locale_init( const char *locale_name ) {
-  return (i18n_locale_t *)sqlite3_malloc(sizeof( i18n_locale_t ));
+  return 0;
 }
 
 void i18n_locale_destroy( i18n_locale_t *locale ) {
-  if (locale != NULL) {
-    sqlite3_free(locale);
-  }
 }
 
 #endif
