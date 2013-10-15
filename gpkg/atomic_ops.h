@@ -41,6 +41,18 @@ static inline long atomic_dec_long(volatile long *value) {
   return __sync_sub_and_fetch(value, 1);
 }
 
+#elif defined(__sun)
+
+#include <atomic.h>
+
+static inline long atomic_inc_long(volatile long *value) {
+  return (long)atomic_inc_ulong_nv((volatile ulong_t *value)value);
+}
+
+static inline long atomic_dec_long(volatile long *value) {
+  return (long)atomic_dec_ulong_nv((volatile ulong_t *value)value);
+}
+
 #else
 
 #error "Atomic operations not supported"
