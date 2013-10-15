@@ -7,7 +7,7 @@
   #define __has_builtin(x) 0
 #endif
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__)
 
 static inline uint32_t atomic_inc_uint32(volatile uint32_t *value) {
   return InterlockedIncrement(value);

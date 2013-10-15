@@ -1,6 +1,6 @@
 #include "i18n.h"
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__)
 
 #include <stdlib.h>
 #include <locale.h>
@@ -42,7 +42,7 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   }
 }
 
-#else
+#elif defined(HAVE_LOCALE_H) || defined(HAVE_XLOCALE_H)
 
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
@@ -94,6 +94,29 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
     freelocale(locale->locale);
     locale->locale = NULL;
 
+    sqlite3_free(locale);
+  }
+}
+
+#else
+
+#error "Locale support not available"
+
+#include <stdlib.h>
+
+struct i18n_locale {
+};
+
+double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
+  return strtod(nptr, endptr);
+}
+
+i18n_locale_t *i18n_locale_init( const char *locale_name ) {
+  return (i18n_locale_t *)sqlite3_malloc(sizeof( i18n_locale_t ));
+}
+
+void i18n_locale_destroy( i18n_locale_t *locale ) {
+  if (locale != NULL) {
     sqlite3_free(locale);
   }
 }
