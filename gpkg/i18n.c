@@ -6,7 +6,7 @@
 
 #include "sqlite.h"
 
-#if LOCALE_USE__CREATE_LOCALE
+#if defined(LOCALE_USE__CREATE_LOCALE)
 
 #include <locale.h>
 #include <stdlib.h>
@@ -47,7 +47,7 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   }
 }
 
-#elif LOCALE_USE_NEWLOCALE
+#elif defined(LOCALE_USE_NEWLOCALE)
 
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
@@ -98,7 +98,7 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   }
 }
 
-#elif LOCALE_USE_SET_LOCALE
+#elif defined(LOCALE_USE_SET_LOCALE)
 
 #include <locale.h>
 #include <stdlib.h>
