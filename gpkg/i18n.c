@@ -47,7 +47,7 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   }
 }
 
-#elif defined(LOCALE_USE_NEWLOCALE)
+#elif LOCALE_USE_NEWLOCALE
 
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
@@ -98,7 +98,32 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   }
 }
 
+#elif LOCALE_USE_SET_LOCALE
+
+#include <locale.h>
+#include <stdlib.h>
+
+struct i18n_locale {
+  int dummy;
+};
+
+double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
+  char *old_locale = setlocale(LC_NUMERIC, "C");
+  double result = strtod(nptr, endptr);
+  setlocale(LC_NUMERIC, old_locale);
+  return result;
+}
+
+i18n_locale_t *i18n_locale_init( const char *locale_name ) {
+  return 0;
+}
+
+void i18n_locale_destroy( i18n_locale_t *locale ) {
+}
+
 #else
+
+#error "Locale support not available"
 
 #include <stdlib.h>
 

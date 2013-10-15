@@ -10,3 +10,4 @@
 #cmakedefine HAVE_XLOCALE_H
 #cmakedefine LOCALE_USE__CREATE_LOCALE
 #cmakedefine LOCALE_USE_NEWLOCALE
+#cmakedefine LOCALE_USE_SET_LOCALE

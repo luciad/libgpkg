@@ -78,5 +78,26 @@ function(check_locale)
     endif()
   endif()
 
+  if( NOT ___LOCALE )
+    message( STATUS "Checking if setlocale is supported" )
+    check_c_source_compiles(
+      "#include <locale.h>
+      int main(int argc, char **argv) {
+        setlocale( LC_ALL, \"C\" );
+        return 1;
+      }"
+      LOCALE_USE_SET_LOCALE
+    )
+    endif()
+
+    set( ___LOCALE ${LOCALE_USE_SET_LOCALE} )
+    if (${LOCALE_USE_SET_LOCALE})
+      message( STATUS "Checking if setlocale is supported - yes" )
+      set( LOCALE_USE_SET_LOCALE ${LOCALE_USE_SET_LOCALE} PARENT_SCOPE )
+    else()
+      message( STATUS "Checking if setlocale is supported - no" )
+    endif()
+  endif()
+
   message( STATUS "Determining available locale mechanism - Done" )
 endfunction()
