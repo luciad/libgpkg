@@ -88,7 +88,6 @@ function(check_locale)
       }"
       LOCALE_USE_SET_LOCALE
     )
-    endif()
 
     set( ___LOCALE ${LOCALE_USE_SET_LOCALE} )
     if (${LOCALE_USE_SET_LOCALE})
