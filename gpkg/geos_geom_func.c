@@ -22,7 +22,7 @@
 #include "sql.h"
 
 typedef struct {
-  volatile uint32_t ref_count;
+  volatile long ref_count;
   GEOSContextHandle_t geos_handle;
   const spatialdb_t *spatialdb;
 } geos_context_t;
@@ -47,13 +47,13 @@ static geos_context_t *geos_context_init(const spatialdb_t *spatialdb) {
 
 static void geos_context_acquire(geos_context_t *ctx) {
   if (ctx) {
-    atomic_inc_uint32(&ctx->ref_count);
+    atomic_inc_long(&ctx->ref_count);
   }
 }
 
 static void geos_context_release(geos_context_t *ctx) {
   if (ctx) {
-    uint32_t newval = atomic_dec_uint32(&ctx->ref_count);
+    long newval = atomic_dec_long(&ctx->ref_count);
     if (newval == 0) {
       geom_geos_destroy(ctx->geos_handle);
       ctx->geos_handle = NULL;

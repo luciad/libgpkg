@@ -304,7 +304,7 @@ static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args
 }
 
 typedef struct {
-  volatile uint32_t ref_count;
+  volatile long ref_count;
   const spatialdb_t *spatialdb;
   i18n_locale_t *locale;
 } fromtext_t;
@@ -330,13 +330,13 @@ static fromtext_t *fromtext_init(const spatialdb_t *spatialdb) {
 
 static void fromtext_acquire(fromtext_t *fromtext) {
   if (fromtext) {
-    atomic_inc_uint32(&fromtext->ref_count);
+    atomic_inc_long(&fromtext->ref_count);
   }
 }
 
 static void fromtext_release(fromtext_t *fromtext) {
   if (fromtext) {
-    uint32_t newval = atomic_dec_uint32(&fromtext->ref_count);
+    long newval = atomic_dec_long(&fromtext->ref_count);
     if (newval == 0) {
       i18n_locale_destroy(fromtext->locale);
       fromtext->locale = NULL;
@@ -874,9 +874,6 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     result = SQLITE_ERROR;
   }
   error_destroy(&error);
-
-  uint32_t v = 0;
-  atomic_inc_uint32(&v);
 
   return result;
 }
