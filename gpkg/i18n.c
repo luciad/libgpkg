@@ -1,10 +1,15 @@
 #include "i18n.h"
 
-#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__)
+#ifdef GPKG_HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include <stdlib.h>
-#include <locale.h>
 #include "sqlite.h"
+
+#if LOCALE_USE__CREATE_LOCALE
+
+#include <locale.h>
+#include <stdlib.h>
 
 struct i18n_locale {
   _locale_t locale;
@@ -42,16 +47,11 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   }
 }
 
-#elif defined(HAVE_LOCALE_H) || defined(HAVE_XLOCALE_H)
+#elif defined(LOCALE_USE_NEWLOCALE)
 
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
 
-#ifdef GPKG_HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdlib.h>
 #ifdef HAVE_LOCALE_H
   #include <locale.h>
 #endif
@@ -60,7 +60,7 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
   #include <xlocale.h>
 #endif
 
-#include "sqlite.h"
+#include <stdlib.h>
 
 struct i18n_locale {
   locale_t locale;
@@ -100,8 +100,6 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
 
 #else
 
-#error "Locale support not available"
-
 #include <stdlib.h>
 
 struct i18n_locale {
@@ -122,4 +120,3 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
 }
 
 #endif
-

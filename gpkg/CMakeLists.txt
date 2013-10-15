@@ -34,6 +34,9 @@ add_definitions( -DGPKG_HAVE_CONFIG_H )
 include( UseTLS )
 check_tls()
 
+include( UseLocale )
+check_locale()
+
 include_directories( "${PROJECT_SOURCE_DIR}/sqlite" )
 
 #
@@ -71,9 +74,6 @@ if(GPKG_HAVE_GEOM_FUNC)
   target_link_libraries ( gpkg_ext gpkg_geom ${GEOS_LIBRARY} )
   target_link_libraries ( gpkg_static gpkg_geom ${GEOS_LIBRARY} )
 endif()
-
-check_include_file(locale.h HAVE_LOCALE_H)
-check_include_file(xlocale.h HAVE_XLOCALE_H)
 
 configure_file ( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
