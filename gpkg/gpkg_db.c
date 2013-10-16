@@ -670,7 +670,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db_name, table_name, geometry_column_name, table_name,
              id_column_name, id_column_name,
              geometry_column_name, geometry_column_name,
-             index_table_name,
+             index_table_name, id_column_name,
              index_table_name,
              id_column_name,
              geometry_column_name, geometry_column_name,
@@ -705,7 +705,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              "BEGIN\n"
              "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
              "END;",
-             db_name, table_name, geometry_column_name, table_name, geometry_column_name, geometry_column_name,
+             db_name, table_name, geometry_column_name, table_name,
              index_table_name, id_column_name
            );
   if (result != SQLITE_OK) {
@@ -729,7 +729,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
   result = sql_exec(
              db,
-             "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name, definition, scope) VALUES (\"%w\", \"%w\", \"%w\", \"%w\")",
+             "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name, definition, scope) VALUES (\"%w\", \"%w\", \"%w\", \"%w\", \"%w\")",
              db_name, table_name, geometry_column_name, "gpkg_rtree_index", "GeoPackage 1.0 Specification Annex M", "write-only"
            );
   if (result != SQLITE_OK) {
