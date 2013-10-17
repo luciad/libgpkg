@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ #include <stdio.h>
 #include "spatialdb_internal.h"
 #include "spl_geom.h"
 #include "sql.h"
@@ -560,15 +561,13 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
     goto exit;
   }
 
-  int spatial_index_updates = 0;
-  result = sql_exec_for_int(db, &spatial_index_updates,
-                            "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, geometry_column_name);
+  result = sql_exec(db, "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, geometry_column_name);
   if (result != SQLITE_OK) {
     error_append(error, "Could not set spatial index enabled flag for column %s.%s.%s: %s", db_name, table_name, geometry_column_name, db_name, sqlite3_errmsg(db));
     goto exit;
   }
 
-  if (spatial_index_updates == 0) {
+  if (sqlite3_changes( db ) == 0) {
     // Spatial index already enabled; silent return
     goto exit;
   }
@@ -594,7 +593,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
     goto exit;
   }
 
-  result = sql_exec(db, "CREATE VIRTUAL TABLE \"%w\".\"%w\" USING rtree(pkid, minx, maxx, miny, maxy)", db_name, index_table_name);
+  result = sql_exec(db, "CREATE VIRTUAL TABLE \"%w\".\"%w\" USING rtree(pkid, xmin, xmax, ymin, ymax)", db_name, index_table_name);
   if (result != SQLITE_OK) {
     error_append(error, "Could not create rtree table %s.%s: %s", db_name, index_table_name, sqlite3_errmsg(db));
     goto exit;
@@ -618,10 +617,11 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db,
              "CREATE TRIGGER \"%w\".\"giu_%w_%w\" AFTER UPDATE ON \"%w\"\n"
              "BEGIN\n"
-             "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
+             "  DELETE FROM \"%w\" WHERE pkid = OLD.\"%w\";\n"
              "  SELECT RTreeAlign(\"%w\", NEW.\"%w\", NEW.\"%w\");\n"
              "END;",
              db_name, table_name, geometry_column_name, table_name,
+             index_table_name, id_column_name,
              index_table_name, id_column_name, geometry_column_name
            );
   if (result != SQLITE_OK) {
@@ -633,9 +633,9 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
              db,
              "CREATE TRIGGER \"%w\".\"gid_%w_%w\" AFTER DELETE ON \"%w\"\n"
              "BEGIN\n"
-             "  DELETE FROM \"%w\" WHERE id = OLD.\"%w\";\n"
+             "  DELETE FROM \"%w\" WHERE pkid = OLD.\"%w\";\n"
              "END;",
-             db_name, table_name, geometry_column_name, table_name, geometry_column_name, geometry_column_name,
+             db_name, table_name, geometry_column_name, table_name,
              index_table_name, id_column_name
            );
   if (result != SQLITE_OK) {
@@ -645,11 +645,9 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
 
   result = sql_exec(
              db,
-             "INSERT OR REPLACE INTO \"%w\".\"%w\" (id, minx, maxx, miny, maxy) "
-             "  SELECT \"%w\", ST_MinX(\"%w\"), ST_MaxX(\"%w\"), ST_MinY(\"%w\"), ST_MaxY(\"%w\") FROM \"%w\".\"%w\""
+             "SELECT RTreeAlign(\"%w\", \"%w\", \"%w\") FROM \"%w\".\"%w\""
              "  WHERE \"%w\" NOTNULL AND NOT ST_IsEmpty(\"%w\")",
-             db_name, index_table_name,
-             id_column_name, geometry_column_name, geometry_column_name, geometry_column_name, geometry_column_name, db_name, table_name,
+             index_table_name, id_column_name, geometry_column_name, db_name, table_name,
              geometry_column_name, geometry_column_name
            );
   if (result != SQLITE_OK) {
@@ -666,6 +664,7 @@ exit:
  * (indx_table_name text, \"%w\" int, geometry blob)
  */
 static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  printf("spl_rtree_align\n");
   const spatialdb_t *spatialdb;
   FUNCTION_TEXT_ARG(index_table_name);
   FUNCTION_TEXT_ARG(row_id);
@@ -675,13 +674,34 @@ static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value 
   spatialdb = (const spatialdb_t *)sqlite3_user_data(context);
   FUNCTION_GET_TEXT_ARG(context, index_table_name, 0);
   FUNCTION_GET_TEXT_ARG(context, row_id, 1);
-  FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geom, 2);
 
-  sql_exec(
-    sqlite3_context_db_handle(context),
-    "INSERT OR REPLACE INTO \"%w\" (pkid, xmin, ymin, xmax, ymax) VALUES (%s, %1.12f, %1.12f, %1.12f, %1.12f)",
-    index_table_name, row_id, geom.envelope.min_x, geom.envelope.min_y, geom.envelope.max_x, geom.envelope.max_y
-  );
+  int delete_row = 0;
+  if (sqlite3_value_type(args[2]) == SQLITE_NULL) {
+    printf("Null geometry\n");
+    delete_row = 1;
+  } else {
+    FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geom, 2);
+    delete_row = geom.empty;
+    printf("%s\n", delete_row ? "empty geometry" : "non empty geometry");
+  }
+
+  if (delete_row) {
+    FUNCTION_RESULT = sql_exec(
+        sqlite3_context_db_handle(context),
+        "DELETE FROM \"%w\" WHERE pkid = %s",
+        index_table_name, row_id
+    );
+  } else {
+    FUNCTION_RESULT = sql_exec(
+      sqlite3_context_db_handle(context),
+      "INSERT OR REPLACE INTO \"%w\" (pkid, xmin, ymin, xmax, ymax) VALUES (%s, %1.12f, %1.12f, %1.12f, %1.12f)",
+      index_table_name, row_id, geom.envelope.min_x, geom.envelope.min_y, geom.envelope.max_x, geom.envelope.max_y
+    );
+  }
+
+  if (FUNCTION_RESULT != SQLITE_OK) {
+    error_append(&FUNCTION_ERROR, sqlite3_errmsg(sqlite3_context_db_handle(context)));
+  }
 
   FUNCTION_END(context);
   FUNCTION_FREE_TEXT_ARG(index_table_name);

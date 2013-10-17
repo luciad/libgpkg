@@ -15,20 +15,61 @@
 require_relative 'gpkg'
 
 describe 'CreateSpatialIndex' do
+  index_prefix = mode == :gpkg ? 'rtree' : 'idx'
+  index_id = mode == :gpkg ? 'id' : 'pkid'
+  
   it 'should return NULL on success' do
     expect('SELECT InitSpatialMetadata()').to have_result nil
     expect('CREATE TABLE test (id int)').to have_result nil
     expect("SELECT AddGeometryColumn('test', 'geom', 'point', 0, 0, 0)").to have_result nil
     expect("SELECT CreateSpatialIndex('test', 'geom', 'rowid')").to have_result nil
+    expect("select count(*) from sqlite_master where name = \"#{index_prefix}_test_geom\";").to have_result 1
   end
 
   it 'should create working spatial index' do
     expect('SELECT InitSpatialMetadata()').to have_result nil
     expect('CREATE TABLE test (id int)').to have_result nil
     expect("SELECT AddGeometryColumn('test', 'geom', 'point', 0, 0, 0)").to have_result nil
-    expect("SELECT CreateSpatialIndex('test', 'geom', 'rowid')").to have_result nil
+    expect("SELECT CreateSpatialIndex('test', 'geom', 'id')").to have_result nil
+
+    # Insertion
     expect("INSERT INTO test VALUES (1, GeomFromText('POINT(1 1)'))").to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result 1
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 1
+
+    # Update where geometry changes
     expect("UPDATE test SET geom = GeomFromText('POINT(2 2)') WHERE id = 1").to have_result nil
-    expect('DELETE FROM test WHERE id = 1').to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result 1
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 1
+
+    # Update where geometry changes from not NULL to NULL
+    expect("UPDATE test SET geom = NULL WHERE id = 1").to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result nil
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 0
+
+    # Update where geometry changes from NULL to not NULL
+    expect("UPDATE test SET geom = GeomFromText('POINT(2 2)') WHERE id = 1").to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result 1
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 1
+
+    # Update where id changes and geometry changes to NULL
+    expect("UPDATE test SET id = 2, geom = NULL WHERE id = 1").to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result nil
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 0
+
+    # Update where id changes and geometry changes to not NULL
+    expect("UPDATE test SET id = 3, geom = GeomFromText('POINT(2 2)') WHERE id = 2").to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result 3
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 1
+
+    # Update where id changes and geometry changes to not NULL
+    expect("UPDATE test SET id = 4 WHERE id = 3").to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result 4
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 1
+
+    # Deletion
+    expect('DELETE FROM test').to have_result nil
+    expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result nil
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 0
   end
 end
