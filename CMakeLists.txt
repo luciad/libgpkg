@@ -9,7 +9,7 @@ include(CheckFunctionExists)
 
 set ( gpkg_VERSION_MAJOR 0 )
 set ( gpkg_VERSION_MINOR 9 )
-set ( gpkg_VERSION_PATCH 3 )
+set ( gpkg_VERSION_PATCH 4 )
 set ( gpkg_BUILD_VERSION "${gpkg_VERSION_MAJOR}.${gpkg_VERSION_MINOR}.${gpkg_VERSION_PATCH}" )
 set ( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
 

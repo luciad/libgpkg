@@ -25,12 +25,12 @@
 #define F(v) FUNC_VALUE(v)
 
 static column_info_t gpkg_spatial_ref_sys_columns[] = {
-  {"srs_name", "text", N, SQL_NOT_NULL, NULL},
-  {"srs_id", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"organization", "text", N, SQL_NOT_NULL, NULL},
-  {"organization_coordsys_id", "integer", N, SQL_NOT_NULL, NULL},
-  {"definition", "text", N, SQL_NOT_NULL, NULL},
-  {"description", "text", N, 0, NULL},
+  {"srs_name", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"srs_id", "INTEGER", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
+  {"organization", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"organization_coordsys_id", "INTEGER", N, SQL_NOT_NULL, NULL},
+  {"definition", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"description", "TEXT", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static value_t gpkg_spatial_ref_sys_data[] = {
@@ -45,16 +45,16 @@ static table_info_t gpkg_spatial_ref_sys = {
 };
 
 static column_info_t gpkg_contents_columns[] = {
-  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"data_type", "text", N, SQL_NOT_NULL, NULL},
-  {"identifier", "text", N, SQL_UNIQUE(1), NULL},
-  {"description", "text", T(""), 0, NULL},
-  {"last_change", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
-  {"min_x", "double", N, 0, NULL},
-  {"min_y", "double", N, 0, NULL},
-  {"max_x", "double", N, 0, NULL},
-  {"max_y", "double", N, 0, NULL},
-  {"srs_id", "integer", N, 0, "CONSTRAINT fk_srid__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+  {"table_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
+  {"data_type", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"identifier", "TEXT", N, SQL_UNIQUE(1), NULL},
+  {"description", "TEXT", T(""), 0, NULL},
+  {"last_change", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
+  {"min_x", "DOUBLE", N, 0, NULL},
+  {"min_y", "DOUBLE", N, 0, NULL},
+  {"max_x", "DOUBLE", N, 0, NULL},
+  {"max_y", "DOUBLE", N, 0, NULL},
+  {"srs_id", "INTEGER", N, 0, "CONSTRAINT fk_srid__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_contents = {
@@ -64,11 +64,11 @@ static table_info_t gpkg_contents = {
 };
 
 static column_info_t gpkg_extensions_columns[] = {
-  {"table_name", "text", N, SQL_UNIQUE(1), NULL},
-  {"column_name", "text", N, SQL_UNIQUE(1), NULL},
-  {"extension_name", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"definition", "text", N, SQL_NOT_NULL, NULL},
-  {"scope", "text", N, SQL_NOT_NULL, NULL},
+  {"table_name", "TEXT", N, SQL_UNIQUE(1), NULL},
+  {"column_name", "TEXT", N, SQL_UNIQUE(1), NULL},
+  {"extension_name", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"definition", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"scope", "TEXT", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_extensions = {
@@ -78,12 +78,12 @@ static table_info_t gpkg_extensions = {
 };
 
 static column_info_t gpkg_geometry_columns_columns[] = {
-  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY | SQL_UNIQUE(1),  "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
-  {"column_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"geometry_type_name", "text", N, SQL_NOT_NULL, NULL},
-  {"srs_id", "integer", N, SQL_NOT_NULL, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
-  {"z", "integer", N, SQL_NOT_NULL, NULL},
-  {"m", "integer", N, SQL_NOT_NULL, NULL},
+  {"table_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY | SQL_UNIQUE(1),  "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
+  {"column_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
+  {"geometry_type_name", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"srs_id", "INTEGER", N, SQL_NOT_NULL, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+  {"z", "TINYINT", N, SQL_NOT_NULL, NULL},
+  {"m", "TINYINT", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_geometry_columns = {
@@ -93,12 +93,12 @@ static table_info_t gpkg_geometry_columns = {
 };
 
 static column_info_t gpkg_tile_matrix_set_columns[] = {
-  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
-  {"srs_id", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
-  {"min_x", "double", N, SQL_NOT_NULL, NULL},
-  {"min_y", "double", N, SQL_NOT_NULL, NULL},
-  {"max_x", "double", N, SQL_NOT_NULL, NULL},
-  {"max_y", "double", N, SQL_NOT_NULL, NULL},
+  {"table_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
+  {"srs_id", "INTEGER", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+  {"min_x", "DOUBLE", N, SQL_NOT_NULL, NULL},
+  {"min_y", "DOUBLE", N, SQL_NOT_NULL, NULL},
+  {"max_x", "DOUBLE", N, SQL_NOT_NULL, NULL},
+  {"max_y", "DOUBLE", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_tile_matrix_set = {
@@ -108,14 +108,14 @@ static table_info_t gpkg_tile_matrix_set = {
 };
 
 static column_info_t gpkg_tile_matrix_columns[] = {
-  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
-  {"zoom_level", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"matrix_width", "integer", N, SQL_NOT_NULL, NULL},
-  {"matrix_height", "integer", N, SQL_NOT_NULL, NULL},
-  {"tile_width", "integer", N, SQL_NOT_NULL, NULL},
-  {"tile_height", "integer", N, SQL_NOT_NULL, NULL},
-  {"pixel_x_size", "double", N, SQL_NOT_NULL, NULL},
-  {"pixel_y_size", "double", N, SQL_NOT_NULL, NULL},
+  {"table_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
+  {"zoom_level", "INTEGER", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
+  {"matrix_width", "INTEGER", N, SQL_NOT_NULL, NULL},
+  {"matrix_height", "INTEGER", N, SQL_NOT_NULL, NULL},
+  {"tile_width", "INTEGER", N, SQL_NOT_NULL, NULL},
+  {"tile_height", "INTEGER", N, SQL_NOT_NULL, NULL},
+  {"pixel_x_size", "DOUBLE", N, SQL_NOT_NULL, NULL},
+  {"pixel_y_size", "DOUBLE", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_tile_matrix = {
@@ -125,22 +125,22 @@ static table_info_t gpkg_tile_matrix = {
 };
 
 static const column_info_t gpkg_tiles_table_columns[] = {
-  {"id", "integer", N, SQL_PRIMARY_KEY | SQL_AUTOINCREMENT, NULL},
-  {"zoom_level", "integer", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"tile_column", "integer", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"tile_row", "integer", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"tile_data", "blob", N, SQL_NOT_NULL, NULL},
+  {"id", "INTEGER", N, SQL_PRIMARY_KEY | SQL_AUTOINCREMENT, NULL},
+  {"zoom_level", "INTEGER", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"tile_column", "INTEGER", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"tile_row", "INTEGER", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"tile_data", "BLOB", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 
 static column_info_t gpkg_data_columns_columns[] = {
-  {"table_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
-  {"column_name", "text", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
-  {"name", "text", N, 0, NULL},
-  {"title", "text", N, 0, NULL},
-  {"description", "text", N, 0, NULL},
-  {"mime_type", "text", N, 0, NULL},
-  {"constraint_name", "text", N, 0, NULL},
+  {"table_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
+  {"column_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
+  {"name", "TEXT", N, 0, NULL},
+  {"title", "TEXT", N, 0, NULL},
+  {"description", "TEXT", N, 0, NULL},
+  {"mime_type", "TEXT", N, 0, NULL},
+  {"constraint_name", "TEXT", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_data_columns = {
@@ -150,13 +150,13 @@ static table_info_t gpkg_data_columns = {
 };
 
 static column_info_t gpkg_data_column_constraints_columns[] = {
-  {"constraint_name", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"constraint_type", "text", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
-  {"value", "text", N, SQL_UNIQUE(1), NULL},
-  {"min", "numeric", N, 0, NULL},
-  {"minIsInclusive", "integer", N, 0, NULL},
-  {"max", "numeric", N, 0, NULL},
-  {"maxIsInclusive", "integer", N, 0, NULL},
+  {"constraint_name", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"constraint_type", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+  {"value", "TEXT", N, SQL_UNIQUE(1), NULL},
+  {"min", "NUMERIC", N, 0, NULL},
+  {"minIsInclusive", "BOOLEAN", N, 0, NULL},
+  {"max", "NUMERIC", N, 0, NULL},
+  {"maxIsInclusive", "BOOLEAN", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_data_column_constraints = {
@@ -166,11 +166,11 @@ static table_info_t gpkg_data_column_constraints = {
 };
 
 static column_info_t gpkg_metadata_columns[] = {
-  {"id", "integer", N, SQL_NOT_NULL | SQL_AUTOINCREMENT | SQL_PRIMARY_KEY, NULL},
-  {"md_scope", "text", T("dataset"), SQL_NOT_NULL, NULL},
-  {"md_standard_uri", "text", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
-  {"mime_type", "text", T("text/xml"), SQL_NOT_NULL, NULL},
-  {"metadata", "text", T(""), SQL_NOT_NULL, NULL},
+  {"id", "INTEGER", N, SQL_NOT_NULL | SQL_AUTOINCREMENT | SQL_PRIMARY_KEY, NULL},
+  {"md_scope", "TEXT", T("dataset"), SQL_NOT_NULL, NULL},
+  {"md_standard_uri", "TEXT", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
+  {"mime_type", "TEXT", T("text/xml"), SQL_NOT_NULL, NULL},
+  {"metadata", "TEXT", T(""), SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_metadata = {
@@ -180,13 +180,13 @@ static table_info_t gpkg_metadata = {
 };
 
 static column_info_t gpkg_metadata_reference_columns[] = {
-  {"reference_scope", "text", N, SQL_NOT_NULL, NULL},
-  {"table_name", "text", N, 0, NULL},
-  {"column_name", "text", N, 0, NULL},
-  {"row_id_value", "integer", N, 0, NULL},
-  {"timestamp", "text", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
-  {"md_file_id", "integer", N, SQL_NOT_NULL, "CONSTRAINT fk_file_id__metadata_id REFERENCES gpkg_metadata(id)"},
-  {"md_parent_id", "integer", N, 0, "CONSTRAINT fk_parent_id__metadata_id REFERENCES gpkg_metadata(id)"},
+  {"reference_scope", "TEXT", N, SQL_NOT_NULL, NULL},
+  {"table_name", "TEXT", N, 0, NULL},
+  {"column_name", "TEXT", N, 0, NULL},
+  {"row_id_value", "INTEGER", N, 0, NULL},
+  {"timestamp", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
+  {"md_file_id", "INTEGER", N, SQL_NOT_NULL, "CONSTRAINT fk_file_id__metadata_id REFERENCES gpkg_metadata(id)"},
+  {"md_parent_id", "INTEGER", N, 0, "CONSTRAINT fk_parent_id__metadata_id REFERENCES gpkg_metadata(id)"},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_metadata_reference = {
