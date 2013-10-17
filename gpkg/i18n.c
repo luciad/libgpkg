@@ -107,6 +107,8 @@ struct i18n_locale {
   int dummy;
 };
 
+static struct i18n_locale DUMMY_LOCALE;
+
 double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
   char *old_locale = setlocale(LC_NUMERIC, "C");
   double result = strtod(nptr, endptr);
@@ -115,7 +117,7 @@ double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
 }
 
 i18n_locale_t *i18n_locale_init( const char *locale_name ) {
-  return 0;
+  return &DUMMY_LOCALE;
 }
 
 void i18n_locale_destroy( i18n_locale_t *locale ) {
@@ -131,12 +133,14 @@ struct i18n_locale {
   int dummy;
 };
 
+static struct i18n_locale DUMMY_LOCALE;
+
 double i18n_strtod( const char *nptr, char **endptr, i18n_locale_t *locale ) {
   return strtod(nptr, endptr);
 }
 
 i18n_locale_t *i18n_locale_init( const char *locale_name ) {
-  return 0;
+  return &DUMMY_LOCALE;
 }
 
 void i18n_locale_destroy( i18n_locale_t *locale ) {
