@@ -119,7 +119,7 @@ int binstream_seek(binstream_t *stream, size_t position) {
 
 int binstream_relseek(binstream_t *stream, int32_t amount) {
   size_t position = stream->position;
-  if (amount < 0 && -amount > position) {
+  if (amount < 0 && (size_t)(-amount) > position) {
     return SQLITE_IOERR;
   }
   return binstream_seek(stream, position + amount);

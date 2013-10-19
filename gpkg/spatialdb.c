@@ -310,7 +310,7 @@ typedef struct {
 } fromtext_t;
 
 static fromtext_t *fromtext_init(const spatialdb_t *spatialdb) {
-  fromtext_t *ctx = sqlite3_malloc(sizeof(fromtext_t));
+  fromtext_t *ctx = (fromtext_t*)sqlite3_malloc(sizeof(fromtext_t));
 
   if (ctx == NULL) {
     return NULL;
