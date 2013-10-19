@@ -55,5 +55,8 @@ if ( WIN32 )
   set_target_properties ( sqlite_shared PROPERTIES PREFIX "" )
 endif()
 
+if ( MSVC )
+  target_compile_definitions( sqlite_shared PRIVATE "-DSQLITE_API=__declspec\(dllexport\)" )
+endif()
 
 
