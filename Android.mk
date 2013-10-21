@@ -8,10 +8,10 @@ LOCAL_SRC_FILES := \
     gpkg/error.c \
     gpkg/fp.c \
     gpkg/geomio.c \
-    gpkg/geom_func_null.c \
     gpkg/gpkg.c \
     gpkg/gpkg_db.c \
     gpkg/gpkg_geom.c \
+    gpkg/i18n.c \
     gpkg/spatialdb.c \
     gpkg/spl_db.c \
     gpkg/spl_geom.c \
@@ -28,7 +28,7 @@ LOCAL_MODULE := gpkg
 LOCAL_CFLAGS := \
     -fvisibility=hidden \
     -std=c99 \
-    -DLIBGPKG_VERSION="\"0.8.0\"" \
+    -DLIBGPKG_VERSION="\"0.9.4\"" \
     -DGPKG_EXPORT="__attribute__((visibility(\"default\")))"
 
 include $(BUILD_SHARED_LIBRARY)
