@@ -643,7 +643,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
     goto exit;
   }
 
-  result = sql_exec(
+  result = sql_exec_all(
              db,
              "SELECT RTreeAlign(\"%w\", \"%w\", \"%w\") FROM \"%w\".\"%w\""
              "  WHERE \"%w\" NOTNULL AND NOT ST_IsEmpty(\"%w\")",
@@ -664,7 +664,6 @@ exit:
  * (indx_table_name text, \"%w\" int, geometry blob)
  */
 static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-  printf("spl_rtree_align\n");
   const spatialdb_t *spatialdb;
   FUNCTION_TEXT_ARG(index_table_name);
   FUNCTION_TEXT_ARG(row_id);
@@ -677,12 +676,10 @@ static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value 
 
   int delete_row = 0;
   if (sqlite3_value_type(args[2]) == SQLITE_NULL) {
-    printf("Null geometry\n");
     delete_row = 1;
   } else {
     FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geom, 2);
     delete_row = geom.empty;
-    printf("%s\n", delete_row ? "empty geometry" : "non empty geometry");
   }
 
   if (delete_row) {
