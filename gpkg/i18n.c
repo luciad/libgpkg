@@ -125,8 +125,6 @@ void i18n_locale_destroy( i18n_locale_t *locale ) {
 
 #else
 
-#error "Locale support not available"
-
 #include <stdlib.h>
 
 struct i18n_locale {

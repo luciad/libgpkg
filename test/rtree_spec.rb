@@ -72,4 +72,20 @@ describe 'CreateSpatialIndex' do
     expect("SELECT #{index_id} FROM #{index_prefix}_test_geom").to have_result nil
     expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 0
   end
+
+  it 'should create working spatial index for existing data' do
+    expect('SELECT InitSpatialMetadata()').to have_result nil
+    expect('CREATE TABLE test (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test', 'geom', 'point', 0, 0, 0)").to have_result nil
+
+    expect("INSERT INTO test VALUES (1, GeomFromText('POINT(11 12)'))").to have_result nil
+    expect("INSERT INTO test VALUES (2, GeomFromText('POINT(21 22)'))").to have_result nil
+    expect("INSERT INTO test VALUES (3, GeomFromText('POINT(31 32)'))").to have_result nil
+
+    # Create spatial index based on initial data
+    expect("SELECT CreateSpatialIndex('test', 'geom', 'id')").to have_result nil
+    expect("SELECT count(*) FROM #{index_prefix}_test_geom").to have_result 3
+  end
+
 end
+
