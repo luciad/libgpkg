@@ -41,7 +41,7 @@ static value_t gpkg_spatial_ref_sys_data[] = {
 static table_info_t gpkg_spatial_ref_sys = {
   "gpkg_spatial_ref_sys",
   gpkg_spatial_ref_sys_columns,
-  gpkg_spatial_ref_sys_data, 2
+  gpkg_spatial_ref_sys_data, 3
 };
 
 static column_info_t gpkg_contents_columns[] = {
