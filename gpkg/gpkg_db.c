@@ -213,6 +213,8 @@ static int init(sqlite3 *db, const char *db_name, error_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = gpkg_tables;
 
+  sql_exec(  );
+
   while (*table != NULL) {
     result = sql_init_table(db, db_name, *table, error);
     if (result != SQLITE_OK) {
