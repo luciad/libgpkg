@@ -213,21 +213,26 @@ static int init(sqlite3 *db, const char *db_name, error_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = gpkg_tables;
 
-  sql_exec(  );
+  result = sql_exec( db, "PRAGMA application_id = %d", 0x47503130 );
+  if ( result != SQLITE_OK ) {
+    error_append( error, "Could not set application_id" );
+  }
 
-  while (*table != NULL) {
-    result = sql_init_table(db, db_name, *table, error);
-    if (result != SQLITE_OK) {
-      break;
+  if ( result == SQLITE_OK ) {
+    while (*table != NULL) {
+      result = sql_init_table(db, db_name, *table, error);
+      if (result != SQLITE_OK) {
+        break;
+      }
+      table++;
     }
-    table++;
   }
 
   if (result == SQLITE_OK && error_count(error) > 0) {
-    return SQLITE_ERROR;
-  } else {
-    return result;
+    result = SQLITE_ERROR;
   }
+
+  return result;
 }
 
 /*
