@@ -22,14 +22,29 @@ static inline long atomic_dec_long(volatile long *value) {
 #elif defined(__MACH__) || defined(__APPLE__)
 
 #include <libkern/OSAtomic.h>
+#include <limits.h>
 
+#if ULONG_MAX == 0xffffffff
 static inline long atomic_inc_long(volatile long *value) {
-  return OSIncrementAtomicLong(value);
+  return OSAtomicIncrement32((volatile int32_t *)value);
 }
 
 static inline long atomic_dec_long(volatile long *value) {
-  return OSDecrementAtomicLong(value);
+  return OSAtomicDecrement32((volatile int32_t *)value);
 }
+#elif ULONG_MAX == 0xffffffffffffffff
+static inline long atomic_inc_long(volatile long *value) {
+  return OSAtomicIncrement64((volatile int64_t *)value);
+}
+
+static inline long atomic_dec_long(volatile long *value) {
+  return OSAtomicDecrement64((volatile int64_t *)value);
+}
+#else
+
+#error "Unsupported long size"
+
+#endif
 
 #elif defined(__GNUC__) || (defined(__has_builtin) && __has_builtin(__sync_fetch_and_add) && __has_builtin(__sync_fetch_and_sub))
 
