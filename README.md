@@ -24,6 +24,7 @@ libgpkg extends SQLite with the function listed below. These function can be use
 that SQLite provides.
 
 libgpkg exposes a number of SQLite extension entry points:
+
 - sqlite3_gpkg_init: geopackage mode
 - sqlite3_gpkg_spl3_init: spatialite 3.x mode
 - sqlite3_gpkg_spl4_init: spatialite 4.x mode
