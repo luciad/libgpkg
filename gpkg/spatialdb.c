@@ -220,7 +220,17 @@ static void ST_AsBinary(sqlite3_context *context, int nbArgs, sqlite3_value **ar
   spatialdb = (spatialdb_t *)sqlite3_user_data(context);
   FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geomblob, 0);
 
-  sqlite3_result_blob(context, binstream_data(&FUNCTION_GEOM_ARG_STREAM(geomblob)), (int) binstream_available(&FUNCTION_GEOM_ARG_STREAM(geomblob)), SQLITE_TRANSIENT);
+  wkb_writer_t writer;
+  wkb_writer_init(&writer, WKB_ISO);
+
+  FUNCTION_RESULT = spatialdb->read_geometry(&FUNCTION_GEOM_ARG_STREAM(geomblob), wkb_writer_geom_consumer(&writer), &FUNCTION_ERROR);
+
+  if (FUNCTION_RESULT == SQLITE_OK) {
+    sqlite3_result_blob(context, wkb_writer_getwkb(&writer), (int) wkb_writer_length(&writer), sqlite3_free);
+    wkb_writer_destroy(&writer, 0);
+  } else {
+    wkb_writer_destroy(&writer, 1);
+  }
 
   FUNCTION_END(context);
   
@@ -289,11 +299,7 @@ static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args
 
   FUNCTION_RESULT = spatialdb->read_geometry(&FUNCTION_GEOM_ARG_STREAM(geomblob), wkt_writer_geom_consumer(&writer), &FUNCTION_ERROR);
 
-  if (FUNCTION_RESULT != SQLITE_OK) {
-    if (error_count(&FUNCTION_ERROR) == 0) {
-      error_append(&FUNCTION_ERROR, "Could not parse WKB");
-    }
-  } else {
+  if (FUNCTION_RESULT == SQLITE_OK) {
     sqlite3_result_text(context, wkt_writer_getwkt(&writer), (int) wkt_writer_length(&writer), SQLITE_TRANSIENT);
   }
   wkt_writer_destroy(&writer);
