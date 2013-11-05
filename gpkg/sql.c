@@ -15,6 +15,7 @@
  */
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "sqlite.h"
 #include "sql.h"
 
@@ -32,6 +33,7 @@ static int sql_stmt_vinit(sqlite3_stmt **stmt, sqlite3 *db, char *sql, va_list a
   }
 
   int result = sqlite3_prepare_v2(db, formatted_sql, -1, stmt, NULL);
+  printf("%s\n", formatted_sql);
   sqlite3_free(formatted_sql);
   return result;
 }

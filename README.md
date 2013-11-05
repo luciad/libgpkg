@@ -26,13 +26,14 @@ that SQLite provides.
 libgpkg exposes a number of SQLite extension entry points:
 
 - sqlite3_gpkg_init: geopackage mode
+- sqlite3_gpkg_spl2_init: spatialite 2.x mode
 - sqlite3_gpkg_spl3_init: spatialite 3.x mode
 - sqlite3_gpkg_spl4_init: spatialite 4.x mode
 - sqlite3_gpkg_auto_init: auto detect mode
 
 GeoPackage mode is the default mode which will produce sqlite database that comply with the GeoPackage specification.
 
-The two Spatialite modes provide limited compatibility with Spatialite 3.x and 4.x sqlite databases respectively. These
+The Spatialite modes provide limited compatibility with Spatialite 2.x, 3.x and 4.x sqlite databases respectively. These
 modes are not intend to be a replacement for Spatialite, but should provide sufficient compatibility to read and write
 Spatialite database.
 

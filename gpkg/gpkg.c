@@ -32,6 +32,10 @@ GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, 
   return spatialdb_init(db, pzErrMsg, pThunk, spatialdb_geopackage_schema());
 }
 
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_spl2_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
+  return spatialdb_init(db, pzErrMsg, pThunk, spatialdb_spatialite2_schema());
+}
+
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_spl3_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk) {
   return spatialdb_init(db, pzErrMsg, pThunk, spatialdb_spatialite3_schema());
 }

@@ -700,6 +700,7 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
     spatialdb_geopackage_schema(),
     spatialdb_spatialite4_schema(),
     spatialdb_spatialite3_schema(),
+    spatialdb_spatialite2_schema(),
     NULL
   };
 

@@ -56,6 +56,11 @@ GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, 
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_auto_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 /**
+ * Entry point for the libgpkg SQLite extension that forces usage of the Spatialite 2.x database schema.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_spl2_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
  * Entry point for the libgpkg SQLite extension that forces usage of the Spatialite 3.x database schema.
  */
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_spl3_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);

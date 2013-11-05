@@ -27,6 +27,45 @@
 #define T(v) TEXT_VALUE(v)
 #define F(v) FUNC_VALUE(v)
 
+static column_info_t spl2_spatial_ref_sys_columns[] = {
+  {"srid", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
+  {"auth_name", "varchar(256)", N, SQL_NOT_NULL, NULL},
+  {"auth_srid", "integer", N, SQL_NOT_NULL, NULL},
+  {"ref_sys_name", "varchar(256)", T("Unknown"), 0, NULL},
+  {"proj4text", "varchar(2048)", N, SQL_NOT_NULL, NULL},
+  {NULL, NULL, N, 0, NULL}
+};
+static value_t spl2_spatial_ref_sys_data[] = {
+  I(-1), T("NONE"), I(-1), T("Undefined - Cartesian"), T(""),
+  I(0), T("NONE"), I(0), T("Undefined - Geographic Long/Lat"), T("")
+};
+static table_info_t spl2_spatial_ref_sys = {
+  "spatial_ref_sys",
+  spl2_spatial_ref_sys_columns,
+  spl2_spatial_ref_sys_data, 2
+};
+
+static column_info_t spl2_geometry_columns_columns[] = {
+  {"f_table_name", "varchar(256)", N, SQL_NOT_NULL, NULL},
+  {"f_geometry_column", "varchar(256)", N, SQL_NOT_NULL, NULL},
+  {"type", "varchar(30)", N, SQL_NOT_NULL, NULL},
+  {"coord_dimension", "integer", N, SQL_NOT_NULL, NULL},
+  {"srid", "integer", N, 0, NULL},
+  {"spatial_index_enabled", "integer", N, SQL_NOT_NULL, NULL},
+  {NULL, NULL, N, 0, NULL}
+};
+static table_info_t spl2_geometry_columns = {
+  "geometry_columns",
+  spl2_geometry_columns_columns,
+  NULL, 0
+};
+
+static const table_info_t *const spl2_tables[] = {
+  &spl2_spatial_ref_sys,
+  &spl2_geometry_columns,
+  NULL
+};
+
 static column_info_t spl3_spatial_ref_sys_columns[] = {
   {"srid", "integer", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, NULL},
   {"auth_name", "text", N, SQL_NOT_NULL, NULL},
@@ -106,6 +145,127 @@ static const table_info_t *const spl4_tables[] = {
   &spl4_geometry_columns,
   NULL
 };
+
+static int spl2_init(sqlite3 *db, const char *db_name, error_t *error) {
+  int result = SQLITE_OK;
+  const table_info_t *const *table = spl2_tables;
+
+  while (*table != NULL) {
+    result = sql_init_table(db, db_name, *table, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  if (result == SQLITE_OK && error_count(error) > 0) {
+    return SQLITE_ERROR;
+  } else {
+    return result;
+  }
+}
+
+static int spl2_check(sqlite3 *db, const char *db_name, int check_flags, error_t *error) {
+  int result = SQLITE_OK;
+
+  const table_info_t *const *table = spl2_tables;
+  while (*table != NULL) {
+    result = sql_check_table(db, db_name, *table, check_flags | SQL_MUST_EXIST, error);
+    if (result != SQLITE_OK) {
+      break;
+    }
+    table++;
+  }
+
+  return result;
+}
+
+static int spl2_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
+  int result;
+
+  const char *normalized_geom_type;
+  result = geom_normalized_type_name(geom_type, &normalized_geom_type);
+  if (result != SQLITE_OK) {
+    error_append(error, "Invalid geometry type: %s", geom_type);
+    return result;
+  }
+
+  if (z < 0 || z > 2) {
+    error_append(error, "Invalid Z flag value: %d", z);
+    return result;
+  }
+
+  if (m < 0 || m > 2) {
+    error_append(error, "Invalid M flag value: %d", z);
+    return result;
+  }
+
+  if (z == 2) {
+    error_append(error, "Optional Z values are not supported by Spatialite");
+    return result;
+  }
+
+  if (m == 2) {
+    error_append(error, "Optional M values are not supported by Spatialite");
+    return result;
+  }
+
+  int coord_type;
+  if (z == 1 && m == 1) {
+    coord_type = 4;
+  } else if (z == 0 && m == 1) {
+    coord_type = 3;
+  } else if (z == 1 && m == 0) {
+    coord_type = 3;
+  } else {
+    coord_type = 2;
+  }
+
+  // Check if the target table exists
+  int exists = 0;
+  result = sql_check_table_exists(db, db_name, table_name, &exists);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not check if table %s.%s exists", db_name, table_name);
+    return result;
+  }
+
+  if (!exists) {
+    error_append(error, "Table %s.%s does not exist", db_name, table_name);
+    return SQLITE_OK;
+  }
+
+  if (error_count(error) > 0) {
+    return SQLITE_OK;
+  }
+
+  // Check if the SRID is defined
+  int count = 0;
+  result = sql_exec_for_int(db, &count, "SELECT count(*) FROM spatial_ref_sys WHERE srid = %d", srs_id);
+  if (result != SQLITE_OK) {
+    return result;
+  }
+
+  if (count == 0) {
+    error_append(error, "SRS %d does not exist", srs_id);
+    return SQLITE_OK;
+  }
+
+  result = sql_exec(db, "ALTER TABLE \"%w\".\"%w\" ADD COLUMN \"%w\" %s", db_name, table_name, column_name, normalized_geom_type);
+  if (result != SQLITE_OK) {
+    error_append(error, sqlite3_errmsg(db));
+    return result;
+  }
+
+  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (f_table_name, f_geometry_column, type, coord_dimension, srid, spatial_index_enabled) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name,
+                    "geometry_columns", table_name, column_name,
+                    normalized_geom_type, coord_type, srs_id, 0);
+  if (result != SQLITE_OK) {
+    error_append(error, sqlite3_errmsg(db));
+    return result;
+  }
+
+  return SQLITE_OK;
+}
 
 static int spl3_init(sqlite3 *db, const char *db_name, error_t *error) {
   int result = SQLITE_OK;
@@ -712,6 +872,24 @@ static void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *
   sql_create_function(db, "RTreeAlign", spl_rtree_align, 3, (void *)spatialDb, NULL, error);
 }
 
+static const spatialdb_t SPATIALITE2 = {
+  "Spatialite2",
+  spatialite_init,
+  spl2_init,
+  spl2_check,
+  write_blob_header,
+  read_blob_header,
+  spl3_writer_init,
+  spb_writer_init,
+  spb_writer_destroy,
+  spl2_add_geometry_column,
+  NULL,
+  create_spatial_index,
+  fill_envelope,
+  read_geometry_header,
+  read_geometry
+};
+
 static const spatialdb_t SPATIALITE3 = {
   "Spatialite3",
   spatialite_init,
@@ -747,6 +925,10 @@ static const spatialdb_t SPATIALITE4 = {
   read_geometry_header,
   read_geometry
 };
+
+const spatialdb_t *spatialdb_spatialite2_schema() {
+  return &SPATIALITE2;
+}
 
 const spatialdb_t *spatialdb_spatialite3_schema() {
   return &SPATIALITE3;
