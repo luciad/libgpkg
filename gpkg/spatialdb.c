@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #include <stdint.h>
-#include <stdio.h>
 #include "atomic_ops.h"
 #include "binstream.h"
 #include "blobio.h"
@@ -762,41 +761,42 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     return SQLITE_ERROR;
   }
 
-  const char *forbidden_options[] = {
-    "SQLITE_OMIT_FOREIGN_KEY", "foreign key",
-    "SQLITE_OMIT_TRIGGER", "trigger",
-    "SQLITE_OMIT_VIRTUALTABLE", "virtual table",
-    "SQLITE_RTREE_INT_ONLY", "floating point rtree",
-    NULL, NULL
-  };
+  if ( sqlite3_compileoption_used != NULL ) {
+    const char *forbidden_options[] = {
+      "SQLITE_OMIT_FOREIGN_KEY", "foreign key",
+      "SQLITE_OMIT_TRIGGER", "trigger",
+      "SQLITE_OMIT_VIRTUALTABLE", "virtual table",
+      "SQLITE_RTREE_INT_ONLY", "floating point rtree",
+      NULL, NULL
+    };
 
-  const char **forbidden_option = forbidden_options;
-  while (*forbidden_option != NULL) {
-    if (sqlite3_compileoption_used(*forbidden_option)) {
-      if (pzErrMsg) {
-        *pzErrMsg = sqlite3_mprintf("libgpkg requires %s support but %s compile option was used", *(forbidden_option + 1), *forbidden_option);
+    const char **forbidden_option = forbidden_options;
+    while (*forbidden_option != NULL) {
+      if (sqlite3_compileoption_used(*forbidden_option)) {
+        if (pzErrMsg) {
+          *pzErrMsg = sqlite3_mprintf("libgpkg requires %s support but %s compile option was used", *(forbidden_option + 1), *forbidden_option);
+        }
+        return SQLITE_ERROR;
       }
-      return SQLITE_ERROR;
+      forbidden_option += 2;
     }
-    forbidden_option += 2;
-  }
 
-  const char *required_options[] = {
-    "SQLITE_ENABLE_RTREE", "rtree",
-    NULL, NULL
-  };
+    const char *required_options[] = {
+      "SQLITE_ENABLE_RTREE", "rtree",
+      NULL, NULL
+    };
 
-  const char **required_option = required_options;
-  while (*required_option != NULL) {
-    if (!sqlite3_compileoption_used(*required_option)) {
-      if (pzErrMsg) {
-        *pzErrMsg = sqlite3_mprintf("libgpkg requires %s support but %s compile option was not used", *(required_option + 1), *required_option);
+    const char **required_option = required_options;
+    while (*required_option != NULL) {
+      if (!sqlite3_compileoption_used(*required_option)) {
+        if (pzErrMsg) {
+          *pzErrMsg = sqlite3_mprintf("libgpkg requires %s support but %s compile option was not used", *(required_option + 1), *required_option);
+        }
+        return SQLITE_ERROR;
       }
-      return SQLITE_ERROR;
+      required_option += 2;
     }
-    required_option += 2;
   }
-
 
   error_t error;
   if (error_init(&error) != SQLITE_OK) {
