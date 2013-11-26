@@ -83,7 +83,7 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 #
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
   add_definitions( -DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\) )
-  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -fvisibility=hidden -std=c99 -pedantic" )
+  set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic" )
 endif()
 
 if ( MSVC )
