@@ -250,32 +250,44 @@ static int gpkg_contents_geometry_table_check_row(sqlite3 *db, sqlite3_stmt *stm
 }
 
 static int gpkg_contents_geometry_table_check(sqlite3 *db, const char *db_name, error_t *error) {
-  return sql_exec_stmt(
+  int result = sql_exec_stmt(
            db, gpkg_contents_geometry_table_check_row, NULL, error,
            "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='features' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_geometry_columns)",
            db_name, db_name
          );
+
+  if (result != SQLITE_OK) {
+    error_append(error, sqlite3_errmsg(db));
+  }
+
+  return result;
 }
 
 /*
- * Check that each 'tiles' table in gpkg_contents has at least one corresponding row in gpkg_tile_matrix_metadata.
+ * Check that each 'tiles' table in gpkg_contents has at least one corresponding row in gpkg_tile_matrix_set.
  * This is not covered by a foreign key reference.
  */
 static int gpkg_contents_tilemetadata_table_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   error_append(
     (error_t *)data,
-    "gpkg_contents: table '%s' has data_type 'tiles' but no rows exist in gpkg_tile_matrix_metadata for this table",
+    "gpkg_contents: table '%s' has data_type 'tiles' but no rows exist in gpkg_tile_matrix_set for this table",
     sqlite3_column_text(stmt, 0)
   );
   return SQLITE_OK;
 }
 
 static int gpkg_contents_tilemetadata_table_check(sqlite3 *db, const char *db_name, error_t *error) {
-  return sql_exec_stmt(
+  int result = sql_exec_stmt(
            db, gpkg_contents_tilemetadata_table_check_row, NULL, error,
-           "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='tiles' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_tile_matrix_metadata)",
+           "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='tiles' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_tile_matrix_set)",
            db_name, db_name
          );
+
+  if (result != SQLITE_OK) {
+    error_append(error, sqlite3_errmsg(db));
+  }
+
+  return result;
 }
 
 /*
@@ -324,16 +336,23 @@ exit:
 }
 
 static int gpkg_table_column_check(sqlite3 *db, const char *db_name, const char *table_name, const char *table_column, const char *column_column, error_t *error) {
+  int result = SQLITE_OK;
   column_check_data_t c;
   c.db_name = db_name;
   c.source_table = table_name;
   c.error = error;
 
   if (column_column != NULL) {
-    return sql_exec_stmt(db, gpkg_table_column_check_row, NULL, &c, "SELECT \"%w\", \"%w\" FROM \"%w\".\"%w\"", table_column, column_column, db_name, table_name);
+    result = sql_exec_stmt(db, gpkg_table_column_check_row, NULL, &c, "SELECT \"%w\", \"%w\" FROM \"%w\".\"%w\"", table_column, column_column, db_name, table_name);
   } else {
-    return sql_exec_stmt(db, gpkg_table_column_check_row, NULL, &c, "SELECT \"%w\", NULL FROM \"%w\".\"%w\"", table_column, db_name, table_name);
+    result = sql_exec_stmt(db, gpkg_table_column_check_row, NULL, &c, "SELECT \"%w\", NULL FROM \"%w\".\"%w\"", table_column, db_name, table_name);
   }
+
+  if (result != SQLITE_OK) {
+    error_append(error, sqlite3_errmsg(db));
+  }
+
+  return result;
 }
 
 static int gpkg_contents_columns_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
@@ -348,8 +367,12 @@ static int gpkg_geometry_columns_table_column_check(sqlite3 *db, const char *db_
   return gpkg_table_column_check(db, db_name, "gpkg_geometry_columns", "table_name", "column_name", error);
 }
 
-static int gpkg_tile_matrix_metadata_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
-  return gpkg_table_column_check(db, db_name, "gpkg_tile_matrix_metadata", "table_name", NULL, error);
+static int gpkg_tile_matrix_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+  return gpkg_table_column_check(db, db_name, "gpkg_tile_matrix", "table_name", NULL, error);
+}
+
+static int gpkg_tile_matrix_set_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+  return gpkg_table_column_check(db, db_name, "gpkg_tile_matrix_set", "table_name", NULL, error);
 }
 
 static int gpkg_data_columns_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
@@ -366,7 +389,8 @@ static check_func checks[] = {
   gpkg_contents_columns_table_column_check,
   gpkg_extensions_table_column_check,
   gpkg_geometry_columns_table_column_check,
-  gpkg_tile_matrix_metadata_table_column_check,
+  gpkg_tile_matrix_table_column_check,
+  gpkg_tile_matrix_set_table_column_check,
   gpkg_data_columns_table_column_check,
   gpkg_metadata_reference_table_column_check,
   gpkg_contents_geometry_table_check,
