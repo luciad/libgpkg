@@ -49,7 +49,7 @@ static column_info_t gpkg_contents_columns[] = {
   {"data_type", "TEXT", N, SQL_NOT_NULL, NULL},
   {"identifier", "TEXT", N, SQL_UNIQUE(1), NULL},
   {"description", "TEXT", T(""), 0, NULL},
-  {"last_change", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
+  {"last_change", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', CURRENT_TIMESTAMP)"), SQL_NOT_NULL, NULL},
   {"min_x", "DOUBLE", N, 0, NULL},
   {"min_y", "DOUBLE", N, 0, NULL},
   {"max_x", "DOUBLE", N, 0, NULL},
@@ -184,7 +184,7 @@ static column_info_t gpkg_metadata_reference_columns[] = {
   {"table_name", "TEXT", N, 0, NULL},
   {"column_name", "TEXT", N, 0, NULL},
   {"row_id_value", "INTEGER", N, 0, NULL},
-  {"timestamp", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', 'now')"), SQL_NOT_NULL, NULL},
+  {"timestamp", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', CURRENT_TIMESTAMP)"), SQL_NOT_NULL, NULL},
   {"md_file_id", "INTEGER", N, SQL_NOT_NULL, "CONSTRAINT fk_file_id__metadata_id REFERENCES gpkg_metadata(id)"},
   {"md_parent_id", "INTEGER", N, 0, "CONSTRAINT fk_parent_id__metadata_id REFERENCES gpkg_metadata(id)"},
   {NULL, NULL, N, 0, NULL}
