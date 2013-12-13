@@ -49,7 +49,7 @@ static column_info_t gpkg_contents_columns[] = {
   {"data_type", "TEXT", N, SQL_NOT_NULL, NULL},
   {"identifier", "TEXT", N, SQL_UNIQUE(1), NULL},
   {"description", "TEXT", T(""), 0, NULL},
-  {"last_change", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', CURRENT_TIMESTAMP)"), SQL_NOT_NULL, NULL},
+  {"last_change", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ',CURRENT_TIMESTAMP)"), SQL_NOT_NULL, NULL},
   {"min_x", "DOUBLE", N, 0, NULL},
   {"min_y", "DOUBLE", N, 0, NULL},
   {"max_x", "DOUBLE", N, 0, NULL},
@@ -157,6 +157,7 @@ static column_info_t gpkg_data_column_constraints_columns[] = {
   {"minIsInclusive", "BOOLEAN", N, 0, NULL},
   {"max", "NUMERIC", N, 0, NULL},
   {"maxIsInclusive", "BOOLEAN", N, 0, NULL},
+  {"description", "TEXT", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_data_column_constraints = {
@@ -168,9 +169,9 @@ static table_info_t gpkg_data_column_constraints = {
 static column_info_t gpkg_metadata_columns[] = {
   {"id", "INTEGER", N, SQL_NOT_NULL | SQL_AUTOINCREMENT | SQL_PRIMARY_KEY, NULL},
   {"md_scope", "TEXT", T("dataset"), SQL_NOT_NULL, NULL},
-  {"md_standard_uri", "TEXT", T("http://schemas.opengis.net/iso/19139"), SQL_NOT_NULL, NULL},
+  {"md_standard_uri", "TEXT", N, SQL_NOT_NULL, NULL},
   {"mime_type", "TEXT", T("text/xml"), SQL_NOT_NULL, NULL},
-  {"metadata", "TEXT", T(""), SQL_NOT_NULL, NULL},
+  {"metadata", "TEXT", N, SQL_NOT_NULL, NULL},
   {NULL, NULL, N, 0, NULL}
 };
 static table_info_t gpkg_metadata = {
@@ -184,7 +185,7 @@ static column_info_t gpkg_metadata_reference_columns[] = {
   {"table_name", "TEXT", N, 0, NULL},
   {"column_name", "TEXT", N, 0, NULL},
   {"row_id_value", "INTEGER", N, 0, NULL},
-  {"timestamp", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ', CURRENT_TIMESTAMP)"), SQL_NOT_NULL, NULL},
+  {"timestamp", "DATETIME", F("strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ',CURRENT_TIMESTAMP)"), SQL_NOT_NULL, NULL},
   {"md_file_id", "INTEGER", N, SQL_NOT_NULL, "CONSTRAINT fk_file_id__metadata_id REFERENCES gpkg_metadata(id)"},
   {"md_parent_id", "INTEGER", N, 0, "CONSTRAINT fk_parent_id__metadata_id REFERENCES gpkg_metadata(id)"},
   {NULL, NULL, N, 0, NULL}
