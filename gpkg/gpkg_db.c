@@ -94,7 +94,7 @@ static table_info_t gpkg_geometry_columns = {
 
 static column_info_t gpkg_tile_matrix_set_columns[] = {
   {"table_name", "TEXT", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_table_name__gpkg_contents_table_name REFERENCES gpkg_contents(table_name)"},
-  {"srs_id", "INTEGER", N, SQL_NOT_NULL | SQL_PRIMARY_KEY, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
+  {"srs_id", "INTEGER", N, SQL_NOT_NULL, "CONSTRAINT fk_srs_id__gpkg_spatial_ref_sys_srs_id REFERENCES gpkg_spatial_ref_sys(srs_id)"},
   {"min_x", "DOUBLE", N, SQL_NOT_NULL, NULL},
   {"min_y", "DOUBLE", N, SQL_NOT_NULL, NULL},
   {"max_x", "DOUBLE", N, SQL_NOT_NULL, NULL},
