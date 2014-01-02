@@ -254,7 +254,7 @@ static void ST_GeomFromWKB(sqlite3_context *context, int nbArgs, sqlite3_value *
       FUNCTION_GET_INT_ARG(srid, 1);
       spatialdb->writer_init_srid(&writer, srid);
     } else {
-      FUNCTION_SET_INT_ARG(srid, -1);
+      FUNCTION_SET_INT_ARG(srid, 0);
       spatialdb->writer_init(&writer);
     }
 
@@ -368,7 +368,7 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
       FUNCTION_GET_INT_ARG(srid, 1);
       fromtext->spatialdb->writer_init_srid(&writer, srid);
     } else {
-      FUNCTION_SET_INT_ARG(srid, -1);
+      FUNCTION_SET_INT_ARG(srid, 0);
       fromtext->spatialdb->writer_init(&writer);
     }
 
