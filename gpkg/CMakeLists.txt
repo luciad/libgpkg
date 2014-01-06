@@ -54,11 +54,7 @@ endif()
 # Static library of libgpkg
 #
 add_library( gpkg_static STATIC ${GPKG_SOURCE_FILES} )
-set_target_properties(
-  gpkg_static PROPERTIES
-  OUTPUT_NAME "gpkg"
-  PUBLIC_HEADER gpkg.h
-)
+set_target_properties( gpkg_static PROPERTIES OUTPUT_NAME "gpkg" )
 
 #
 # SQLite loadable extension version of libgpkg
@@ -114,6 +110,6 @@ if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
 endif()
 
 if ( UNIX )
-  install( TARGETS gpkg_ext gpkg_static DESTINATION lib )
+  install( TARGETS gpkg_ext LIBRARY DESTINATION lib )
   install( FILES gpkg.h DESTINATION include )
 endif()

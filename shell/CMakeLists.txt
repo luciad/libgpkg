@@ -25,7 +25,6 @@ include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 set_target_properties(
   gpkg_shell PROPERTIES
   OUTPUT_NAME "gpkg"
-  VERSION ${gpkg_BUILD_VERSION}
 )
 
 if( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
