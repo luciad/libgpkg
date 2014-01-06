@@ -29,8 +29,5 @@ if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
 endif()
 
 if ( UNIX )
-  install(
-    TARGETS gpkg_shell
-    RUNTIME DESTINATION "bin"
-  )
+  install( TARGETS gpkg_shell DESTINATION bin )
 endif()

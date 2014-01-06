@@ -52,7 +52,7 @@ set_target_properties(
 #
 # SQLite loadable extension version of libgpkg
 #
-add_library ( gpkg_ext MODULE ${GPKG_SOURCE_FILES} gpkg.c )
+add_library ( gpkg_ext SHARED ${GPKG_SOURCE_FILES} gpkg.c )
 set_target_properties( gpkg_ext PROPERTIES OUTPUT_NAME "gpkg" )
 
 #
@@ -106,4 +106,9 @@ endif()
 if ( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" AND GPKG_COVERAGE )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage" )
   set_target_properties( gpkg_ext PROPERTIES LINK_FLAGS "--coverage" )
+endif()
+
+if ( UNIX )
+  install( TARGETS gpkg_ext DESTINATION lib )
+  install( FILES gpkg.h DESTINATION include )
 endif()
