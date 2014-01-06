@@ -128,11 +128,11 @@ static int row_string(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   char **out = (char **)data;
   int col_count = sqlite3_column_count(stmt);
   if (col_count > 0) {
+    const unsigned char *text = sqlite3_column_text(stmt, 0);
     int length = sqlite3_column_bytes(stmt, 0);
     if (length <= 0) {
       *out = NULL;
     } else {
-      const unsigned char *text = sqlite3_column_text(stmt, 0);
       *out = (char *)sqlite3_malloc(length + 1);
       if (*out == NULL) {
         return SQLITE_NOMEM;
