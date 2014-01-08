@@ -22,4 +22,6 @@ before_script:
 script: make && make test
 
 after_success:
-  - coveralls -r gpkg/CMakeFiles/gpkg_ext.dir -b gpkg/CMakeFiles/gpkg_ext.dir
+  - mkdir coverage
+  - cd coverage
+  - ruby ../../coveralls gpkg/CMakeFiles/gpkg_ext.dir
