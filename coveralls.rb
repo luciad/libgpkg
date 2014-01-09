@@ -40,9 +40,12 @@ class Coveralls
     # Convert gcov reports to coveralls report
     puts "Generating coveralls.io report" if verbose?
     repo_root = Pathname.new(gitroot)
-    source_files = Dir["#{Dir.pwd}/*.gcov"].map do |gcov|
-      puts "  #{gcov}" if verbose?
-      report(gcov, repo_root)
+    source_files = []
+    @dirs.each do |dir|
+      Dir["#{File.expand_path(dir)}/**/*.gcov"].each do |gcov|
+        puts "  #{gcov}" if verbose?
+        source_files << report(gcov, repo_root)
+      end
     end
 
     report = {
@@ -132,8 +135,8 @@ class Coveralls
     `git remote -v`.lines.find_all { |l| l.index '(fetch)' }.map { |l| { 'name' => l.split[0], 'url' => l.split[1] } }
   end
 
-  def run_gcov(object_file)
-    `gcov #{object_file}`
+  def run_gcov(file_name)
+    system('gcov', File.basename(file_name), :chdir => File.dirname(file_name))
   end
 end
 
