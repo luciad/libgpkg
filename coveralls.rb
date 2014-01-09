@@ -50,7 +50,7 @@ class Coveralls
 
     report = {
         'service_name' => 'travis-ci',
-        'service_job_id' => ENV['TRAVIS_JOB_ID'] || '16651305',
+        'service_job_id' => ENV['TRAVIS_JOB_ID'],
         'git' => {
             'head' => {
                 'id' => gitlog('%H'),
@@ -63,15 +63,16 @@ class Coveralls
             'branch' => ENV['TRAVIS_BRANCH'] || gitbranch,
             'remotes' => gitremotes
         },
-        'source_files' => source_files,
         'run_at' => Time.now.utc.to_s
     }
 
     puts JSON.pretty_generate(report) if verbose?
 
     report['source_files'] = source_files
-    File.open('report.json', 'w') { |f| JSON.dump( report, f ) }
-    'report.json'
+
+    report_path = File.expand_path('report.json')
+    File.open(report_path, 'w') { |f| JSON.dump( report, f ) }
+    report_path
   end
 
   def report(gcov_file, root_dir)
