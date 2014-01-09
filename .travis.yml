@@ -23,4 +23,4 @@ script: make && make test
 after_success:
   - mkdir coverage
   - cd coverage
-  - ruby ../../coveralls.rb -v gpkg/CMakeFiles/gpkg_ext.dir
+  - ruby ../../coveralls.rb -v ../gpkg/CMakeFiles/gpkg_ext.dir
