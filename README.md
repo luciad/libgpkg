@@ -14,6 +14,10 @@ more information.
 
 A free GeoPackage viewer on Android, based on LuciadMobile, is available at [demo.luciad.com/GeoPackage](http://demo.luciad.com/GeoPackage/).
 
+# Status
+[![Build Status](https://travis-ci.org/luciad/libgpkg.png?branch=master)](https://travis-ci.org/luciad/libgpkg)
+[![Coverage Status](https://coveralls.io/repos/luciad/libgpkg/badge.png?branch=master)](https://coveralls.io/r/luciad/libgpkg?branch=master)
+
 # License
 libgpkg is distributed under the [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) version 2.0.
 
