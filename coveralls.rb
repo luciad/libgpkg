@@ -91,7 +91,7 @@ class Coveralls
         tag,info = source_line.split(':', 2)
         source_file = info.strip if tag == 'Source'
       else
-        src << "\n"
+        src << "\n" unless src.empty?
         src << source_line
         if exec_count.index('-')
           cov << nil
