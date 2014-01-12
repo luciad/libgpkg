@@ -47,6 +47,7 @@ if( GPKG_GEOS )
 
     list( APPEND GPKG_SOURCE_FILES geos_context.c geos_geom_func.c geos_geom_io.c )
     include_directories( GEOS_INCLUDE_DIR )
+    set ( GPKG_HAVE_GEOS TRUE PARENT_SCOPE )
   endif()
 endif()
 

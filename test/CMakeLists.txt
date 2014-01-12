@@ -47,5 +47,12 @@ foreach(entry_point IN LISTS entry_points)
       GPKG_EXTENSION=${gpkgext_location}
       GPKG_ENTRY_POINT=${entry_point}
     )
+    if ( GPKG_HAVE_GEOS )
+      set_property(
+        TEST ${test_name}
+        PROPERTY ENVIRONMENT
+        GPKG_GEOS=TRUE
+      )
+    endif()
   endforeach(test_script)
 endforeach(entry_point)
