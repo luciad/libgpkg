@@ -68,6 +68,10 @@ static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_
   uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
   size_t blob_length = (size_t) sqlite3_value_bytes(value);
 
+  if (blob == NULL) {
+    return NULL;
+  }
+
   binstream_t stream;
   binstream_init(&stream, blob, blob_length);
 
@@ -83,16 +87,21 @@ static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_
 }
 
 static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, error_t *error) {
-  geom_blob_writer_t writer;
-  geos_context->spatialdb->writer_init_srid( &writer, GEOSGetSRID_r(geos_context->geos_handle, geom) );
+  if (geom == NULL) {
+    sqlite3_result_null(context);
+    return SQLITE_OK;
+  } else {
+    geom_blob_writer_t writer;
+    geos_context->spatialdb->writer_init_srid( &writer, GEOSGetSRID_r(geos_context->geos_handle, geom) );
 
-  geos_read_geometry(geos_context->geos_handle, geom, geom_blob_writer_geom_consumer(&writer), error);
+    geos_read_geometry(geos_context->geos_handle, geom, geom_blob_writer_geom_consumer(&writer), error);
 
-  sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), geom_blob_writer_length(&writer), sqlite3_free);
+    sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), geom_blob_writer_length(&writer), sqlite3_free);
 
-  geos_context->spatialdb->writer_destroy( &writer, 0 );
+    geos_context->spatialdb->writer_destroy( &writer, 0 );
 
-  return SQLITE_OK;
+    return SQLITE_OK;
+  }
 }
 
 #define GEOS_START(context) \
@@ -109,7 +118,11 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   if (g1 == NULL) {\
-    sqlite3_result_error(context, error_message(&error), -1);\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
     return;\
   }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1);\
@@ -127,7 +140,11 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
   if (g1 == NULL || g2 == NULL) {\
-    sqlite3_result_error(context, error_message(&error), -1);\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
     return;\
   }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
@@ -145,7 +162,11 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   if (g1 == NULL) {\
-    sqlite3_result_error(context, error_message(&error), -1);\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
     return;\
   }\
   double val;\
@@ -164,7 +185,11 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
   if (g1 == NULL || g2 == NULL) {\
-    sqlite3_result_error(context, error_message(&error), -1);\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
     return;\
   }\
   double val;\
@@ -183,7 +208,11 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOS_START(context);\
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   if (g1 == NULL) {\
-    sqlite3_result_error(context, error_message(&error), -1);\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
     return;\
   }\
   GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1);\
@@ -202,7 +231,11 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
   GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
   if (g1 == NULL || g2 == NULL) {\
-    sqlite3_result_error(context, error_message(&error), -1);\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
     return;\
   }\
   GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
