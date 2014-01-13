@@ -48,6 +48,6 @@ describe 'ST_IsMeasured' do
   end
 
   it 'should raise an error on invalid input' do
-    expect("SELECT ST_IsMeasured(x'FFFFFFFFFF'))").to raise_sql_error
+    expect("SELECT ST_IsMeasured(x'FFFFFFFFFF')").to raise_sql_error
   end
 end

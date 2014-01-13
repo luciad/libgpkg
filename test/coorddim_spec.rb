@@ -52,6 +52,6 @@ describe 'ST_CoordDim' do
   end
 
   it 'should raise an error on invalid input' do
-    expect("SELECT ST_CoordDim(x'FFFFFFFFFF'))").to raise_sql_error
+    expect("SELECT ST_CoordDim(x'FFFFFFFFFF')").to raise_sql_error
   end
 end

@@ -28,7 +28,7 @@ describe 'ST_SRID' do
   end
 
   it 'should raise an error on invalid input' do
-    expect("SELECT ST_SRID(x'FFFFFFFFFF'))").to raise_sql_error
+    expect("SELECT ST_SRID(x'FFFFFFFFFF')").to raise_sql_error
   end
 
   it 'should return an update geometry when called with two parameters' do

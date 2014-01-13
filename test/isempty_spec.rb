@@ -38,6 +38,6 @@ describe 'ST_IsEmpty' do
   end
 
   it 'should raise an error on invalid input' do
-    expect("SELECT ST_IsEmpty(x'FFFFFFFFFF'))").to raise_sql_error
+    expect("SELECT ST_IsEmpty(x'FFFFFFFFFF')").to raise_sql_error
   end
 end
