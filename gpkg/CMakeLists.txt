@@ -46,7 +46,7 @@ if( GPKG_GEOS )
     message( WARNING "GEOS is licensed under LGPL 2.1" )
 
     list( APPEND GPKG_SOURCE_FILES geos_context.c geos_geom_func.c geos_geom_io.c )
-    include_directories( GEOS_INCLUDE_DIR )
+    include_directories( ${GEOS_INCLUDE_DIR} )
     set ( GPKG_HAVE_GEOM_FUNC "GEOS" )
     set ( GPKG_HAVE_GEOM_FUNC ${GPKG_HAVE_GEOM_FUNC} PARENT_SCOPE )
   endif()
