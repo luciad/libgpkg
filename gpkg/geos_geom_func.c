@@ -255,10 +255,15 @@ static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args
   GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );
   GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );
   const unsigned char *pattern = sqlite3_value_text( args[2] );
-  if (g1 == NULL || g2 == NULL) {
-    sqlite3_result_error(context, error_message(&error), -1);
+  if (g1 == NULL || g2 == NULL || pattern == NULL) {
+    if (error_count(&error) > 0) {
+      sqlite3_result_error(context, error_message(&error), -1);
+    } else {
+      sqlite3_result_null(context);
+    }
     return;
   }
+
   char result = GEOSRelatePattern_r(GEOS_HANDLE, g1, g2, (const char *)pattern);
   if (result == 2) {
     geom_geos_get_error(&error);
