@@ -299,7 +299,7 @@ GEOS_FUNC2_GEOM(SymDifference)
 GEOS_FUNC2_GEOM(Intersection)
 GEOS_FUNC2_GEOM(Union)
 
-#if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR > 3)
+#if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3)
   GEOS_FUNC1(isClosed)
   GEOS_FUNC2(Covers)
   GEOS_FUNC2(CoveredBy)
@@ -362,8 +362,8 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   GEOS_FUNCTION(db, ST, Intersection, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Union, 2, ctx, error);
 
-#if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR > 3)
-  if (geos_major > 3 || geos_minor >= 3) {
+#if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3)
+  if (geos_major > 3 || (geos_major == 3 && geos_minor >= 3)) {
     GEOS_FUNCTION(db, ST, isClosed, 1, ctx, error);
     GEOS_FUNCTION(db, ST, Covers, 2, ctx, error);
     GEOS_FUNCTION(db, ST, CoveredBy, 2, ctx, error);
