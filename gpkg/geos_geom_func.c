@@ -307,6 +307,10 @@ GEOS_FUNC2_GEOM(SymDifference)
 GEOS_FUNC2_GEOM(Intersection)
 GEOS_FUNC2_GEOM(Union)
 
+static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  sqlite3_result_text(context, GEOSversion(), -1, SQLITE_TRANSIENT);
+}
+
 #define STR(x) #x
 
 #define GEOS_FUNCTION(db, prefix, name, nbArgs, ctx, error)                                                            \
@@ -324,12 +328,15 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
     return;
   }
 
+  int geos_major;
+  int geos_minor;
+  int geos_version_result = sscanf( GEOSversion(), "%d.%d", &geos_major, &geos_minor );
+  if ( geos_version_result != 2 ) {
+    error_append(error, "Could not parse GEOS version number (%s)", GEOSversion());
+  }
+
   GEOS_FUNCTION(db, ST, Area, 1, ctx, error);
   GEOS_FUNCTION(db, ST, Length, 1, ctx, error);
-
-#if GEOS_CAPI_VERSION_MINOR >= 7
-  GEOS_FUNCTION(db, ST, isClosed, 1, ctx, error);
-#endif
 
   GEOS_FUNCTION(db, ST, isSimple, 1, ctx, error);
   GEOS_FUNCTION(db, ST, isRing, 1, ctx, error);
@@ -345,11 +352,6 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   GEOS_FUNCTION(db, ST, Equals, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Relate, 3, ctx, error);
 
-#if GEOS_CAPI_VERSION_MINOR >= 8
-  GEOS_FUNCTION(db, ST, Covers, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, CoveredBy, 2, ctx, error);
-#endif
-
   GEOS_FUNCTION(db, ST, Distance, 2, ctx, error);
   GEOS_FUNCTION(db, ST, HausdorffDistance, 2, ctx, error);
 
@@ -361,6 +363,14 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
   GEOS_FUNCTION(db, ST, SymDifference, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Intersection, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Union, 2, ctx, error);
+
+  if (geos_major > 3 || geos_minor >= 3) {
+    GEOS_FUNCTION(db, ST, isClosed, 1, ctx, error);
+    GEOS_FUNCTION(db, ST, Covers, 2, ctx, error);
+    GEOS_FUNCTION(db, ST, CoveredBy, 2, ctx, error);
+  }
+
+  GEOS_FUNCTION(db, GPKG, GEOSVersion, 0, ctx, error);
 
   geos_context_release(ctx);
 }
