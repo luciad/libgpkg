@@ -107,6 +107,7 @@ module GeoPackage
 
     class RaiseSQLError
       include RSpec::Matchers::Pretty
+      include GeoPackage::Pretty
 
       def initialize(db)
         @db = db
@@ -115,7 +116,7 @@ module GeoPackage
       def matches?(query)
         @query = query.dup
         begin
-          @db.get_first_value(query)
+          @actual = @db.get_first_value(query)
           false
         rescue SQLite3::SQLite3Error => e
           @error = e.message
@@ -124,11 +125,11 @@ module GeoPackage
       end
 
       def failure_message_for_should
-        "expected #{format_query()} to raise SQL error"
+        "expected #{format_query(@query)} to raise SQL error, but returned #{@actual}"
       end
 
       def failure_message_for_should_not
-        "expected #{format_query()} to not raise SQL error '#{@error}'"
+        "expected #{format_query(@query)} to not raise SQL error '#{@error}'"
       end
     end
 
