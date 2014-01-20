@@ -18,7 +18,9 @@ before_script:
  - cd build
  - cmake -DGPKG_GEOS:BOOL=on -DGPKG_TEST:BOOL=on -DGPKG_COVERAGE:BOOL=on ..
 
-script: make && make test
+script:
+ - make
+ - ctest --output-on-failure
 
 after_success:
   - mkdir coverage
