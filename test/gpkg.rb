@@ -44,8 +44,18 @@ module GeoPackage
       ENV['GPKG_ENTRY_POINT'].match(/^(?:gpkg_)?(.*)/)[1].to_sym
     end
 
+    def self.geos_version
+      db = SQLite3::Database.new(':memory:', SQLite3::OPEN_READWRITE | SQLite3::OPEN_CREATE)
+      db.load_extension ENV['GPKG_EXTENSION'], "sqlite3_#{ENV['GPKG_ENTRY_POINT']}_init"
+      db.get_first_value('SELECT GPKG_GeosVersion()').scan(/\d+/)[0..2].map { |s| s.to_i }
+    end
+
     def mode
       Helpers.mode
+    end
+
+    def geos_version
+      Helpers.geos_version
     end
 
     def query(*query)

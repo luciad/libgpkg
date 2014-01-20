@@ -271,40 +271,44 @@ if ENV['GPKG_HAVE_GEOM_FUNC']
   end
 
   describe 'ST_Covers' do
-    it 'should return NULL when either argument is NULL' do
-      expect("SELECT ST_Covers(NULL, GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to have_result nil
-      expect("SELECT ST_Covers(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), NULL)").to have_result nil
-      expect("SELECT ST_Covers(NULL, NULL)").to have_result nil
-    end
+    if geos_version[0] > 3 || geos_version[1] >= 3
+      it 'should return NULL when either argument is NULL' do
+        expect("SELECT ST_Covers(NULL, GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to have_result nil
+        expect("SELECT ST_Covers(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), NULL)").to have_result nil
+        expect("SELECT ST_Covers(NULL, NULL)").to have_result nil
+      end
 
-    it 'should raise an error on invalid input' do
-      expect("SELECT ST_Covers(x'FFFFFFFFFF', GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to raise_sql_error
-      expect("SELECT ST_Covers(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), x'FFFFFFFFFF')").to raise_sql_error
-      expect("SELECT ST_Covers(x'FFFFFFFFFF', x'FFFFFFFFFF')").to raise_sql_error
-    end
+      it 'should raise an error on invalid input' do
+        expect("SELECT ST_Covers(x'FFFFFFFFFF', GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to raise_sql_error
+        expect("SELECT ST_Covers(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), x'FFFFFFFFFF')").to raise_sql_error
+        expect("SELECT ST_Covers(x'FFFFFFFFFF', x'FFFFFFFFFF')").to raise_sql_error
+      end
 
-    it 'should raise a valid value' do
-      expect("SELECT ST_Covers(GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'), GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'))").to have_result 0
-      expect("SELECT ST_Covers(GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'),GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'))").to have_result 1
+      it 'should raise a valid value' do
+        expect("SELECT ST_Covers(GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'), GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'))").to have_result 0
+        expect("SELECT ST_Covers(GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'),GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'))").to have_result 1
+      end
     end
   end
 
   describe 'ST_CoveredBy' do
-    it 'should return NULL when either argument is NULL' do
-      expect("SELECT ST_CoveredBy(NULL, GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to have_result nil
-      expect("SELECT ST_CoveredBy(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), NULL)").to have_result nil
-      expect("SELECT ST_CoveredBy(NULL, NULL)").to have_result nil
-    end
+    if geos_version[0] > 3 || geos_version[1] >= 3
+      it 'should return NULL when either argument is NULL' do
+        expect("SELECT ST_CoveredBy(NULL, GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to have_result nil
+        expect("SELECT ST_CoveredBy(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), NULL)").to have_result nil
+        expect("SELECT ST_CoveredBy(NULL, NULL)").to have_result nil
+      end
 
-    it 'should raise an error on invalid input' do
-      expect("SELECT ST_CoveredBy(x'FFFFFFFFFF', GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to raise_sql_error
-      expect("SELECT ST_CoveredBy(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), x'FFFFFFFFFF')").to raise_sql_error
-      expect("SELECT ST_CoveredBy(x'FFFFFFFFFF', x'FFFFFFFFFF')").to raise_sql_error
-    end
+      it 'should raise an error on invalid input' do
+        expect("SELECT ST_CoveredBy(x'FFFFFFFFFF', GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'))").to raise_sql_error
+        expect("SELECT ST_CoveredBy(GeomFromText('Polygon((0 0, 2 0, 1 2, 0 0))'), x'FFFFFFFFFF')").to raise_sql_error
+        expect("SELECT ST_CoveredBy(x'FFFFFFFFFF', x'FFFFFFFFFF')").to raise_sql_error
+      end
 
-    it 'should raise a valid value' do
-      expect("SELECT ST_CoveredBy(GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'), GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'))").to have_result 1
-      expect("SELECT ST_CoveredBy(GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'),GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'))").to have_result 0
+      it 'should raise a valid value' do
+        expect("SELECT ST_CoveredBy(GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'), GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'))").to have_result 1
+        expect("SELECT ST_CoveredBy(GeomFromText('Polygon((0 0, 3 0, 3 3, 0 3, 0 0))'),GeomFromText('Polygon((1 1, 2 1, 2 2, 1 2, 1 1))'))").to have_result 0
+      end
     end
   end
 
