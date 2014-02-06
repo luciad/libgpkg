@@ -1,0 +1,14 @@
+0.9.15 06/02/2014
+- Synced libgpkg shell with SQLite version 3.8.3
+- Functions are now registered as SQLITE_DETERMINISTIC is possible. This should improve performance for certain
+  queries. This optimization is enabled when libgpkg is compiled and used with SQLite 3.8.3 or greater.
+- Correct handling of NULL parameters in ST_Relate
+- Improved reliability of GEOS function availability checks
+- GEOS function availability is now determined at runtime rather than at compile time. This makes libgpkg more reliable
+  when it is dynamically linked with GEOS.
+
+0.9.14 13/01/2014
+- GEOS-based geometry functions now correctly return NULL when necessary
+
+0.9.13 06/01/2014
+- Correct potential bug when columns non-text columns are retrieved as text
