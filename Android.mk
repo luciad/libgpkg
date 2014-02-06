@@ -28,7 +28,7 @@ LOCAL_MODULE := gpkg
 LOCAL_CFLAGS := \
     -fvisibility=hidden \
     -std=c99 \
-    -DLIBGPKG_VERSION="\"0.9.7\"" \
+    -DLIBGPKG_VERSION="\"0.9.15\"" \
     -DGPKG_EXPORT="__attribute__((visibility(\"default\")))"
 
 include $(BUILD_SHARED_LIBRARY)
