@@ -867,9 +867,9 @@ static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value 
 }
 
 static void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {
-  sql_create_function(db, "GeometryConstraints", spl_geometry_constraints, 3, (void *)spatialDb, NULL, error);
-  sql_create_function(db, "GeometryConstraints", spl_geometry_constraints, 4, (void *)spatialDb, NULL, error);
-  sql_create_function(db, "RTreeAlign", spl_rtree_align, 3, (void *)spatialDb, NULL, error);
+  sql_create_function(db, "GeometryConstraints", spl_geometry_constraints, 3, SQL_DETERMINISTIC, (void *)spatialDb, NULL, error);
+  sql_create_function(db, "GeometryConstraints", spl_geometry_constraints, 4, SQL_DETERMINISTIC, (void *)spatialDb, NULL, error);
+  sql_create_function(db, "RTreeAlign", spl_rtree_align, 3, 0, (void *)spatialDb, NULL, error);
 }
 
 static const spatialdb_t SPATIALITE2 = {

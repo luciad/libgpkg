@@ -363,7 +363,9 @@ int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql);
 
 typedef void(sql_function)(sqlite3_context*,int,sqlite3_value**);
 
-int sql_create_function(sqlite3 *db, const char *name, sql_function *function, int args, void *user_data, void (*destroy)(void*), error_t *error);
+#define SQL_DETERMINISTIC 1
+
+int sql_create_function(sqlite3 *db, const char *name, sql_function *function, int args, int flags, void *user_data, void (*destroy)(void*), error_t *error);
 
 /** @} */
 

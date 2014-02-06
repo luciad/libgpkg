@@ -319,9 +319,9 @@ static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value
 #define GEOS_FUNCTION(db, prefix, name, nbArgs, ctx, error)                                                            \
   do {                                                                                                                 \
     geos_context_acquire(ctx);                                                                                         \
-    sql_create_function(db, STR(name), prefix##_##name, nbArgs, ctx, (void(*)(void*))geos_context_release, error);     \
+    sql_create_function(db, STR(name), prefix##_##name, nbArgs, SQL_DETERMINISTIC, ctx, (void(*)(void*))geos_context_release, error);     \
     geos_context_acquire(ctx);                                                                                         \
-    sql_create_function(db, STR(prefix##_##name), prefix##_##name, nbArgs, ctx, (void(*)(void*))geos_context_release, error);\
+    sql_create_function(db, STR(prefix##_##name), prefix##_##name, nbArgs, SQL_DETERMINISTIC, ctx, (void(*)(void*))geos_context_release, error);\
   } while (0)
 
 void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {

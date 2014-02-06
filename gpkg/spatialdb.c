@@ -723,32 +723,32 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
 
 #define STR(x) #x
 
-#define SPATIALDB_FUNCTION(db, pre, name, args, spatialdb, err)                                                        \
+#define SPATIALDB_FUNCTION(db, pre, name, args, flags, spatialdb, err)                                                 \
   do {                                                                                                                 \
-    sql_create_function(db, STR(name), pre##_##name, args, (void*)spatialdb, NULL, err);                               \
-    sql_create_function(db, STR(pre##_##name), pre##_##name, args, (void*)spatialdb, NULL, err);                       \
+    sql_create_function(db, STR(name), pre##_##name, args, flags, (void*)spatialdb, NULL, err);                        \
+    sql_create_function(db, STR(pre##_##name), pre##_##name, args, flags, (void*)spatialdb, NULL, err);                \
   } while (0)
 
-#define SPATIALDB_ALIAS(db, pre, name, func, args, spatialdb, err)                                                     \
+#define SPATIALDB_ALIAS(db, pre, name, func, args, flags, spatialdb, err)                                              \
   do {                                                                                                                 \
-    sql_create_function(db, STR(name), pre##_##func, args, (void*)spatialdb, NULL, err);                               \
-    sql_create_function(db, STR(pre##_##name), pre##_##func, args, (void*)spatialdb, NULL, err);                       \
+    sql_create_function(db, STR(name), pre##_##func, args, flags, (void*)spatialdb, NULL, err);                        \
+    sql_create_function(db, STR(pre##_##name), pre##_##func, args, flags, (void*)spatialdb, NULL, err);                \
   } while (0)
 
-#define FROMTEXT_FUNCTION(db, pre, name, args, ft, err)                                                                \
+#define FROMTEXT_FUNCTION(db, pre, name, args, flags, ft, err)                                                         \
   do {                                                                                                                 \
     fromtext_acquire(fromtext);                                                                                        \
-    sql_create_function(db, STR(name), pre##_##name, args, ft, (void(*)(void*))fromtext_release, err);                 \
+    sql_create_function(db, STR(name), pre##_##name, args, flags, ft, (void(*)(void*))fromtext_release, err);          \
     fromtext_acquire(fromtext);                                                                                        \
-    sql_create_function(db, STR(pre##_##name), pre##_##name, args, ft, (void(*)(void*))fromtext_release, err);         \
+    sql_create_function(db, STR(pre##_##name), pre##_##name, args, flags, ft, (void(*)(void*))fromtext_release, err);  \
   } while (0)
 
-#define FROMTEXT_ALIAS(db, pre, name, func, args, ft, err)                                                             \
+#define FROMTEXT_ALIAS(db, pre, name, func, args, flags, ft, err)                                                      \
   do {                                                                                                                 \
     fromtext_acquire(fromtext);                                                                                        \
-    sql_create_function(db, STR(name), pre##_##func, args, (void*)ft, (void(*)(void*))fromtext_release, err);          \
+    sql_create_function(db, STR(name), pre##_##func, args, flags, (void*)ft, (void(*)(void*))fromtext_release, err);   \
     fromtext_acquire(fromtext);                                                                                        \
-    sql_create_function(db, STR(pre##_##name), pre##_##func, args, (void*)ft, (void(*)(void*))fromtext_release, err);  \
+    sql_create_function(db, STR(pre##_##name), pre##_##func, args, flags, (void*)ft, (void(*)(void*))fromtext_release, err);  \
   } while (0)
 
 int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, const spatialdb_t *spatialdb) {
@@ -814,57 +814,57 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     spatialdb->init(db, spatialdb, &error);
   }
 
-  SPATIALDB_FUNCTION(db, ST, MinX, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MaxX, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MinY, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MaxY, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MinZ, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MaxZ, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MinM, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, MaxM, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, SRID, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, SRID, 2, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, Is3d, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, IsEmpty, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, IsMeasured, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, IsValid, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, CoordDim, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, GeometryType, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, AsBinary, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, GeomFromWKB, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, GeomFromWKB, 2, spatialdb, &error);
-  SPATIALDB_ALIAS(db, ST, WKBToSQL, GeomFromWKB, 1, spatialdb, &error);
-  SPATIALDB_ALIAS(db, ST, WKBToSQL, GeomFromWKB, 2, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, AsText, 1, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MinX, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MaxX, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MinY, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MaxY, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MinZ, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MaxZ, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MinM, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, MaxM, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, SRID, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, SRID, 2, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, Is3d, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, IsEmpty, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, IsMeasured, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, IsValid, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, CoordDim, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, GeometryType, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, AsBinary, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, GeomFromWKB, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, GeomFromWKB, 2, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_ALIAS(db, ST, WKBToSQL, GeomFromWKB, 1, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_ALIAS(db, ST, WKBToSQL, GeomFromWKB, 2, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, ST, AsText, 1, SQL_DETERMINISTIC, spatialdb, &error);
 
   fromtext_t *fromtext = fromtext_init(spatialdb);
   if (fromtext != NULL) {
-    FROMTEXT_FUNCTION(db, ST, GeomFromText, 1, fromtext, &error);
-    FROMTEXT_FUNCTION(db, ST, GeomFromText, 2, fromtext, &error);
-    FROMTEXT_ALIAS(db, ST, WKTToSQL, GeomFromText, 1, fromtext, &error);
-    FROMTEXT_ALIAS(db, ST, WKTToSQL, GeomFromText, 2, fromtext, &error);
-    FROMTEXT_FUNCTION(db, ST, WKBFromText, 1, fromtext, &error);
+    FROMTEXT_FUNCTION(db, ST, GeomFromText, 1, SQL_DETERMINISTIC, fromtext, &error);
+    FROMTEXT_FUNCTION(db, ST, GeomFromText, 2, SQL_DETERMINISTIC, fromtext, &error);
+    FROMTEXT_ALIAS(db, ST, WKTToSQL, GeomFromText, 1, SQL_DETERMINISTIC, fromtext, &error);
+    FROMTEXT_ALIAS(db, ST, WKTToSQL, GeomFromText, 2, SQL_DETERMINISTIC, fromtext, &error);
+    FROMTEXT_FUNCTION(db, ST, WKBFromText, 1, SQL_DETERMINISTIC, fromtext, &error);
 
     fromtext_release(fromtext);
   } else {
     error_append(&error, "Could not create fromtext function context");
   }
 
-  SPATIALDB_FUNCTION(db, GPKG, IsAssignable, 2, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CheckSpatialMetaData, 0, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CheckSpatialMetaData, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CheckSpatialMetaData, 2, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, InitSpatialMetaData, 0, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, InitSpatialMetaData, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 4, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 5, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 6, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 7, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CreateTilesTable, 1, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CreateTilesTable, 2, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CreateSpatialIndex, 3, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, CreateSpatialIndex, 4, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, GPKG, SpatialDBType, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, IsAssignable, 2, SQL_DETERMINISTIC, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CheckSpatialMetaData, 0, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CheckSpatialMetaData, 1, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CheckSpatialMetaData, 2, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, InitSpatialMetaData, 0, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, InitSpatialMetaData, 1, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 4, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 5, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 6, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, AddGeometryColumn, 7, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CreateTilesTable, 1, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CreateTilesTable, 2, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CreateSpatialIndex, 3, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, CreateSpatialIndex, 4, 0, spatialdb, &error);
+  SPATIALDB_FUNCTION(db, GPKG, SpatialDBType, 0, 0, spatialdb, &error);
 
 
 #ifdef GPKG_HAVE_GEOM_FUNC
