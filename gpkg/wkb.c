@@ -37,6 +37,10 @@
 #define WKB_MULTILINESTRING 5
 #define WKB_MULTIPOLYGON 6
 #define WKB_GEOMETRYCOLLECTION 7
+#define WKB_CIRCULARSTRING 8
+#define WKB_COMPOUNDCURVE 9
+#define WKB_CURVEPOLYGON 10
+
 
 #define MINMAXCOORD(coord) double coord = coords[off++]; \
   if (coord < env->min_ ## coord) { \
@@ -154,6 +158,15 @@ int wkb_fill_geom_header(uint32_t wkb_type, geom_header_t *header, error_t *erro
     case WKB_GEOMETRYCOLLECTION:
       header->geom_type = GEOM_GEOMETRYCOLLECTION;
       break;
+    case WKB_CIRCULARSTRING:
+      header->geom_type = GEOM_CIRCULARSTRING;
+      break;
+    case WKB_COMPOUNDCURVE:
+      header->geom_type = GEOM_COMPOUNDCURVE;
+      break;
+    case WKB_CURVEPOLYGON:
+      header->geom_type = GEOM_CURVEPOLYGON;
+      break;
     default:
       if (error) {
         error_append(error, "Unsupported WKB geometry type: %d", wkb_type);
@@ -229,6 +242,15 @@ static int read_wkb_geometry_header(binstream_t *stream, wkb_dialect dialect, ge
       break;
     case WKB_GEOMETRYCOLLECTION:
       header->geom_type = GEOM_GEOMETRYCOLLECTION;
+      break;
+    case WKB_CIRCULARSTRING:
+      header->geom_type = GEOM_CIRCULARSTRING;
+      break;
+    case WKB_COMPOUNDCURVE:
+      header->geom_type = GEOM_COMPOUNDCURVE;
+      break;
+    case WKB_CURVEPOLYGON:
+      header->geom_type = GEOM_CURVEPOLYGON;
       break;
     default:
       if (error) {
@@ -461,6 +483,79 @@ static int read_geometrycollection(binstream_t *stream, wkb_dialect dialect, con
   return SQLITE_OK;
 }
 
+static int read_circularstring(binstream_t *stream, wkb_dialect dialect, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
+  uint32_t point_count;
+  if (binstream_read_u32(stream, &point_count) != SQLITE_OK) {
+    if (error) {
+      error_append(error, "Error reading line string point count");
+    }
+    return SQLITE_IOERR;
+  }
+
+  if (point_count < 3 && point_count != 0) {
+    if (error) {
+      error_append(error, "Error CircularString requires at least 3 points or has to be EMPTY");
+    }
+    return SQLITE_IOERR;
+  }
+
+  return read_points(stream, dialect, consumer, header, point_count, error);
+}
+
+static int read_compoundcurve(binstream_t *stream, wkb_dialect dialect, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
+  uint32_t curve_count;
+  if (binstream_read_u32(stream, &curve_count) != SQLITE_OK) {
+    if (error) {
+      error_append(error, "Error reading ompoundcurve element count");
+    }
+    return SQLITE_IOERR;
+  }
+
+  geom_header_t curve_header;
+  for (uint32_t i = 0; i < curve_count; i++) {
+    if (read_wkb_geometry_header(stream, dialect, &curve_header, error) != SQLITE_OK) {
+      return SQLITE_IOERR;
+    }
+
+    uint32_t geom_type = curve_header.geom_type;
+    if (curve_header.coord_type != header->coord_type || (geom_type != GEOM_CIRCULARSTRING && geom_type != GEOM_LINESTRING)) {
+      return SQLITE_IOERR;
+    }
+
+    if (read_geometry(stream, dialect, consumer, &curve_header, error) != SQLITE_OK) {
+      return SQLITE_IOERR;
+    }
+  }
+  return SQLITE_OK;
+}
+
+static int read_curvepolygon(binstream_t *stream, wkb_dialect dialect, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
+  uint32_t curve_count;
+  if (binstream_read_u32(stream, &curve_count) != SQLITE_OK) {
+    if (error) {
+      error_append(error, "Error reading ompoundcurve element count");
+    }
+    return SQLITE_IOERR;
+  }
+
+  geom_header_t curve_header;
+  for (uint32_t i = 0; i < curve_count; i++) {
+    if (read_wkb_geometry_header(stream, dialect, &curve_header, error) != SQLITE_OK) {
+      return SQLITE_IOERR;
+    }
+
+    uint32_t geom_type = curve_header.geom_type;
+    if (curve_header.coord_type != header->coord_type || (geom_type != GEOM_CIRCULARSTRING && geom_type != GEOM_LINESTRING && geom_type != GEOM_COMPOUNDCURVE)) {
+      return SQLITE_IOERR;
+    }
+
+    if (read_geometry(stream, dialect, consumer, &curve_header, error) != SQLITE_OK) {
+      return SQLITE_IOERR;
+    }
+  }
+  return SQLITE_OK;
+}
+
 static int read_geometry(binstream_t *stream, wkb_dialect dialect, geom_consumer_t const *consumer, geom_header_t *header, error_t *error) {
   int result;
 
@@ -486,6 +581,15 @@ static int read_geometry(binstream_t *stream, wkb_dialect dialect, geom_consumer
       break;
     case GEOM_GEOMETRYCOLLECTION:
       read_body = read_geometrycollection;
+      break;
+    case GEOM_CIRCULARSTRING:
+      read_body = read_circularstring;
+      break;
+    case GEOM_COMPOUNDCURVE:
+      read_body = read_compoundcurve;
+      break;
+    case GEOM_CURVEPOLYGON:
+      read_body = read_curvepolygon;
       break;
     default:
       if (error) {
@@ -659,6 +763,15 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
         break;
       case GEOM_GEOMETRYCOLLECTION:
         geom_type = WKB_GEOMETRYCOLLECTION;
+        break;
+      case GEOM_CIRCULARSTRING:
+        geom_type = WKB_CIRCULARSTRING;
+        break;
+      case GEOM_COMPOUNDCURVE:
+        geom_type = WKB_COMPOUNDCURVE;
+        break;
+      case GEOM_CURVEPOLYGON:
+        geom_type = WKB_CURVEPOLYGON;
         break;
     }
 

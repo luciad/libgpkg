@@ -59,9 +59,17 @@ typedef enum {
    */
   GEOM_GEOMETRYCOLLECTION = 7,
   /**
+  * Circular String
+  */
+  GEOM_CIRCULARSTRING = 8,
+  /**
+  * Compound curve
+  */
+  GEOM_COMPOUNDCURVE = 9,
+  /**
    * Curve polygon
    */
-  GEOM_CURVE_POLYGON = 10,
+  GEOM_CURVEPOLYGON = 10,
   /**
    * Multi curve
    */

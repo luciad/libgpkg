@@ -97,7 +97,7 @@ int geom_type_name(geom_type_t geom_type, const char **geom_type_name) {
     case GEOM_SURFACE:
       *geom_type_name = "Surface";
       break;
-    case GEOM_CURVE_POLYGON:
+    case GEOM_CURVEPOLYGON:
       *geom_type_name = "CurvePolygon";
       break;
     case GEOM_POLYGON:
@@ -120,6 +120,12 @@ int geom_type_name(geom_type_t geom_type, const char **geom_type_name) {
       break;
     case GEOM_MULTIPOINT:
       *geom_type_name = "MultiPoint";
+      break;
+    case GEOM_CIRCULARSTRING:
+      *geom_type_name = "CircularString";
+      break;
+    case GEOM_COMPOUNDCURVE:
+      *geom_type_name = "CompoundCurve";
       break;
     default:
       *geom_type_name = NULL;
@@ -202,7 +208,11 @@ int geom_type_from_string(const char *type_name, geom_type_t *type) {
   } else if (sqlite3_strnicmp(type_name, "linestring", 11) == 0) {
     geom_type = GEOM_LINESTRING;
   } else if (sqlite3_strnicmp(type_name, "curvepolygon", 13) == 0) {
-    geom_type = GEOM_CURVE_POLYGON;
+    geom_type = GEOM_CURVEPOLYGON;
+  } else if (sqlite3_strnicmp(type_name, "circularstring", 15) == 0) {
+    geom_type = GEOM_CIRCULARSTRING;
+  } else if (sqlite3_strnicmp(type_name, "compoundcurve", 14) == 0) {
+    geom_type = GEOM_COMPOUNDCURVE;
   } else {
     result = SQLITE_ERROR;
   }
@@ -229,14 +239,16 @@ static int geom_parent_type(geom_type_t type, geom_type_t *super_type) {
       *super_type = GEOM_GEOMETRY;
       break;
     case GEOM_LINESTRING:
+    case GEOM_CIRCULARSTRING:
+    case GEOM_COMPOUNDCURVE:
     case GEOM_LINEARRING:
       *super_type = GEOM_CURVE;
       break;
-    case GEOM_CURVE_POLYGON:
+    case GEOM_CURVEPOLYGON:
       *super_type = GEOM_SURFACE;
       break;
     case GEOM_POLYGON:
-      *super_type = GEOM_CURVE_POLYGON;
+      *super_type = GEOM_CURVEPOLYGON;
       break;
     case GEOM_MULTISURFACE:
     case GEOM_MULTICURVE:
