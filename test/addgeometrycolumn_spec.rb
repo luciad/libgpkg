@@ -44,6 +44,8 @@ describe 'AddGeometryColumn' do
     expect("SELECT AddGeometryColumn('test7', 'geom7', 'geometrycollection', 0, 0, 0)").to have_result nil
     expect('CREATE TABLE test8 (id int)').to have_result nil
     expect("SELECT AddGeometryColumn('test8', 'geom8', 'geometry', 0, 0, 0)").to have_result nil
+    expect('CREATE TABLE test9 (id int)').to have_result nil
+    expect("SELECT AddGeometryColumn('test9', 'geom9', 'circularstring', 0, 0, 0)").to have_result nil
 
     expect('test').to have_table_schema(
                           'id' => {:index => 0, :type => 'int', :not_null => false, :default => nil, :primary_key => false},
@@ -58,11 +60,6 @@ describe 'AddGeometryColumn' do
                       )
   end
 
-  it 'should raise error on unsupported geometry type' do
-    expect('SELECT InitSpatialMetadata()').to have_result nil
-    expect('CREATE TABLE test (id int)').to have_result nil
-    expect("SELECT AddGeometryColumn('test', 'geom', 'circularstring', 0, 0, 0)").to raise_sql_error
-  end
 
   it 'should raise error if table does not exist' do
     expect("SELECT AddGeometryColumn('test', 'geom', 'point', 0, 0, 0)").to raise_sql_error

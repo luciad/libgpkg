@@ -41,68 +41,24 @@
 #define WKB_COMPOUNDCURVE 9
 #define WKB_CURVEPOLYGON 10
 
-
-#define MINMAXCOORD(coord) double coord = coords[off++]; \
-  if (coord < env->min_ ## coord) { \
-    env->min_ ## coord = coord; \
-  } \
-  if (coord > env->max_ ## coord) { \
-      env->max_ ## coord = coord; \
-  }
-
 typedef struct {
   geom_consumer_t consumer;
-  geom_envelope_t *header;
-} fill_header_t;
+  geom_envelope_t *envelope;
+} fill_t;
 
-static int fill_gpb_envelope_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, error_t *error) {
-  geom_envelope_t *env = ((fill_header_t *) consumer)->header;
-  if (header->coord_type == GEOM_XY) {
-    env->has_env_x = 1;
-    env->has_env_y = 1;
-    for (size_t i = 0, off = 0; i < point_count; i++) {
-      MINMAXCOORD(x)
-      MINMAXCOORD(y)
-    }
-  } else if (header->coord_type == GEOM_XYZ) {
-    env->has_env_x = 1;
-    env->has_env_y = 1;
-    env->has_env_z = 1;
-    for (size_t i = 0, off = 0; i < point_count; i++) {
-      MINMAXCOORD(x)
-      MINMAXCOORD(y)
-      MINMAXCOORD(z)
-    }
-  } else if (header->coord_type == GEOM_XYM) {
-    env->has_env_x = 1;
-    env->has_env_y = 1;
-    env->has_env_m = 1;
-    for (size_t i = 0, off = 0; i < point_count; i++) {
-      MINMAXCOORD(x)
-      MINMAXCOORD(y)
-      MINMAXCOORD(m)
-    }
-  } else {
-    env->has_env_x = 1;
-    env->has_env_y = 1;
-    env->has_env_z = 1;
-    env->has_env_m = 1;
-    for (size_t i = 0, off = 0; i < point_count; i++) {
-      MINMAXCOORD(x)
-      MINMAXCOORD(y)
-      MINMAXCOORD(z)
-      MINMAXCOORD(m)
-    }
-  }
+static int fill_envelope_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, error_t *error) {
+  geom_envelope_t *envelope = ((fill_t *) consumer)->envelope;
+  geom_envelope_accumulate(envelope, header);
+  geom_envelope_fill(envelope, header, point_count, coords); 
   return SQLITE_OK;
 }
 
 int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t *envelope, error_t *error) {
   geom_envelope_init(envelope);
 
-  fill_header_t fill_gpb;
-  fill_gpb.header = envelope;
-  geom_consumer_init(&fill_gpb.consumer, NULL, NULL, NULL, NULL, fill_gpb_envelope_coordinates);
+  fill_t fill_gpb;
+  fill_gpb.envelope = envelope;
+  geom_consumer_init(&fill_gpb.consumer, NULL, NULL, NULL, NULL, fill_envelope_coordinates);
   int result = wkb_read_geometry(stream, dialect, &fill_gpb.consumer, error);
 
   return result;
@@ -282,7 +238,7 @@ static int read_point(binstream_t *stream, wkb_dialect dialect, const geom_consu
     return SQLITE_OK;
   }
 
-  return consumer->coordinates(consumer, header, 1, coord, error);
+  return consumer->coordinates(consumer, header, 1, coord, 0, error);
 }
 
 #define COORD_BATCH_SIZE 10
@@ -290,24 +246,40 @@ static int read_point(binstream_t *stream, wkb_dialect dialect, const geom_consu
 static int read_points(binstream_t *stream, wkb_dialect dialect, const geom_consumer_t *consumer, const geom_header_t *header, uint32_t point_count, error_t *error) {
   int result;
   double coord[GEOM_MAX_COORD_SIZE * COORD_BATCH_SIZE];
+  int max_coords_to_read = COORD_BATCH_SIZE;
+  
+  if(header->geom_type == GEOM_CIRCULARSTRING){
+      max_coords_to_read = COORD_BATCH_SIZE - ((COORD_BATCH_SIZE -3)%2);
+  }
 
   uint32_t remaining = point_count;
-  while (remaining > 0) {
-    uint32_t points_to_read = (remaining > COORD_BATCH_SIZE ? COORD_BATCH_SIZE : remaining);
+  uint32_t offset =0;
+  uint32_t points_read =0;
+  uint32_t extra_coords = 0;
+  while (remaining > 0) {      
+    uint32_t points_to_read = (remaining > max_coords_to_read ? max_coords_to_read : remaining);
     uint32_t coords_to_read = points_to_read * header->coord_size;
     for (uint32_t i = 0; i < coords_to_read; i++) {
-      result = binstream_read_double(stream, &coord[i]);
+      result = binstream_read_double(stream, &coord[i+offset]);
       if (result != SQLITE_OK) {
         if (error) {
           error_append(error, "Error reading point coordinates");
         }
         return result;
       }
-    }
+    }    
 
-    result = consumer->coordinates(consumer, header, points_to_read, coord, error);
+    result = consumer->coordinates(consumer, header, points_to_read+extra_coords, coord, offset, error);
     if (result != SQLITE_OK) {
       return result;
+    }
+    
+    if(header->geom_type == GEOM_CIRCULARSTRING){
+         for(uint32_t i = 0; i < header->coord_size; i++){
+            coord[i] = coord[((points_to_read-1)*header->coord_size)+i];
+        }
+        offset = header->coord_size; 
+        extra_coords = 1;        
     }
 
     remaining -= points_to_read;
@@ -506,7 +478,7 @@ static int read_compoundcurve(binstream_t *stream, wkb_dialect dialect, const ge
   uint32_t curve_count;
   if (binstream_read_u32(stream, &curve_count) != SQLITE_OK) {
     if (error) {
-      error_append(error, "Error reading ompoundcurve element count");
+      error_append(error, "Error reading compoundcurve element count");
     }
     return SQLITE_IOERR;
   }
@@ -685,13 +657,14 @@ static int wkb_begin_geometry(const geom_consumer_t *consumer, const geom_header
   return result;
 }
 
-static int wkb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, error_t *error) {
+static int wkb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, error_t *error) {
   int result = SQLITE_OK;
 
   wkb_writer_t *writer = (wkb_writer_t *) consumer;
   binstream_t *stream = &writer->stream;
-
-  result = binstream_write_ndouble(stream, coords, point_count * header->coord_size);
+  
+  point_count = (skip_coords == 0)?point_count:(point_count-(skip_coords/header->coord_size));
+  result = binstream_write_ndouble(stream, &coords[skip_coords], point_count * header->coord_size);
   if (result != SQLITE_OK) {
     goto exit;
   }

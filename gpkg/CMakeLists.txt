@@ -69,6 +69,10 @@ if ( GPKG_GEOS AND GEOS_FOUND )
   target_link_libraries( gpkg_static ${GEOS_LIBRARY} )
 endif()
 
+find_library( M_LIB m )
+target_link_libraries( gpkg_ext ${M_LIB} )
+target_link_libraries( gpkg_static ${M_LIB} )
+
 add_definitions( -DGPKG_HAVE_CONFIG_H )
 configure_file( "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/config.h" )
 include_directories( ${CMAKE_CURRENT_BINARY_DIR} )

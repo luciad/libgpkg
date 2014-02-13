@@ -27,6 +27,27 @@ describe 'ST_MinX' do
     expect("SELECT ST_MinX(GeomFromText('LineString(-1 0, 5 0)'))").to have_result -1.0
   end
 
+  it 'should return the minimum X coordinate of a circular string' do
+    expect("SELECT ST_MinX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result -10.0
+  end
+
+  it 'should return the minimum X coordinate of a circular string' do
+    expect("SELECT ST_MinX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
+  end
+
+  it 'should return the minimum X coordinate of a circular string' do
+    expect("SELECT ST_MinX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result -10.0
+  end
+
+  it 'should return the minimum X coordinate of a circular string' do
+    expect("SELECT ST_MinX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
+  end
+
+  it 'should return the minimum X coordinate of a circular string' do
+    expect("SELECT ST_MinX(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 0.0
+  end
+
+
   if mode == :gpkg
     it 'should return the value from the GPB header' do
       expect("SELECT ST_MinX(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')").
@@ -46,6 +67,50 @@ describe 'ST_MaxX' do
 
   it 'should return the maximum X coordinate of a line string' do
     expect("SELECT ST_MaxX(GeomFromText('LineString(-1 0, 5 0)'))").to have_result 5.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 20 10, 30 0)'))").to have_result 30.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 20 10, 30 0)'))").to have_result 30.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 120.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 20 10, 30 0)'))").to have_result 30.0
+  end
+
+  it 'should return the maximum X coordinate of a circular string' do
+    expect("SELECT ST_MaxX(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 120.0
   end
 
   if mode == :gpkg
@@ -69,6 +134,41 @@ describe 'ST_MinY' do
     expect("SELECT ST_MinY(GeomFromText('LineString(-1 7, 5 -3)'))").to have_result -3.0
   end
 
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 0.0
+  end
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
+  end
+
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 0.0
+  end
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
+  end
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result -10.0
+  end
+
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 0.0
+  end
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
+  end
+
+  it 'should return the minimum Y coordinate of a circular string' do
+    expect("SELECT ST_MinY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result -10.0
+  end
+
   if mode == :gpkg
     it 'should return the value from the GPB header' do
       expect("SELECT ST_MinY(x'475000030000000095950D08000014C097950D0800001C4059AFB70700002AC05BAFB707000024400103000000010000000300000000000000000014C000000000000024400000000000001C400000000000002AC000000000000014C00000000000002440')").
@@ -88,6 +188,50 @@ describe 'ST_MaxY' do
 
   it 'should return the maximum Y coordinate of a line string' do
     expect("SELECT ST_MaxY(GeomFromText('LineString(-1 7, 5 -3)'))").to have_result 7.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 30 20, 50 0)'))").to have_result 20.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 20.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 30 20, 50 0)'))").to have_result 20.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 20.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
+  end
+
+  it 'should return the maximum Y coordinate of a circular string' do
+    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 30 20, 50 0)'))").to have_result 20.0
   end
 
   if mode == :gpkg

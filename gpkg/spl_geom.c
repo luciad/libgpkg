@@ -136,7 +136,7 @@ exit:
   return result;
 }
 
-static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, error_t *error) {
+static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, error_t *error) {
   int result = SQLITE_OK;
 
   if (point_count <= 0) {
@@ -146,7 +146,7 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
   spb_writer_t *writer = (spb_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
   geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
-  result = wkb_consumer->coordinates(wkb_consumer, header, point_count, coords, error);
+  result = wkb_consumer->coordinates(wkb_consumer, header, point_count, coords, skip_coords, error);
   if (result != SQLITE_OK) {
     goto exit;
   }
@@ -161,43 +161,10 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
     }
   }
 
-  geom_blob_header_t *spb = &writer->header;
+  geom_blob_header_t *spb = &writer->header;  
   spb->empty = 0;
-  int offset = 0;
-  switch (header->coord_type) {
-#define MIN_MAX(coord) double coord = coords[offset++]; \
-        if (coord < spb->envelope.min_##coord) spb->envelope.min_##coord = coord; \
-        if (coord > spb->envelope.max_##coord) spb->envelope.max_##coord = coord;
-    case GEOM_XYZ:
-      for (size_t i = 0; i < point_count; i++) {
-        MIN_MAX(x)
-        MIN_MAX(y)
-        MIN_MAX(z)
-      }
-      break;
-    case GEOM_XYM:
-      for (size_t i = 0; i < point_count; i++) {
-        MIN_MAX(x)
-        MIN_MAX(y)
-        MIN_MAX(m)
-      }
-      break;
-    case GEOM_XYZM:
-      for (size_t i = 0; i < point_count; i++) {
-        MIN_MAX(x)
-        MIN_MAX(y)
-        MIN_MAX(z)
-        MIN_MAX(m)
-      }
-      break;
-    default:
-      for (size_t i = 0; i < point_count; i++) {
-        MIN_MAX(x)
-        MIN_MAX(y)
-      }
-      break;
-#undef MIN_MAX
-  }
+  geom_envelope_t *envelope = &spb->envelope;
+  geom_envelope_fill(envelope, header, point_count, coords); 
 
 exit:
   return result;
@@ -223,16 +190,12 @@ static int spb_end(const geom_consumer_t *consumer, error_t *error) {
   if (result != SQLITE_OK) {
     goto exit;
   }
-
-  if (writer->header.empty != 0) {
-    geom_envelope_t *envelope = &writer->header.envelope;
-    double nan = fp_nan();
-    envelope->min_x = envelope->max_x = nan;
-    envelope->min_y = envelope->max_y = nan;
-    envelope->min_z = envelope->max_z = nan;
-    envelope->min_m = envelope->max_m = nan;
+  
+  geom_envelope_t *envelope = &writer->header.envelope;
+  if(geom_envelope_finalize(envelope) == EMPTY_GEOM){
+      writer->header.empty = 1;
   }
-
+  
   result = spb_write_header(stream, &writer->header, NULL);
   if (result != SQLITE_OK) {
     goto exit;

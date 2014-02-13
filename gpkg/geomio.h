@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include "error.h"
 
+#define EMPTY_GEOM 1
+
 /**
  * @addtogroup geomio Geometry I/O
  * @{
@@ -235,7 +237,7 @@ typedef struct geom_consumer_t {
    * @param coords the coordinate array. This array contains (point_count * header->coord_size) values.
    * @return SQLITE_OK or an error code
    */
-  int (*coordinates)(const struct geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, error_t *error);
+  int (*coordinates)(const struct geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, error_t *error);
 } geom_consumer_t;
 
 /**
@@ -253,7 +255,7 @@ void geom_consumer_init(
   int (*end)(const geom_consumer_t *, error_t *),
   int (*begin_geometry)(const geom_consumer_t *, const geom_header_t *, error_t *),
   int (*end_geometry)(const geom_consumer_t *, const geom_header_t *, error_t *),
-  int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords, error_t *)
+  int (*coordinates)(const geom_consumer_t *, const geom_header_t *, size_t point_count, const double *coords, int skip_coords, error_t *)
 );
 
 /**
@@ -309,6 +311,29 @@ int geom_is_assignable(geom_type_t expected_type, geom_type_t actual_type);
  * @param envelope the envelope to initialize
  */
 void geom_envelope_init(geom_envelope_t *envelope);
+
+/**
+ * 
+ * @param envelope the envelope to set the coordinate types
+ * @param header geometry header which defines the coordinate types
+ */
+void geom_envelope_accumulate(geom_envelope_t *envelope, const geom_header_t *header);
+
+/**
+ * 
+ * @return EMPTY_GEOM (1) if bounds indicate empty, 0 if not empty
+ */
+int geom_envelope_finalize(geom_envelope_t *envelope);
+
+
+/**
+ * 
+ * @param envelope
+ * @param header
+ * @param point_count
+ * @param coords
+ */
+void geom_envelope_fill(geom_envelope_t *envelope, const geom_header_t *header, size_t point_count, const double *coords);
 
 /** @} */
 

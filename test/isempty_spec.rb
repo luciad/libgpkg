@@ -25,9 +25,9 @@ describe 'ST_IsEmpty' do
     expect("SELECT ST_IsEmpty(GeomFromText('Polygon((1 1, 2 2, 3 3))'))").to have_result 0
     expect("SELECT ST_IsEmpty(GeomFromText('Polygon((1 1, 2 2, 3 3), EMPTY)'))").to have_result 0
     expect("SELECT ST_IsEmpty(GeomFromText('GeometryCollection(Point(1 0), Point EMPTY)'))").to have_result 0
-    expect("SELECT ST_IsEmpty(GeomFromText('CircularString(1 1, 2 2)'))").to have_result 0
+    expect("SELECT ST_IsEmpty(GeomFromText('CircularString(1 1, 2 2, 2 2)'))").to have_result 0
     expect("SELECT ST_IsEmpty(GeomFromText('Curvepolygon((1 1, 2 2))'))").to have_result 0
-    expect("SELECT ST_IsEmpty(GeomFromText('compoundcurve(circularstring(1 1, 2 2, 2 2))'))").to have_result 0
+    expect("SELECT ST_IsEmpty(GeomFromText('compoundcurve(circularstring(1 1, 2 2, 2 2))'))").to have_result 0    
   end
 
   it 'should return the 1 for empty geometry' do
