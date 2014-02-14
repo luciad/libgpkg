@@ -456,17 +456,18 @@ static int read_geometrycollection(binstream_t *stream, wkb_dialect dialect, con
 }
 
 static int read_circularstring(binstream_t *stream, wkb_dialect dialect, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
-  uint32_t point_count;
+  uint32_t point_count;  
+  
   if (binstream_read_u32(stream, &point_count) != SQLITE_OK) {
     if (error) {
       error_append(error, "Error reading line string point count");
     }
     return SQLITE_IOERR;
-  }
+  }  
 
-  if (point_count < 3 && point_count != 0) {
+  if ((point_count-3)%2 != 0 && point_count != 0) {
     if (error) {
-      error_append(error, "Error CircularString requires at least 3 points or has to be EMPTY");
+      error_append(error, "Error CircularString requires 3+2n points or has to be EMPTY");
     }
     return SQLITE_IOERR;
   }

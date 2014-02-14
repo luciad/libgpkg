@@ -453,6 +453,16 @@ static int wkt_read_points(wkt_tokenizer_t *tok, const geom_header_t *header, co
     more_coords = tok->token == WKT_COMMA;
 
     if (coord_count == max_coords_to_read || !more_coords ) {
+        if(header->geom_type == GEOM_CIRCULARSTRING){
+            if((coord_count-3)%2 != 0 && coord_count != 0){
+                if (error) {
+                        error_append(error, "Error CircularString requires 3+2n points or has to be EMPTY");
+                 }
+                 result = SQLITE_IOERR;
+                 goto exit;
+            }
+        }
+        
       if (consumer->coordinates) {
         result = consumer->coordinates(consumer, header, coord_count, coords, skip_coords,error);
         if (result != SQLITE_OK) {

@@ -36,15 +36,11 @@ describe 'ST_MinX' do
   end
 
   it 'should return the minimum X coordinate of a circular string' do
-    expect("SELECT ST_MinX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result -10.0
-  end
-
-  it 'should return the minimum X coordinate of a circular string' do
-    expect("SELECT ST_MinX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
-  end
-
-  it 'should return the minimum X coordinate of a circular string' do
     expect("SELECT ST_MinX(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 0.0
+  end
+
+  it 'should return the minimum X coordinate of a circular string' do
+    expect("SELECT ST_MinX(GeomFromText('circularstring z( 0 0 10, 10 10 10, 20 0 10, 30 10 20, 40 0 20, 50 -10 30, 60 0 30, 70 10 30, 80 0 10, 100 20 20, 120 0 -10) '))").to have_result 0.0
   end
 
 
@@ -82,35 +78,11 @@ describe 'ST_MaxX' do
   end
 
   it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 20 10, 30 0)'))").to have_result 30.0
-  end
-
-  it 'should return the maximum X coordinate of a circular string' do
     expect("SELECT ST_MaxX(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 120.0
   end
 
   it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 20 10, 30 0)'))").to have_result 30.0
-  end
-
-  it 'should return the maximum X coordinate of a circular string' do
-    expect("SELECT ST_MaxX(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 120.0
+    expect("SELECT ST_MaxX(GeomFromText('circularstring z( 0 0 10, 10 10 10, 20 0 10, 30 10 20, 40 0 20, 50 -10 30, 60 0 30, 70 10 30, 80 0 10, 100 20 20, 120 0 -10) '))").to have_result 120.0
   end
 
   if mode == :gpkg
@@ -143,30 +115,12 @@ describe 'ST_MinY' do
     expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
   end
 
-
-  it 'should return the minimum Y coordinate of a circular string' do
-    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 0.0
-  end
-
-  it 'should return the minimum Y coordinate of a circular string' do
-    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
-  end
-
   it 'should return the minimum Y coordinate of a circular string' do
     expect("SELECT ST_MinY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result -10.0
   end
 
-
   it 'should return the minimum Y coordinate of a circular string' do
-    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 0.0
-  end
-
-  it 'should return the minimum Y coordinate of a circular string' do
-    expect("SELECT ST_MinY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result -10.0
-  end
-
-  it 'should return the minimum Y coordinate of a circular string' do
-    expect("SELECT ST_MinY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result -10.0
+    expect("SELECT ST_MinY(GeomFromText('circularstring z( 0 0 10, 10 10 10, 20 0 10, 30 10 20, 40 0 20, 50 -10 30, 60 0 30, 70 10 30, 80 0 10, 100 20 20, 120 0 -10) '))").to have_result -10.0
   end
 
   if mode == :gpkg
@@ -207,31 +161,11 @@ describe 'ST_MaxY' do
   end
 
   it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
+    expect("SELECT ST_MaxY(GeomFromText('circularstring z( 0 0 10, 10 10 10, 20 0 10, 30 10 20, 40 0 20, 50 -10 30, 60 0 30, 70 10 30, 80 0 10, 100 20 20, 120 0 -10) '))").to have_result 20.0
   end
 
   it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 30 20, 50 0)'))").to have_result 20.0
-  end
-
-  it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('circularstring( 0 0, 10 10, 20 0, 30 10, 40 0, 50 -10, 60 0, 70 10, 80 0, 100 20, 120 0) '))").to have_result 20.0
-  end
-
-  it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0)'))").to have_result 10.0
-  end
-
-  it 'should return the maximum Y coordinate of a circular string' do
-    expect("SELECT ST_MaxY(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 30 20, 50 0)'))").to have_result 20.0
+    expect("SELECT ST_MaxY(GeomFromText('compoundcurve z(circularstring z( 0 0 10, 10 10 10, 20 0 10, 30 10 20, 40 0 20, 50 -10 30, 60 0 30, 70 10 30, 80 0 10, 100 20 20, 120 0 -10), (0 0 0, 10 10 0, -10 10 2, 50 50 4)) '))").to have_result 50.0
   end
 
   if mode == :gpkg
@@ -281,6 +215,14 @@ describe 'ST_MinZ' do
 
   it 'should return NULL if Z is undefined' do
     expect("SELECT ST_MinZ(GeomFromText('Point M (1 5 4)'))").to have_result nil
+  end
+
+  it 'should return NULL if Z is undefined' do
+    expect("SELECT ST_MinZ(GeomFromText('CircularString(10 0, 0 10, -10 0, 0 -10, 10 0, 30 20, 50 0)'))").to have_result nil
+  end
+
+  it 'should return the minimum Z coordinate of a circular string' do
+    expect("SELECT ST_MinZ(GeomFromText('circularstring z( 0 0 10, 10 10 10, 20 0 10, 30 10 20, 40 0 20, 50 -10 30, 60 0 30, 70 10 30, 80 0 10, 100 20 20, 120 0 -10) '))").to have_result -10.0
   end
 end
 
