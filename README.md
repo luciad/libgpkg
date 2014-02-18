@@ -21,6 +21,12 @@ A free GeoPackage viewer on Android, based on LuciadMobile, is available at [dem
 # License
 libgpkg is distributed under the [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) version 2.0.
 
+# Installation
+
+- Windows: download binaries from the [Downloads](downloads) page or compile from source.
+- Linux: compile from source.
+- MacOSX: install via homebrew using `brew tap homebrew/science` and then `brew install libgpkg` or compile from source.
+
 # Usage
 libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sqlite.org/c3ref/load_extension.html) C
 function or using the [load\_extension](http://sqlite.org/lang_corefunc.html#load_extension) SQL function. Once loaded
