@@ -23,7 +23,7 @@ libgpkg is distributed under the [Apache Software License](https://www.apache.or
 
 # Installation
 
-- Windows: download binaries from the [Downloads](downloads) page or compile from source.
+- Windows: download binaries from the [Downloads](libgpkg/downloads) page or compile from source.
 - Linux: compile from source.
 - MacOSX: install via homebrew using `brew tap homebrew/science` and then `brew install libgpkg` or compile from source.
 
