@@ -79,6 +79,10 @@ If the database type cannot be determined, GeoPackage will be used.
     - shell/gpkg: a modified version of the SQLite 3 command-line shell that autoloads the GeoPackage extension. This is a standalone binary that has been statically linked with SQLite 3 and the GeoPackage extension.
     - gpkg/libgpkg.so: a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
 
+# Getting Help
+
+You can ask questions regarding libgpkg on the [libgpkg-users](https://groups.google.com/forum/#!forum/libgpkg-users) mailing list.
+
 # Dependencies
 
 - libgpkg requires SQLite 3.7.0 or higher.
