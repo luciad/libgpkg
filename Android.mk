@@ -25,10 +25,12 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_MODULE := gpkg
 
+include $(LOCAL_PATH)/version.txt
+
 LOCAL_CFLAGS := \
     -fvisibility=hidden \
     -std=c99 \
-    -DLIBGPKG_VERSION="\"0.9.16\"" \
+    -DLIBGPKG_VERSION="\"$(gpkg_VERSION_MAJOR).$(gpkg_VERSION_MINOR).$(gpkg_VERSION_PATCH)\"" \
     -DGPKG_EXPORT="__attribute__((visibility(\"default\")))"
 
 include $(BUILD_SHARED_LIBRARY)
