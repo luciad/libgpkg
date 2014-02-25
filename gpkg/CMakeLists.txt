@@ -89,7 +89,7 @@ endif()
 
 if ( MSVC )
   add_definitions( -DGPKG_CALL=__cdecl )
-  target_compile_definitions( gpkg_ext PRIVATE "-DGPKG_EXPORT=__declspec\(dllexport\)" )
+  set_target_properties( gpkg_ext PROPERTIES COMPILE_DEFINITIONS "-DGPKG_EXPORT=__declspec\(dllexport\)" )
   set ( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TP" )
 endif()
 
