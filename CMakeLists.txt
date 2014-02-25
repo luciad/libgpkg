@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 2.8.10 )
+cmake_minimum_required( VERSION 2.8.9 )
 
 set( CMAKE_POSITION_INDEPENDENT_CODE true )
 set( CMAKE_USER_MAKE_RULES_OVERRIDE ${CMAKE_CURRENT_SOURCE_DIR}/c_overrides.cmake )

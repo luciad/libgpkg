@@ -71,7 +71,7 @@ If the database type cannot be determined, GeoPackage will be used.
 
 # Compilation
 
-- Install CMake 3.8 or newer. CMake can be downloaded from www.cmake.org or installed using
+- Install CMake 2.8.9 or newer. CMake can be downloaded from www.cmake.org or installed using
   your systems package manager.
 - Run 'cmake .' in the root of directory of the project to generate the build scripts for your system.
 - Build the project using the generated build scripts.
