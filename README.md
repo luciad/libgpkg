@@ -21,6 +21,12 @@ A free GeoPackage viewer on Android, based on LuciadMobile, is available at [dem
 # License
 libgpkg is distributed under the [Apache Software License](https://www.apache.org/licenses/LICENSE-2.0) version 2.0.
 
+# Installation
+
+- Windows: download binaries from the [Downloads](libgpkg/downloads) page or compile from source.
+- Linux: compile from source.
+- MacOSX: install via homebrew using `brew tap homebrew/science` and then `brew install libgpkg` or compile from source.
+
 # Usage
 libgpkg can be loaded into SQLite using the [sqlite3\_load\_extension](http://sqlite.org/c3ref/load_extension.html) C
 function or using the [load\_extension](http://sqlite.org/lang_corefunc.html#load_extension) SQL function. Once loaded
@@ -65,13 +71,17 @@ If the database type cannot be determined, GeoPackage will be used.
 
 # Compilation
 
-- Install CMake 3.8 or newer. CMake can be downloaded from www.cmake.org or installed using
+- Install CMake 2.8.9 or newer. CMake can be downloaded from www.cmake.org or installed using
   your systems package manager.
 - Run 'cmake .' in the root of directory of the project to generate the build scripts for your system.
 - Build the project using the generated build scripts.
 - The build scripts will generate a number of binaries
     - shell/gpkg: a modified version of the SQLite 3 command-line shell that autoloads the GeoPackage extension. This is a standalone binary that has been statically linked with SQLite 3 and the GeoPackage extension.
     - gpkg/libgpkg.so: a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
+
+# Getting Help
+
+You can ask questions regarding libgpkg on the [libgpkg-users](https://groups.google.com/forum/#!forum/libgpkg-users) mailing list.
 
 # Dependencies
 

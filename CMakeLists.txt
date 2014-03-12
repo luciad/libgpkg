@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 2.8.10 )
+cmake_minimum_required( VERSION 2.8.9 )
 
 set( CMAKE_POSITION_INDEPENDENT_CODE true )
 set( CMAKE_USER_MAKE_RULES_OVERRIDE ${CMAKE_CURRENT_SOURCE_DIR}/c_overrides.cmake )
@@ -12,11 +12,17 @@ project( libgpkg )
 include( CheckIncludeFile )
 include( CheckFunctionExists )
 
-set ( gpkg_VERSION_MAJOR 0 )
-set ( gpkg_VERSION_MINOR 9 )
-set ( gpkg_VERSION_PATCH 14 )
-set ( gpkg_BUILD_VERSION "${gpkg_VERSION_MAJOR}.${gpkg_VERSION_MINOR}.${gpkg_VERSION_PATCH}" )
-set ( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
+# Load version info from version.txt
+file( STRINGS version.txt gpkg_VERSION )
+list( GET gpkg_VERSION 0 gpkg_VERSION_MAJOR )
+string( REGEX REPLACE "^.*:=" "" gpkg_VERSION_MAJOR ${gpkg_VERSION_MAJOR} )
+list( GET gpkg_VERSION 1 gpkg_VERSION_MINOR )
+string( REGEX REPLACE "^.*:=" "" gpkg_VERSION_MINOR ${gpkg_VERSION_MINOR} )
+list( GET gpkg_VERSION 2 gpkg_VERSION_PATCH )
+string( REGEX REPLACE "^.*:=" "" gpkg_VERSION_PATCH ${gpkg_VERSION_PATCH} )
+
+set( gpkg_BUILD_VERSION "${gpkg_VERSION_MAJOR}.${gpkg_VERSION_MINOR}.${gpkg_VERSION_PATCH}" )
+set( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
 
 option( GPKG_TEST "Enable Testing?" OFF )
 option( GPKG_COVERAGE "Enable Code coverage?" OFF )

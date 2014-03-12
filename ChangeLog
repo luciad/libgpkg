@@ -1,3 +1,6 @@
+0.9.16 17/02/2014
+- Update embedded SQLite version to 3.8.3.1
+
 0.9.15 06/02/2014
 - Synced libgpkg shell with SQLite version 3.8.3
 - Functions are now registered as SQLITE_DETERMINISTIC is possible. This should improve performance for certain
