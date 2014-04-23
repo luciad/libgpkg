@@ -29,8 +29,6 @@
 #include "wkb.h"
 #include "wkt.h"
 
-SQLITE_EXTENSION_INIT1
-
 #define ST_MIN_MAX(name, check, field) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) { \
     spatialdb_t *spatialdb; \
     FUNCTION_GEOM_ARG(geomblob); \
@@ -750,6 +748,8 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
     fromtext_acquire(fromtext);                                                                                        \
     sql_create_function(db, STR(pre##_##name), pre##_##func, args, flags, (void*)ft, (void(*)(void*))fromtext_release, err);  \
   } while (0)
+
+SQLITE_EXTENSION_INIT1
 
 int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk, const spatialdb_t *spatialdb) {
   SQLITE_EXTENSION_INIT2(pThunk)
