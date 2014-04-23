@@ -486,7 +486,7 @@ struct callback_data {
   const char *zVfs;           /* Name of VFS to use */
   sqlite3_stmt *pStmt;   /* Current statement if any. */
   FILE *pLog;            /* Write log output here */
-  void (*gpkgEntryPoint)();
+  int (*gpkgEntryPoint)(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
   int *aiIndent;         /* Array of indents used in MODE_Explain */
   int nIndent;           /* Size of array aiIndent[] */
   int iIndent;           /* Index of current op in aiIndent[] */
@@ -1669,9 +1669,6 @@ static void update_prompt(sqlite3 *db) {
 static void open_db(struct callback_data *p, int keepAlive){
   if( p->db==0 ){
     sqlite3_initialize();
-#ifndef SQLITE_OMIT_LOAD_EXTENSION
-	sqlite3_auto_extension((void(*)(void))p->gpkgEntryPoint);
-#endif
     sqlite3_open(p->zDbFilename, &p->db);
     db = p->db;
     if( db && sqlite3_errcode(db)==SQLITE_OK ){
@@ -1684,6 +1681,11 @@ static void open_db(struct callback_data *p, int keepAlive){
       if( keepAlive ) return;
       exit(1);
     }
+
+    if (p->gpkgEntryPoint) {
+      p->gpkgEntryPoint(db, NULL, NULL);
+    }
+
 #ifndef SQLITE_OMIT_LOAD_EXTENSION
     sqlite3_enable_load_extension(p->db, 1);
 #endif
@@ -3563,6 +3565,7 @@ static void main_init(struct callback_data *data) {
   data->showHeader = 0;
   sqlite3_config(SQLITE_CONFIG_URI, 1);
   sqlite3_config(SQLITE_CONFIG_LOG, shellLog, data);
+  data->gpkgEntryPoint = sqlite3_gpkg_auto_init;
   sqlite3_snprintf(sizeof(mainPrompt), mainPrompt,"sqlite> ");
   sqlite3_snprintf(sizeof(continuePrompt), continuePrompt,"   ...> ");
   sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);
@@ -3701,11 +3704,11 @@ int main(int argc, char **argv){
         exit(1);
       }
     }else if( strcmp(z,"-gpkg")==0 ){
-      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_init;
+      data.gpkgEntryPoint = data.gpkgEntryPoint = sqlite3_gpkg_init;
     }else if( strcmp(z,"-spl3")==0 ){
-      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_spl3_init;
+      data.gpkgEntryPoint = data.gpkgEntryPoint = sqlite3_gpkg_spl3_init;
     }else if( strcmp(z,"-spl4")==0 ){
-      data.gpkgEntryPoint = data.gpkgEntryPoint = (void ( *)()) sqlite3_gpkg_spl4_init;
+      data.gpkgEntryPoint = data.gpkgEntryPoint = sqlite3_gpkg_spl4_init;
     }
   }
   if( data.zDbFilename==0 ){
@@ -3859,7 +3862,8 @@ int main(int argc, char **argv){
         "SQLite version %s %.19s\n" /*extra-version-info*/
         "libgpkg version %s\n"
         "Enter \".help\" for usage hints.\n",
-        sqlite3_libversion(), sqlite3_sourceid()
+        sqlite3_libversion(), sqlite3_sourceid(),
+        gpkg_libversion()
       );
       if( warnInmemoryDb ){
         printf("Connected to a ");
