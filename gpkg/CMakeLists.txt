@@ -57,6 +57,7 @@ endif()
 #
 add_library( gpkg_static STATIC ${GPKG_SOURCE_FILES} )
 set_target_properties( gpkg_static PROPERTIES OUTPUT_NAME "gpkg" )
+set_target_properties( gpkg_static PROPERTIES COMPILE_DEFINITIONS "SQLITE_CORE=1" )
 
 #
 # SQLite loadable extension version of libgpkg
