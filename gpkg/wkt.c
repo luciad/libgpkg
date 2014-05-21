@@ -784,7 +784,7 @@ static int wkt_read_curvepolygon_text(wkt_tokenizer_t *tok, const geom_header_t 
   int more_curves;
   do {
     int res;
-    int geom_type = tok->token;
+    wkt_token geom_type = tok->token;
 
     geom_header_t child_header;
     if (geom_type == WKT_LPAREN) {
@@ -883,7 +883,7 @@ static int wkt_read_compoundcurve_text(wkt_tokenizer_t *tok, const geom_header_t
   int more_curves;
   do {
     int res;
-    int geom_type = tok->token;
+    wkt_token geom_type = tok->token;
 
     geom_header_t child_header;
 
