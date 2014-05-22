@@ -401,7 +401,7 @@ int geom_type_name(geom_type_t geom_type, const char **geom_type_name) {
             *geom_type_name = "Polygon";
             break;
         case GEOM_GEOMETRYCOLLECTION:
-            *geom_type_name = "GeometryCollection";
+            *geom_type_name = "GeomCollection";
             break;
         case GEOM_MULTISURFACE:
             *geom_type_name = "MultiSurface";
@@ -460,6 +460,12 @@ int geom_type_from_string(const char *type_name, geom_type_t *type) {
     geom_type_t geom_type = GEOM_GEOMETRY;
 
     int result = SQLITE_OK;
+
+    // Ignore optional 'ST_' prefix.
+    if (sqlite3_strnicmp(type_name, "st_", 3) == 0) {
+      type_name += 3;
+    }
+
     if (sqlite3_strnicmp(type_name, "po", 2) == 0) {
         const char *remainder = type_name + 2;
         if (sqlite3_strnicmp(remainder, "int", 4) == 0) {
@@ -494,6 +500,13 @@ int geom_type_from_string(const char *type_name, geom_type_t *type) {
         if (sqlite3_strnicmp(remainder, "", 1) == 0) {
             geom_type = GEOM_GEOMETRY;
         } else if (sqlite3_strnicmp(remainder, "collection", 11) == 0) {
+            geom_type = GEOM_GEOMETRYCOLLECTION;
+        } else {
+            result = SQLITE_ERROR;
+        }
+    } else if (sqlite3_strnicmp(type_name, "geom", 4) == 0) {
+        const char *remainder = type_name + 4;
+        if (sqlite3_strnicmp(remainder, "collection", 11) == 0) {
             geom_type = GEOM_GEOMETRYCOLLECTION;
         } else {
             result = SQLITE_ERROR;

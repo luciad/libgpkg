@@ -265,6 +265,10 @@ describe 'AsText' do
     expect(query(AS_TEXT, 'geometrycollection(point(0 0), linestring(2 1, 3 4))')).to have_result 'GeometryCollection (Point (0 0), LineString (2 1, 3 4))'
   end
 
+  it 'should not allow geomcollection as geometry type' do
+    expect(query(AS_TEXT, 'geomcollection(point(0 0), linestring(2 1, 3 4))')).to raise_sql_error
+  end
+
   it 'should format empty circularstring correctly' do
     expect(query(AS_TEXT, 'CircularString empty')).to have_result 'CircularString EMPTY'
   end
