@@ -1,3 +1,7 @@
+0.9.17 22/05/2014
+- Use 'GeomCollection' as the column type name rather than 'GeometryCollection'
+- Update embedded SQLite version to 3.8.4.3
+
 0.9.16 17/02/2014
 - Update embedded SQLite version to 3.8.3.1
 
