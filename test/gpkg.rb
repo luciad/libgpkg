@@ -144,7 +144,8 @@ module GeoPackage
       end
 
       def matches?(target)
-        actual = @db.execute("PRAGMA table_info('#{target}')").inject({}) do |hash, row|
+        @target = target
+        @actual = @db.execute("PRAGMA table_info('#{target}')").inject({}) do |hash, row|
           hash[row[1]] = {
               :index => row[0],
               :type => row[2],
@@ -155,15 +156,22 @@ module GeoPackage
           hash
         end
 
-        @expected = actual
+        @expected == @actual
       end
 
       def failure_message_for_should
-        "expected #{@target} to raise SQL error"
+        "expected #{@target} to have table schema\n#{format_schema(@expected)}\nbut was\n#{format_schema(@actual)}"
       end
 
       def failure_message_for_should_not
-        "expected #{@target} to not raise SQL error"
+        "expected #{@target} to not have table schema\n#{format_schema(@expected)}"
+      end
+
+      def format_schema(schema)
+        formatted_rows = schema.map do |row|
+          "  #{row[0]}: #{row[1]}"
+        end
+        formatted_rows.join "\n"
       end
     end
 
