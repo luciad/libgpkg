@@ -132,7 +132,7 @@ static int wkt_coordinates(const geom_consumer_t *consumer, const geom_header_t 
   }
 
   int offset = skip_coords;
-  point_count = (offset == 0)?point_count:(point_count-(offset/header->coord_size));
+  point_count = (offset == 0) ? point_count : (point_count - (offset / header->coord_size));
   if (header->coord_size == 2) {
     for (size_t i = 0; i < point_count; i++) {
       double x = coords[offset++];
@@ -424,15 +424,15 @@ static int wkt_read_points(wkt_tokenizer_t *tok, const geom_header_t *header, co
   int result = SQLITE_OK;
   double coords[GEOM_MAX_COORD_SIZE * COORD_BATCH_SIZE];
 
-  size_t coord_count = 0; 
+  size_t coord_count = 0;
   int max_coords_to_read = COORD_BATCH_SIZE;
   int coord_offset = 0;
   int skip_coords = 0;
-  
-  if(header->geom_type == GEOM_CIRCULARSTRING){
-      max_coords_to_read = COORD_BATCH_SIZE - ((COORD_BATCH_SIZE -3)%2);
+
+  if (header->geom_type == GEOM_CIRCULARSTRING) {
+    max_coords_to_read = COORD_BATCH_SIZE - ((COORD_BATCH_SIZE - 3) % 2);
   }
-  
+
 
   int more_coords;
   do {
@@ -452,34 +452,34 @@ static int wkt_read_points(wkt_tokenizer_t *tok, const geom_header_t *header, co
 
     more_coords = tok->token == WKT_COMMA;
 
-    if (coord_count == max_coords_to_read || !more_coords ) {
-        if(header->geom_type == GEOM_CIRCULARSTRING){
-            if((coord_count-3)%2 != 0 && coord_count != 0){
-                if (error) {
-                        error_append(error, "Error CircularString requires 3+2n points or has to be EMPTY");
-                 }
-                 result = SQLITE_IOERR;
-                 goto exit;
-            }
+    if (coord_count == max_coords_to_read || !more_coords) {
+      if (header->geom_type == GEOM_CIRCULARSTRING) {
+        if ((coord_count - 3) % 2 != 0 && coord_count != 0) {
+          if (error) {
+            error_append(error, "Error CircularString requires 3+2n points or has to be EMPTY");
+          }
+          result = SQLITE_IOERR;
+          goto exit;
         }
-        
+      }
+
       if (consumer->coordinates) {
-        result = consumer->coordinates(consumer, header, coord_count, coords, skip_coords,error);
+        result = consumer->coordinates(consumer, header, coord_count, coords, skip_coords, error);
         if (result != SQLITE_OK) {
           goto exit;
         }
-      }      
-      if(header->geom_type == GEOM_CIRCULARSTRING && more_coords){
-        for(uint32_t i = 0; i < header->coord_size; i++){
-            coords[i] = coords[((coord_count-1)*header->coord_size)+i];
+      }
+      if (header->geom_type == GEOM_CIRCULARSTRING && more_coords) {
+        for (uint32_t i = 0; i < header->coord_size; i++) {
+          coords[i] = coords[((coord_count - 1) * header->coord_size) + i];
         }
         coord_offset = header->coord_size;
         skip_coords = header->coord_size;
-        coord_count = 1;          
-      }else{
+        coord_count = 1;
+      } else {
         coord_offset = 0;
         coord_count = 0;
-      }      
+      }
     }
 
     if (more_coords) {

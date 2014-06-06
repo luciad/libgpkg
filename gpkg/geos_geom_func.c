@@ -92,13 +92,13 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     return SQLITE_OK;
   } else {
     geom_blob_writer_t writer;
-    geos_context->spatialdb->writer_init_srid( &writer, GEOSGetSRID_r(geos_context->geos_handle, geom) );
+    geos_context->spatialdb->writer_init_srid(&writer, GEOSGetSRID_r(geos_context->geos_handle, geom));
 
     geos_read_geometry(geos_context->geos_handle, geom, geom_blob_writer_geom_consumer(&writer), error);
 
     sqlite3_result_blob(context, geom_blob_writer_getdata(&writer), geom_blob_writer_length(&writer), sqlite3_free);
 
-    geos_context->spatialdb->writer_destroy( &writer, 0 );
+    geos_context->spatialdb->writer_destroy(&writer, 0);
 
     return SQLITE_OK;
   }
@@ -252,9 +252,9 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
 
 static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   GEOS_START(context);
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );
-  GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );
-  const unsigned char *pattern = sqlite3_value_text( args[2] );
+  GEOSGeometry *g1 = GEOS_GET_GEOM(args, 0);
+  GEOSGeometry *g2 = GEOS_GET_GEOM(args, 1);
+  const unsigned char *pattern = sqlite3_value_text(args[2]);
   if (g1 == NULL || g2 == NULL || pattern == NULL) {
     if (error_count(&error) > 0) {
       sqlite3_result_error(context, error_message(&error), -1);
@@ -271,8 +271,8 @@ static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args
   } else {
     sqlite3_result_int(context, result);
   }
-  GEOS_FREE_GEOM( g1 );
-  GEOS_FREE_GEOM( g2 );
+  GEOS_FREE_GEOM(g1);
+  GEOS_FREE_GEOM(g2);
 }
 
 GEOS_FUNC1(isSimple)
@@ -305,9 +305,9 @@ GEOS_FUNC2_GEOM(Intersection)
 GEOS_FUNC2_GEOM(Union)
 
 #if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3)
-  GEOS_FUNC1(isClosed)
-  GEOS_FUNC2(Covers)
-  GEOS_FUNC2(CoveredBy)
+GEOS_FUNC1(isClosed)
+GEOS_FUNC2(Covers)
+GEOS_FUNC2(CoveredBy)
 #endif
 
 static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
@@ -333,8 +333,8 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
 
   int geos_major;
   int geos_minor;
-  int geos_version_result = sscanf( GEOSversion(), "%d.%d", &geos_major, &geos_minor );
-  if ( geos_version_result != 2 ) {
+  int geos_version_result = sscanf(GEOSversion(), "%d.%d", &geos_major, &geos_minor);
+  if (geos_version_result != 2) {
     error_append(error, "Could not parse GEOS version number (%s)", GEOSversion());
   }
 

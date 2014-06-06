@@ -313,21 +313,21 @@ int geom_is_assignable(geom_type_t expected_type, geom_type_t actual_type);
 void geom_envelope_init(geom_envelope_t *envelope);
 
 /**
- * 
+ *
  * @param envelope the envelope to set the coordinate types
  * @param header geometry header which defines the coordinate types
  */
 void geom_envelope_accumulate(geom_envelope_t *envelope, const geom_header_t *header);
 
 /**
- * 
+ *
  * @return EMPTY_GEOM (1) if bounds indicate empty, 0 if not empty
  */
 int geom_envelope_finalize(geom_envelope_t *envelope);
 
 
 /**
- * 
+ *
  * @param envelope
  * @param header
  * @param point_count

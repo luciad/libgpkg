@@ -21,18 +21,18 @@ static int geos_begin_geometry(const struct geom_consumer_t *consumer, const geo
     case GEOM_POLYGON:
     case GEOM_MULTIPOLYGON:
     case GEOM_MULTILINESTRING:
-    case GEOM_GEOMETRYCOLLECTION:  
-    case GEOM_MULTIPOINT:  
+    case GEOM_GEOMETRYCOLLECTION:
+    case GEOM_MULTIPOINT:
       writer->childData[writer->offset].type = GEOMETRIES;
       writer->childData[writer->offset].data = sqlite3_malloc(20 * sizeof(GEOSGeometry *));
       writer->childData[writer->offset].capacity = 20;
       break;
     default:
-      result = SQLITE_IOERR; 
+      result = SQLITE_IOERR;
   }
-  
-  if(result != SQLITE_OK){
-      error_append(error, "Unsupported geometry type %d", header->geom_type); 
+
+  if (result != SQLITE_OK) {
+    error_append(error, "Unsupported geometry type %d", header->geom_type);
   }
 
   if (writer->childData[writer->offset].data == NULL) {
@@ -283,7 +283,7 @@ static int read_geos_coordseq(GEOSContextHandle_t geos, geom_header_t *header, c
       GEOSCoordSeq_getY_r(geos, coordseq, i, &coord[ix + 1]);
     }
 
-    result = consumer->coordinates(consumer, header, points_to_read, coord, 0,error);
+    result = consumer->coordinates(consumer, header, points_to_read, coord, 0, error);
     if (result != SQLITE_OK) {
       return result;
     }

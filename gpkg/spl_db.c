@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- #include <stdio.h>
+#include <stdio.h>
 #include "spatialdb_internal.h"
 #include "spl_geom.h"
 #include "sql.h"
@@ -721,13 +721,14 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
     goto exit;
   }
 
-  result = sql_exec(db, "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name, geometry_column_name);
+  result = sql_exec(db, "UPDATE \"%w\".geometry_columns SET spatial_index_enabled = 1 WHERE f_table_name LIKE %Q AND f_geometry_column LIKE %Q and spatial_index_enabled = 0", db_name, table_name,
+                    geometry_column_name);
   if (result != SQLITE_OK) {
     error_append(error, "Could not set spatial index enabled flag for column %s.%s.%s: %s", db_name, table_name, geometry_column_name, db_name, sqlite3_errmsg(db));
     goto exit;
   }
 
-  if (sqlite3_changes( db ) == 0) {
+  if (sqlite3_changes(db) == 0) {
     // Spatial index already enabled; silent return
     goto exit;
   }
@@ -844,16 +845,16 @@ static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value 
 
   if (delete_row) {
     FUNCTION_RESULT = sql_exec(
-        sqlite3_context_db_handle(context),
-        "DELETE FROM \"%w\" WHERE pkid = %s",
-        index_table_name, row_id
-    );
+                        sqlite3_context_db_handle(context),
+                        "DELETE FROM \"%w\" WHERE pkid = %s",
+                        index_table_name, row_id
+                      );
   } else {
     FUNCTION_RESULT = sql_exec(
-      sqlite3_context_db_handle(context),
-      "INSERT OR REPLACE INTO \"%w\" (pkid, xmin, ymin, xmax, ymax) VALUES (%s, %1.12f, %1.12f, %1.12f, %1.12f)",
-      index_table_name, row_id, geom.envelope.min_x, geom.envelope.min_y, geom.envelope.max_x, geom.envelope.max_y
-    );
+                        sqlite3_context_db_handle(context),
+                        "INSERT OR REPLACE INTO \"%w\" (pkid, xmin, ymin, xmax, ymax) VALUES (%s, %1.12f, %1.12f, %1.12f, %1.12f)",
+                        index_table_name, row_id, geom.envelope.min_x, geom.envelope.min_y, geom.envelope.max_x, geom.envelope.max_y
+                      );
   }
 
   if (FUNCTION_RESULT != SQLITE_OK) {

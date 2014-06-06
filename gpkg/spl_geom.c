@@ -161,10 +161,10 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
     }
   }
 
-  geom_blob_header_t *spb = &writer->header;  
+  geom_blob_header_t *spb = &writer->header;
   spb->empty = 0;
   geom_envelope_t *envelope = &spb->envelope;
-  geom_envelope_fill(envelope, header, point_count, coords); 
+  geom_envelope_fill(envelope, header, point_count, coords);
 
 exit:
   return result;
@@ -190,12 +190,12 @@ static int spb_end(const geom_consumer_t *consumer, error_t *error) {
   if (result != SQLITE_OK) {
     goto exit;
   }
-  
+
   geom_envelope_t *envelope = &writer->header.envelope;
-  if(geom_envelope_finalize(envelope) == EMPTY_GEOM){
-      writer->header.empty = 1;
+  if (geom_envelope_finalize(envelope) == EMPTY_GEOM) {
+    writer->header.empty = 1;
   }
-  
+
   result = spb_write_header(stream, &writer->header, NULL);
   if (result != SQLITE_OK) {
     goto exit;

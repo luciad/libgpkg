@@ -222,7 +222,7 @@ static int gpb_begin_geometry(const geom_consumer_t *consumer, const geom_header
   if (wkb->offset < 0) {
     geom_blob_header_t *gpb_header = &writer->header;
     if (header->geom_type != GEOM_POINT) {
-        geom_envelope_accumulate(&gpb_header->envelope, header);      
+      geom_envelope_accumulate(&gpb_header->envelope, header);
     }
     result = binstream_relseek(&wkb->stream, (int32_t)gpb_header_size(gpb_header));
     if (result != SQLITE_OK) {
@@ -264,9 +264,9 @@ static int gpb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
   geom_blob_header_t *gpb = &writer->header;
   gpb->empty = 0;
   geom_envelope_t *envelope = &gpb->envelope;
-  
+
   geom_envelope_fill(envelope, header, point_count, coords);
-  
+
 exit:
   return result;
 }
@@ -291,12 +291,12 @@ static int gpb_end(const geom_consumer_t *consumer, error_t *error) {
   if (result != SQLITE_OK) {
     goto exit;
   }
-  
+
   geom_envelope_t *envelope = &writer->header.envelope;
-  if(geom_envelope_finalize(envelope) == EMPTY_GEOM){
-      writer->header.empty = 1;
+  if (geom_envelope_finalize(envelope) == EMPTY_GEOM) {
+    writer->header.empty = 1;
   }
-  
+
   result = gpb_write_header(stream, &writer->header, NULL);
   if (result != SQLITE_OK) {
     goto exit;

@@ -49,7 +49,7 @@ typedef struct {
 static int fill_envelope_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, error_t *error) {
   geom_envelope_t *envelope = ((fill_t *) consumer)->envelope;
   geom_envelope_accumulate(envelope, header);
-  geom_envelope_fill(envelope, header, point_count, coords); 
+  geom_envelope_fill(envelope, header, point_count, coords);
   return SQLITE_OK;
 }
 
@@ -247,39 +247,39 @@ static int read_points(binstream_t *stream, wkb_dialect dialect, const geom_cons
   int result;
   double coord[GEOM_MAX_COORD_SIZE * COORD_BATCH_SIZE];
   int max_coords_to_read = COORD_BATCH_SIZE;
-  
-  if(header->geom_type == GEOM_CIRCULARSTRING){
-      max_coords_to_read = COORD_BATCH_SIZE - ((COORD_BATCH_SIZE -3)%2);
+
+  if (header->geom_type == GEOM_CIRCULARSTRING) {
+    max_coords_to_read = COORD_BATCH_SIZE - ((COORD_BATCH_SIZE - 3) % 2);
   }
 
   uint32_t remaining = point_count;
-  uint32_t offset =0;
-  uint32_t points_read =0;
+  uint32_t offset = 0;
+  uint32_t points_read = 0;
   uint32_t extra_coords = 0;
-  while (remaining > 0) {      
+  while (remaining > 0) {
     uint32_t points_to_read = (remaining > max_coords_to_read ? max_coords_to_read : remaining);
     uint32_t coords_to_read = points_to_read * header->coord_size;
     for (uint32_t i = 0; i < coords_to_read; i++) {
-      result = binstream_read_double(stream, &coord[i+offset]);
+      result = binstream_read_double(stream, &coord[i + offset]);
       if (result != SQLITE_OK) {
         if (error) {
           error_append(error, "Error reading point coordinates");
         }
         return result;
       }
-    }    
+    }
 
-    result = consumer->coordinates(consumer, header, points_to_read+extra_coords, coord, offset, error);
+    result = consumer->coordinates(consumer, header, points_to_read + extra_coords, coord, offset, error);
     if (result != SQLITE_OK) {
       return result;
     }
-    
-    if(header->geom_type == GEOM_CIRCULARSTRING){
-         for(uint32_t i = 0; i < header->coord_size; i++){
-            coord[i] = coord[((points_to_read-1)*header->coord_size)+i];
-        }
-        offset = header->coord_size; 
-        extra_coords = 1;        
+
+    if (header->geom_type == GEOM_CIRCULARSTRING) {
+      for (uint32_t i = 0; i < header->coord_size; i++) {
+        coord[i] = coord[((points_to_read - 1) * header->coord_size) + i];
+      }
+      offset = header->coord_size;
+      extra_coords = 1;
     }
 
     remaining -= points_to_read;
@@ -456,16 +456,16 @@ static int read_geometrycollection(binstream_t *stream, wkb_dialect dialect, con
 }
 
 static int read_circularstring(binstream_t *stream, wkb_dialect dialect, const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
-  uint32_t point_count;  
-  
+  uint32_t point_count;
+
   if (binstream_read_u32(stream, &point_count) != SQLITE_OK) {
     if (error) {
       error_append(error, "Error reading line string point count");
     }
     return SQLITE_IOERR;
-  }  
+  }
 
-  if ((point_count-3)%2 != 0 && point_count != 0) {
+  if ((point_count - 3) % 2 != 0 && point_count != 0) {
     if (error) {
       error_append(error, "Error CircularString requires 3+2n points or has to be EMPTY");
     }
@@ -663,8 +663,8 @@ static int wkb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
 
   wkb_writer_t *writer = (wkb_writer_t *) consumer;
   binstream_t *stream = &writer->stream;
-  
-  point_count = (skip_coords == 0)?point_count:(point_count-(skip_coords/header->coord_size));
+
+  point_count = (skip_coords == 0) ? point_count : (point_count - (skip_coords / header->coord_size));
   result = binstream_write_ndouble(stream, &coords[skip_coords], point_count * header->coord_size);
   if (result != SQLITE_OK) {
     goto exit;

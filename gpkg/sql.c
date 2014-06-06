@@ -335,10 +335,10 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
       error_append(error, "Column %s.%s should have 'not null' constraint", table_info->name, name);
     }
 
-    if ( ( check->flags & SQL_CHECK_DEFAULT_VALUES ) != 0 ) {
+    if ((check->flags & SQL_CHECK_DEFAULT_VALUES) != 0) {
       value_t default_value = table_info->columns[index].default_value;
       if (default_value.type == VALUE_TEXT) {
-        char *expected = sqlite3_mprintf( "'%s'", VALUE_AS_TEXT(default_value) );
+        char *expected = sqlite3_mprintf("'%s'", VALUE_AS_TEXT(default_value));
         if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
           error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was NULL", table_info->name, name, expected);
         } else {
@@ -348,9 +348,8 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
           }
         }
         sqlite3_free(expected);
-      }
-      else if (default_value.type == VALUE_FUNC) {
-        char *expected = sqlite3_mprintf( VALUE_AS_TEXT(default_value) );
+      } else if (default_value.type == VALUE_FUNC) {
+        char *expected = sqlite3_mprintf(VALUE_AS_TEXT(default_value));
         if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
           error_append(error, "Column %s.%s has incorrect default value: expected '%s' but was NULL", table_info->name, name, expected);
         } else {
@@ -360,8 +359,7 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
           }
         }
         sqlite3_free(expected);
-      }
-      else if (default_value.type == VALUE_INTEGER) {
+      } else if (default_value.type == VALUE_INTEGER) {
         int expected = VALUE_AS_INT(default_value);
         if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
           error_append(error, "Column %s.%s has incorrect default value: expected %d but was NULL", table_info->name, name, expected);
@@ -371,8 +369,7 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
             error_append(error, "Column %s.%s has incorrect default value: expected %d but was %d", table_info->name, name, expected, actual);
           }
         }
-      }
-      else if (default_value.type == VALUE_DOUBLE) {
+      } else if (default_value.type == VALUE_DOUBLE) {
         double expected = VALUE_AS_DOUBLE(default_value);
         if (sqlite3_column_type(stmt, 4) == SQLITE_NULL) {
           error_append(error, "Column %s.%s has incorrect default value: expected %f but was NULL", table_info->name, name, expected);
@@ -382,8 +379,7 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
             error_append(error, "Column %s.%s has incorrect default value: expected %f but was %f", table_info->name, name, expected, actual);
           }
         }
-      }
-      else if (default_value.type == VALUE_NULL) {
+      } else if (default_value.type == VALUE_NULL) {
         if (sqlite3_column_type(stmt, 4) != SQLITE_NULL) {
           const char *actual = (const char *)sqlite3_column_text(stmt, 4);
           error_append(error, "Column %s.%s has incorrect default value: expected NULL but was %s", table_info->name, name, actual);
@@ -973,7 +969,7 @@ int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
   return result;
 }
 
-int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context*,int,sqlite3_value**), int args, int flags, void *user_data, void (*destroy)(void*), error_t *error) {
+int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context *, int, sqlite3_value **), int args, int flags, void *user_data, void (*destroy)(void *), error_t *error) {
   int function_flags = SQLITE_UTF8;
 
 #if SQLITE_VERSION_NUMBER >= 3008003
@@ -983,8 +979,8 @@ int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_
 #endif
 
   int result = sqlite3_create_function_v2(
-    db, name, args, function_flags, user_data, function, NULL, NULL, destroy
-  );
+                 db, name, args, function_flags, user_data, function, NULL, NULL, destroy
+               );
   if (result != SQLITE_OK) {
     error_append(error, "Error registering function %s/%d: %s", name, args, sqlite3_errmsg(db));
   }

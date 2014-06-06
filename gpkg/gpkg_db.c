@@ -36,7 +36,7 @@ static column_info_t gpkg_spatial_ref_sys_columns[] = {
 static value_t gpkg_spatial_ref_sys_data[] = {
   T("Undefined Cartesian"), I(-1), T("NONE"), I(-1), T("undefined"), N,
   T("Undefined Geographic"), I(0), T("NONE"), I(0), T("undefined"), N,
-  T("WGS 84"), I(4326), T("EPSG"), I(4326), T( "GEOGCS[\"WGS 84\", DATUM[\"WGS_1984\", SPHEROID[\"WGS 84\",6378137,298.257223563, AUTHORITY[\"EPSG\",\"7030\"]], AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\" 8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]], AUTHORITY[\"EPSG\",\"4326\"]]" ), N
+  T("WGS 84"), I(4326), T("EPSG"), I(4326), T("GEOGCS[\"WGS 84\", DATUM[\"WGS_1984\", SPHEROID[\"WGS 84\",6378137,298.257223563, AUTHORITY[\"EPSG\",\"7030\"]], AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\" 8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]], AUTHORITY[\"EPSG\",\"4326\"]]"), N
 };
 static table_info_t gpkg_spatial_ref_sys = {
   "gpkg_spatial_ref_sys",
@@ -214,12 +214,12 @@ static int init(sqlite3 *db, const char *db_name, error_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = gpkg_tables;
 
-  result = sql_exec( db, "PRAGMA application_id = %d", 0x47503130 );
-  if ( result != SQLITE_OK ) {
-    error_append( error, "Could not set application_id" );
+  result = sql_exec(db, "PRAGMA application_id = %d", 0x47503130);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not set application_id");
   }
 
-  if ( result == SQLITE_OK ) {
+  if (result == SQLITE_OK) {
     while (*table != NULL) {
       result = sql_init_table(db, db_name, *table, error);
       if (result != SQLITE_OK) {
@@ -251,10 +251,10 @@ static int gpkg_contents_geometry_table_check_row(sqlite3 *db, sqlite3_stmt *stm
 
 static int gpkg_contents_geometry_table_check(sqlite3 *db, const char *db_name, error_t *error) {
   int result = sql_exec_stmt(
-           db, gpkg_contents_geometry_table_check_row, NULL, error,
-           "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='features' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_geometry_columns)",
-           db_name, db_name
-         );
+                 db, gpkg_contents_geometry_table_check_row, NULL, error,
+                 "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='features' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_geometry_columns)",
+                 db_name, db_name
+               );
 
   if (result != SQLITE_OK) {
     error_append(error, sqlite3_errmsg(db));
@@ -278,10 +278,10 @@ static int gpkg_contents_tilemetadata_table_check_row(sqlite3 *db, sqlite3_stmt 
 
 static int gpkg_contents_tilemetadata_table_check(sqlite3 *db, const char *db_name, error_t *error) {
   int result = sql_exec_stmt(
-           db, gpkg_contents_tilemetadata_table_check_row, NULL, error,
-           "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='tiles' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_tile_matrix_set)",
-           db_name, db_name
-         );
+                 db, gpkg_contents_tilemetadata_table_check_row, NULL, error,
+                 "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='tiles' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_tile_matrix_set)",
+                 db_name, db_name
+               );
 
   if (result != SQLITE_OK) {
     error_append(error, sqlite3_errmsg(db));
@@ -524,7 +524,8 @@ static int add_geometry_column(sqlite3 *db, const char *db_name, const char *tab
     return result;
   }
 
-  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (table_name, column_name, geometry_type_name, srs_id, z, m) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name, "gpkg_geometry_columns", table_name, column_name,
+  result = sql_exec(db, "INSERT INTO \"%w\".\"%w\" (table_name, column_name, geometry_type_name, srs_id, z, m) VALUES (%Q, %Q, %Q, %d, %d, %d)", db_name, "gpkg_geometry_columns", table_name,
+                    column_name,
                     normalized_geom_type, srs_id, z, m);
   if (result != SQLITE_OK) {
     error_append(error, sqlite3_errmsg(db));
