@@ -235,6 +235,7 @@ static void geom_envelope_fill_arc(geom_envelope_t *envelope, const geom_header_
       int offset =0;
       for(int processed=0;processed<point_count-2;processed+=2, offset+=header->coord_size*2){
       switch (header->coord_type) {
+        default:
         case GEOM_XY:
             p1_x = coords[offset];
             p1_y = coords[1+offset];
@@ -265,7 +266,7 @@ static void geom_envelope_fill_arc(geom_envelope_t *envelope, const geom_header_
                 min_max(coords[i+offset], &envelope->min_m, &envelope->max_m);
             }            
             break;
-        default:
+        case GEOM_XYZM:
             p1_x = coords[offset];
             p1_y = coords[1+offset];
             p2_x = coords[4+offset];
@@ -294,7 +295,6 @@ static void geom_envelope_fill_arc(geom_envelope_t *envelope, const geom_header_
       
  #undef MIN_MAX  
 }
-
 
 static void geom_envelope_fill_simple(geom_envelope_t *envelope, const geom_header_t *header, size_t point_count, const double *coords) {
 #define MIN_MAX(coord) double coord = coords[offset++]; \
@@ -334,7 +334,6 @@ static void geom_envelope_fill_simple(geom_envelope_t *envelope, const geom_head
 
 #undef MIN_MAX
 }
-
 
 void geom_consumer_init(
         geom_consumer_t *consumer,
