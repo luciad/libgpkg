@@ -95,7 +95,7 @@ set_target_properties(
 #
 if( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
   add_definitions( -DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\) )
-  set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -Wpedantic -Wall -Wno-unused-variable" )
+  set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic -Wall -Wno-unused-variable" )
 endif()
 
 if ( MSVC )
