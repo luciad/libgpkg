@@ -3940,6 +3940,7 @@ static void main_init(ShellState *data) {
   sqlite3_config(SQLITE_CONFIG_URI, 1);
   sqlite3_config(SQLITE_CONFIG_LOG, shellLog, data);
   sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
+  data->gpkgEntryPoint = sqlite3_gpkg_auto_init;
   sqlite3_snprintf(sizeof(mainPrompt), mainPrompt,"sqlite> ");
   sqlite3_snprintf(sizeof(continuePrompt), continuePrompt,"   ...> ");
 }
@@ -4105,11 +4106,11 @@ int main(int argc, char **argv){
         exit(1);
       }
     }else if( strcmp(z,"-gpkg")==0 ){
-      data.gpkgEntryPoint = data.gpkgEntryPoint = sqlite3_gpkg_init;
+      data.gpkgEntryPoint = sqlite3_gpkg_init;
     }else if( strcmp(z,"-spl3")==0 ){
-      data.gpkgEntryPoint = data.gpkgEntryPoint = sqlite3_gpkg_spl3_init;
+      data.gpkgEntryPoint = sqlite3_gpkg_spl3_init;
     }else if( strcmp(z,"-spl4")==0 ){
-      data.gpkgEntryPoint = data.gpkgEntryPoint = sqlite3_gpkg_spl4_init;
+      data.gpkgEntryPoint = sqlite3_gpkg_spl4_init;
     }
   }
   if( data.zDbFilename==0 ){
