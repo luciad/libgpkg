@@ -88,7 +88,7 @@ module GeoPackage
         else
           result = " but was #{to_sentence(@actual)}"
         end
-        "expected #{format_query(@query)} to have result#{expected_to_sentence()}#{result}"
+        "expected #{format_query(@query)} to have result#{to_sentence(@expected)}#{result}"
       end
 
       def failure_message_for_should_not
@@ -97,8 +97,11 @@ module GeoPackage
         else
           result = ''
         end
-        "expected #{format_query(@query)} to not have result#{expected_to_sentence()}#{result}"
+        "expected #{format_query(@query)} to not have result#{to_sentence(@expected)}#{result}"
       end
+
+      alias_method :failure_message, :failure_message_for_should
+      alias_method :failure_message_when_negated, :failure_message_for_should_not
     end
 
     def have_result(result)
@@ -131,6 +134,9 @@ module GeoPackage
       def failure_message_for_should_not
         "expected #{format_query(@query)} to not raise SQL error '#{@error}'"
       end
+
+      alias_method :failure_message, :failure_message_for_should
+      alias_method :failure_message_when_negated, :failure_message_for_should_not
     end
 
     def raise_sql_error()
