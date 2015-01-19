@@ -28,20 +28,6 @@
  */
 
 /**
- * A Spatialite Binary writer. spb_writer_t instances can be used to generate a Spatialite Binary blob based on
- * any geometry source. Use spb_writer_geom_consumer() to obtain a geom_consumer_t pointer that can be passed to
- * geomtery sources.
- */
-typedef struct {
-  /** @private */
-  geom_consumer_t geom_consumer;
-  /** @private */
-  geom_blob_header_t header;
-  /** @private */
-  wkb_writer_t wkb_writer;
-} spb_writer_t;
-
-/**
  * Initializes a Spatialite Binary writer.
  * @param writer the writer to initialize
  * @param srid the SRID that should be used

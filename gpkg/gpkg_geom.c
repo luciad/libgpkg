@@ -19,6 +19,8 @@
 #include "gpkg_geom.h"
 #include "sqlite.h"
 #include "fp.h"
+#include "blobio.h"
+#include "geomio.h"
 
 #define GPB_VERSION 0
 #define GPB_BIG_ENDIAN 0
@@ -220,6 +222,8 @@ static int gpb_begin_geometry(const geom_consumer_t *consumer, const geom_header
   wkb_writer_t *wkb = &writer->wkb_writer;
 
   if (wkb->offset < 0) {
+    writer->geom_type = header->geom_type;
+
     geom_blob_header_t *gpb_header = &writer->header;
     if (header->geom_type != GEOM_POINT) {
       geom_envelope_accumulate(&gpb_header->envelope, header);
@@ -317,6 +321,7 @@ exit:
 int gpb_writer_init(geom_blob_writer_t *writer, int32_t srid) {
   geom_consumer_init(&writer->geom_consumer, NULL, gpb_end, gpb_begin_geometry, gpb_end_geometry, gpb_coordinates);
   geom_envelope_init(&writer->header.envelope);
+  writer->geom_type = GEOM_GEOMETRY;
   writer->header.version = GPB_VERSION;
   writer->header.srid = srid;
   writer->header.empty = 1;

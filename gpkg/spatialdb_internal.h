@@ -19,14 +19,15 @@
 #include "spatialdb.h"
 
 #define FUNCTION_NOOP do {} while(0)
-#define FUNCTION_RESULT result
-#define FUNCTION_DB_HANDLE db_handle
-#define FUNCTION_ERROR error
+#define FUNCTION_RESULT _result
+#define FUNCTION_DB_HANDLE _db_handle
+#define FUNCTION_ERROR _error_ptr
 
 #define FUNCTION_START(context)                                                                                        \
     int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
-    error_t FUNCTION_ERROR;                                                                                            \
-    if (error_init(&FUNCTION_ERROR) != SQLITE_OK) {                                                                    \
+    error_t _error;                                                                                                    \
+    error_t* FUNCTION_ERROR = &_error;                                                                                 \
+    if (error_init(FUNCTION_ERROR) != SQLITE_OK) {                                                                     \
         sqlite3_result_error(context, "Could not init error buffer", -1);                                              \
         goto exit;                                                                                                     \
     };                                                                                                                 \
@@ -35,29 +36,40 @@
 #define FUNCTION_START_STATIC(context, error_buf_size)                                                                 \
     int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
     char error_buffer[error_buf_size];                                                                                 \
-    error_t FUNCTION_ERROR;                                                                                            \
-    if (error_init_fixed(&FUNCTION_ERROR, error_buffer, error_buf_size) != SQLITE_OK) {                                \
+    error_t _error;                                                                                                    \
+    error_t* FUNCTION_ERROR = &_error;                                                                                 \
+    if (error_init_fixed(FUNCTION_ERROR, error_buffer, error_buf_size) != SQLITE_OK) {                                 \
         sqlite3_result_error(context, "Could not init error buffer", -1);                                              \
         goto exit;                                                                                                     \
     }                                                                                                                  \
     sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context)
 
+#define FUNCTION_START_NESTED(context, error)                                                                          \
+    int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
+    error_t* FUNCTION_ERROR = error;                                                                                   \
+    sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context)
+
 #define FUNCTION_END(context)                                                                                          \
   exit:                                                                                                                \
     if (FUNCTION_RESULT == SQLITE_OK) {                                                                                \
-        if (error_count(&FUNCTION_ERROR) > 0) {                                                                        \
-            if (strlen(error_message(&FUNCTION_ERROR)) == 0) {                                                         \
-              error_append(&FUNCTION_ERROR, "unknown error" );                                                         \
+        if (error_count(FUNCTION_ERROR) > 0) {                                                                         \
+            if (strlen(error_message(FUNCTION_ERROR)) == 0) {                                                          \
+              error_append(FUNCTION_ERROR, "unknown error" );                                                          \
             }                                                                                                          \
-            sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                         \
+            sqlite3_result_error(context, error_message(FUNCTION_ERROR), -1);                                          \
         }                                                                                                              \
     } else {                                                                                                           \
-      if (error_count(&FUNCTION_ERROR) == 0 || strlen(error_message(&FUNCTION_ERROR)) == 0) {                          \
-        error_append(&FUNCTION_ERROR, "unknown error: %d", FUNCTION_RESULT );                                          \
+      if (error_count(FUNCTION_ERROR) == 0 || strlen(error_message(FUNCTION_ERROR)) == 0) {                            \
+        error_append(FUNCTION_ERROR, "unknown error: %d", FUNCTION_RESULT );                                           \
       }                                                                                                                \
-      sqlite3_result_error(context, error_message(&FUNCTION_ERROR), -1);                                               \
+      sqlite3_result_error(context, error_message(FUNCTION_ERROR), -1);                                                \
     }                                                                                                                  \
-    error_destroy(&FUNCTION_ERROR)
+    error_destroy(FUNCTION_ERROR)
+
+#define FUNCTION_END_NESTED(context)                                                                                   \
+  exit:                                                                                                                \
+    FUNCTION_NOOP
+
 
 #define FUNCTION_START_TRANSACTION(name)                                                                               \
     char *name##_transaction = #name;                                                                                  \
@@ -68,7 +80,7 @@
       }                                                                                                                \
     } while(0)
 #define FUNCTION_END_TRANSACTION(name) do {                                                                            \
-        if (FUNCTION_RESULT == SQLITE_OK && error_count(&FUNCTION_ERROR) == 0) {                                       \
+        if (FUNCTION_RESULT == SQLITE_OK && error_count(FUNCTION_ERROR) == 0) {                                        \
             FUNCTION_RESULT = sql_commit(FUNCTION_DB_HANDLE, name##_transaction);                                      \
         } else {                                                                                                       \
             sql_rollback(FUNCTION_DB_HANDLE, name##_transaction);                                                      \
@@ -142,9 +154,9 @@
 #define FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, arg,ix)                                                       \
     FUNCTION_GET_STREAM_ARG_UNSAFE(context, arg##_stream,ix);                                                          \
     do {                                                                                                               \
-        if (spatialdb->read_blob_header(&arg##_stream, &arg, &FUNCTION_ERROR) != SQLITE_OK) {                          \
-            if ( error_count(&FUNCTION_ERROR) == 0 ) {                                                                 \
-                error_append(&FUNCTION_ERROR, "Invalid geometry blob header");                                         \
+        if (spatialdb->read_blob_header(&arg##_stream, &arg, FUNCTION_ERROR) != SQLITE_OK) {                           \
+            if ( error_count(FUNCTION_ERROR) == 0 ) {                                                                  \
+                error_append(FUNCTION_ERROR, "Invalid geometry blob header");                                          \
             }                                                                                                          \
             goto exit;                                                                                                 \
         }                                                                                                              \
@@ -159,9 +171,9 @@
 #define FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, arg,ix)                                                        \
     FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, arg##_geom,ix);                                                   \
     do {                                                                                                               \
-        if (spatialdb->read_geometry_header(&arg##_geom_stream, &arg, &FUNCTION_ERROR) != SQLITE_OK) {                 \
-            if ( error_count(&FUNCTION_ERROR) == 0 ) {                                                                 \
-                error_append(&FUNCTION_ERROR, "Invalid geometry blob header");                                         \
+        if (spatialdb->read_geometry_header(&arg##_geom_stream, &arg, FUNCTION_ERROR) != SQLITE_OK) {                  \
+            if ( error_count(FUNCTION_ERROR) == 0 ) {                                                                  \
+                error_append(FUNCTION_ERROR, "Invalid geometry blob header");                                          \
             }                                                                                                          \
             goto exit;                                                                                                 \
         }                                                                                                              \

@@ -18,6 +18,8 @@
 #include "fp.h"
 #include "spl_geom.h"
 #include "sqlite.h"
+#include "blobio.h"
+#include "geomio.h"
 
 #define SPB_BIG_ENDIAN 0x00
 #define SPB_LITTLE_ENDIAN 0x01
@@ -120,10 +122,12 @@ int spb_write_header(binstream_t *stream, geom_blob_header_t *spb, error_t *erro
 static int spb_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
   int result = SQLITE_OK;
 
-  spb_writer_t *writer = (spb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
 
   if (wkb->offset < 0) {
+    writer->geom_type = header->geom_type;
+
     result = binstream_relseek(&wkb->stream, 38);
     if (result != SQLITE_OK) {
       goto exit;
@@ -143,7 +147,7 @@ static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t 
     goto exit;
   }
 
-  spb_writer_t *writer = (spb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
   geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
   result = wkb_consumer->coordinates(wkb_consumer, header, point_count, coords, skip_coords, error);
@@ -171,7 +175,7 @@ exit:
 }
 
 static int spb_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
-  spb_writer_t *writer = (spb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
 
   geom_consumer_t *wkb_consumer = wkb_writer_geom_consumer(wkb);
@@ -181,7 +185,7 @@ static int spb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
 static int spb_end(const geom_consumer_t *consumer, error_t *error) {
   int result = SQLITE_OK;
 
-  spb_writer_t *writer = (spb_writer_t *) consumer;
+  geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
   binstream_t *stream = &wkb->stream;
 
@@ -216,6 +220,7 @@ exit:
 int spb_writer_init(geom_blob_writer_t *writer, int32_t srid) {
   geom_consumer_init(&writer->geom_consumer, NULL, spb_end, spb_begin_geometry, spb_end_geometry, spb_coordinates);
   geom_envelope_init(&writer->header.envelope);
+  writer->geom_type = GEOM_GEOMETRY;
   writer->header.envelope.has_env_x = 1;
   writer->header.envelope.has_env_y = 1;
   writer->header.srid = srid;

@@ -596,7 +596,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
     FUNCTION_GET_INT_ARG(expected_geometry_type_int, 1);
     FUNCTION_GET_INT_ARG(expected_srid, 2);
     FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, wkb, 0);
-    wkb_fill_geom_header((uint32_t)expected_geometry_type_int, &expected, &error);
+    wkb_fill_geom_header((uint32_t)expected_geometry_type_int, &expected, FUNCTION_ERROR);
   } else {
     FUNCTION_GET_TEXT_ARG(context, expected_geometry_type_text, 1);
     FUNCTION_GET_INT_ARG(expected_srid, 2);
@@ -605,7 +605,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
 
     FUNCTION_RESULT = geom_type_from_string(expected_geometry_type_text, &expected.geom_type);
     if (FUNCTION_RESULT != SQLITE_OK) {
-      error_append(&error, "Invalid geometry type %s", expected_geometry_type_text);
+      error_append(FUNCTION_ERROR, "Invalid geometry type %s", expected_geometry_type_text);
       goto exit;
     }
 
@@ -622,7 +622,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
       expected.coord_size = 4;
       expected.coord_type = GEOM_XYZM;
     } else {
-      error_append(&error, "Unsupported geometry dimension: %s", expected_dimension_text);
+      error_append(FUNCTION_ERROR, "Unsupported geometry dimension: %s", expected_dimension_text);
       goto exit;
     }
   }
@@ -632,12 +632,12 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
     geom_type_name(expected.geom_type, &expected_name);
     const char *actual_name;
     geom_type_name(wkb.geom_type, &actual_name);
-    error_append(&error, "Geometry of type %s can not be written to column of type %s", actual_name, expected_name);
+    error_append(FUNCTION_ERROR, "Geometry of type %s can not be written to column of type %s", actual_name, expected_name);
     goto exit;
   }
 
   if (FUNCTION_WKB_ARG_GEOM(wkb).srid != expected_srid) {
-    error_append(&error, "Geometry of with srid %d can not be written to column with srid %d", FUNCTION_WKB_ARG_GEOM(wkb).srid, expected_srid);
+    error_append(FUNCTION_ERROR, "Geometry of with srid %d can not be written to column with srid %d", FUNCTION_WKB_ARG_GEOM(wkb).srid, expected_srid);
     goto exit;
   }
 
@@ -646,7 +646,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
     geom_coord_type_name(expected.coord_type, &expected_coord_type);
     const char *actual_coord_type;
     geom_coord_type_name(wkb.coord_type, &actual_coord_type);
-    error_append(&error, "%s geometry can not be written to %s column", actual_coord_type, expected_coord_type);
+    error_append(FUNCTION_ERROR, "%s geometry can not be written to %s column", actual_coord_type, expected_coord_type);
     goto exit;
   }
 
