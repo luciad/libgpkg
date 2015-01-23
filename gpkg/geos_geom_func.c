@@ -86,6 +86,68 @@ static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_
   return g;
 }
 
+typedef struct {
+  const GEOSPreparedGeometry* geometry;
+  GEOSContextHandle_t context;
+} geos_prepared_geometry_t;
+
+static geos_prepared_geometry_t *get_geos_prepared_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
+  geom_blob_header_t header;
+
+  uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
+  size_t blob_length = (size_t) sqlite3_value_bytes(value);
+
+  if (blob == NULL) {
+    return NULL;
+  }
+
+  binstream_t stream;
+  binstream_init(&stream, blob, blob_length);
+
+  geos_writer_t writer;
+  geos_writer_init(&writer, geos_context->geos_handle);
+
+  geos_context->spatialdb->read_blob_header(&stream, &header, error);
+  geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
+
+  GEOSGeometry *g = geos_writer_getgeometry(&writer);
+  geos_writer_destroy(&writer, g == NULL);
+
+  if (g == NULL) {
+    return NULL;
+  }
+
+  struct GEOSPrepGeom_t const *prepared_g = GEOSPrepare_r(geos_context->geos_handle, g);
+  if (prepared_g == NULL) {
+    return NULL;
+  }
+
+  geos_prepared_geometry_t *result = sqlite3_malloc(sizeof(geos_prepared_geometry_t));
+  if (result == NULL) {
+    GEOSPreparedGeom_destroy_r(geos_context->geos_handle, prepared_g);
+    return NULL;
+  }
+
+  result->context = geos_context->geos_handle;
+  result->geometry = prepared_g;
+
+  return result;
+}
+
+static void free_geos_prepared_geom(void* data) {
+  if (data == NULL) {
+    return;
+  }
+
+  geos_prepared_geometry_t* geom = (geos_prepared_geometry_t*)data;
+  GEOSPreparedGeom_destroy_r(geom->context, geom->geometry);
+
+  geom->context = NULL;
+  geom->geometry = NULL;
+
+  sqlite3_free(data);
+}
+
 static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, error_t *error) {
   if (geom == NULL) {
     sqlite3_result_null(context);
@@ -111,12 +173,24 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   error_init_fixed(&error, error_buffer, 256)
 #define GEOS_CONTEXT geos_context
 #define GEOS_HANDLE geos_context->geos_handle
-#define GEOS_GET_GEOM(args, i) get_geos_geom( context, geos_context, args[i], &error )
+#define GEOS_GET_GEOM(name, args, i) GEOSGeometry *name = get_geos_geom( context, geos_context, args[i], &error )
 #define GEOS_FREE_GEOM(geom) GEOSGeom_destroy_r( geos_context->geos_handle, geom )
+#define GEOS_GET_PREPARED_GEOM(name, args, i) \
+  const geos_prepared_geometry_t *name = sqlite3_get_auxdata(context, i); \
+  int name##_set_auxdata = 0; \
+  if (name == NULL) { \
+    name = get_geos_prepared_geom( context, geos_context, args[i], &error ); \
+    name##_set_auxdata = 1;\
+  }
+
+#define GEOS_FREE_PREPARED_GEOM(name, i) \
+  if (name != NULL && name##_set_auxdata) { \
+    sqlite3_set_auxdata(context, i, (void*)name, free_geos_prepared_geom); \
+  }
 
 #define GEOS_FUNC1(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  GEOS_GET_GEOM( g1, args, 0 );\
   if (g1 == NULL) {\
     if (error_count(&error) > 0) {\
       sqlite3_result_error(context, error_message(&error), -1);\
@@ -137,8 +211,8 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
 
 #define GEOS_FUNC2(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
-  GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
+  GEOS_GET_GEOM( g1, args, 0 );\
+  GEOS_GET_GEOM( g2, args, 1 );\
   if (g1 == NULL || g2 == NULL) {\
     if (error_count(&error) > 0) {\
       sqlite3_result_error(context, error_message(&error), -1);\
@@ -158,9 +232,32 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   GEOS_FREE_GEOM( g2 );\
 }
 
+#define GEOS_FUNC2_PREPARED(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
+  GEOS_START(context);\
+  GEOS_GET_PREPARED_GEOM( g1, args, 0 );\
+  GEOS_GET_GEOM( g2, args, 1 );\
+  if (g1 == NULL || g2 == NULL) {\
+    if (error_count(&error) > 0) {\
+      sqlite3_result_error(context, error_message(&error), -1);\
+    } else {\
+      sqlite3_result_null(context);\
+    }\
+    return;\
+  }\
+  char result = GEOSPrepared##name##_r(GEOS_HANDLE, g1->geometry, g2);\
+  if (result == 2) {\
+    geom_geos_get_error(&error);\
+    sqlite3_result_error(context, error_message(&error), -1);\
+  } else {\
+    sqlite3_result_int(context, result);\
+  }\
+  GEOS_FREE_PREPARED_GEOM( g1, 0 );\
+  GEOS_FREE_GEOM( g2 );\
+}
+
 #define GEOS_FUNC1_DBL(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  GEOS_GET_GEOM( g1, args, 0 );\
   if (g1 == NULL) {\
     if (error_count(&error) > 0) {\
       sqlite3_result_error(context, error_message(&error), -1);\
@@ -182,8 +279,8 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
 
 #define GEOS_FUNC2_DBL(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
-  GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
+  GEOS_GET_GEOM( g1, args, 0 );\
+  GEOS_GET_GEOM( g2, args, 1 );\
   if (g1 == NULL || g2 == NULL) {\
     if (error_count(&error) > 0) {\
       sqlite3_result_error(context, error_message(&error), -1);\
@@ -206,7 +303,7 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
 
 #define GEOS_FUNC1_GEOM(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
+  GEOS_GET_GEOM( g1, args, 0 );\
   if (g1 == NULL) {\
     if (error_count(&error) > 0) {\
       sqlite3_result_error(context, error_message(&error), -1);\
@@ -228,8 +325,8 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
 
 #define GEOS_FUNC2_GEOM(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
   GEOS_START(context);\
-  GEOSGeometry *g1 = GEOS_GET_GEOM( args, 0 );\
-  GEOSGeometry *g2 = GEOS_GET_GEOM( args, 1 );\
+  GEOS_GET_GEOM( g1, args, 0 );\
+  GEOS_GET_GEOM( g2, args, 1 );\
   if (g1 == NULL || g2 == NULL) {\
     if (error_count(&error) > 0) {\
       sqlite3_result_error(context, error_message(&error), -1);\
@@ -252,8 +349,8 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
 
 static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   GEOS_START(context);
-  GEOSGeometry *g1 = GEOS_GET_GEOM(args, 0);
-  GEOSGeometry *g2 = GEOS_GET_GEOM(args, 1);
+  GEOS_GET_GEOM(g1, args, 0);
+  GEOS_GET_GEOM(g2, args, 1);
   const unsigned char *pattern = sqlite3_value_text(args[2]);
   if (g1 == NULL || g2 == NULL || pattern == NULL) {
     if (error_count(&error) > 0) {
@@ -280,13 +377,14 @@ GEOS_FUNC1(isRing)
 
 GEOS_FUNC1(isValid)
 
-GEOS_FUNC2(Disjoint)
-GEOS_FUNC2(Intersects)
-GEOS_FUNC2(Touches)
-GEOS_FUNC2(Crosses)
-GEOS_FUNC2(Within)
-GEOS_FUNC2(Contains)
-GEOS_FUNC2(Overlaps)
+GEOS_FUNC2_PREPARED(Disjoint)
+GEOS_FUNC2_PREPARED(Intersects)
+GEOS_FUNC2_PREPARED(Touches)
+GEOS_FUNC2_PREPARED(Crosses)
+GEOS_FUNC2_PREPARED(Within)
+GEOS_FUNC2_PREPARED(Contains)
+GEOS_FUNC2_PREPARED(Overlaps)
+
 GEOS_FUNC2(Equals)
 
 GEOS_FUNC1_DBL(Area)
@@ -306,8 +404,8 @@ GEOS_FUNC2_GEOM(Union)
 
 #if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3)
 GEOS_FUNC1(isClosed)
-GEOS_FUNC2(Covers)
-GEOS_FUNC2(CoveredBy)
+GEOS_FUNC2_PREPARED(Covers)
+GEOS_FUNC2_PREPARED(CoveredBy)
 #endif
 
 static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
