@@ -647,7 +647,14 @@ static int wkb_begin_geometry(const geom_consumer_t *consumer, const geom_header
       wkb_header_size = 5;
       break;
     case GEOM_LINEARRING:
-      wkb_header_size = 4;
+      if (writer->offset == 0) {
+        // A linear ring as root object does not exist in WKB; we encode it as a line string
+        // Need to leave more room for a line string header
+        // See wkb_end_geometry for details.
+        wkb_header_size = 9;
+      } else {
+        wkb_header_size = 4;
+      }
       break;
     default:
       wkb_header_size = 9;
@@ -685,13 +692,13 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
   size_t current_pos = binstream_position(stream);
   size_t children = writer->children[writer->offset];
 
-  size_t start = writer->start[writer->offset];
-  result = binstream_seek(stream, start);
-  if (result != SQLITE_OK) {
-    goto exit;
-  }
+  if (header->geom_type == GEOM_LINEARRING && writer->offset > 0) {
+    size_t start = writer->start[writer->offset];
+    result = binstream_seek(stream, start);
+    if (result != SQLITE_OK) {
+      goto exit;
+    }
 
-  if (header->geom_type == GEOM_LINEARRING) {
     result = binstream_write_u32(stream, (uint32_t)children);
     if (result != SQLITE_OK) {
       goto exit;
@@ -716,10 +723,12 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
 
     uint32_t geom_type;
     switch (header->geom_type) {
-      default:
       case GEOM_POINT:
         geom_type = WKB_POINT;
         break;
+      case GEOM_LINEARRING:
+        // We can get here if the root geometry is a linear ring.
+        // This isn't possible in WKB so encode it as a line string instead.
       case GEOM_LINESTRING:
         geom_type = WKB_LINESTRING;
         break;
@@ -747,6 +756,18 @@ static int wkb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
       case GEOM_CURVEPOLYGON:
         geom_type = WKB_CURVEPOLYGON;
         break;
+      default:
+        if (error) {
+          error_append(error, "Unsupported geometry type: %d", header->geom_type);
+        }
+        result = SQLITE_IOERR;
+        goto exit;
+    }
+
+    size_t start = writer->start[writer->offset];
+    result = binstream_seek(stream, start);
+    if (result != SQLITE_OK) {
+      goto exit;
     }
 
     uint8_t order;
