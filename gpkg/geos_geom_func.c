@@ -62,7 +62,12 @@ static void geos_context_release(geos_context_t *ctx) {
   }
 }
 
-static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
+typedef struct {
+  GEOSGeometry* geometry;
+  GEOSContextHandle_t context;
+} geos_geometry_t;
+
+static geos_geometry_t *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
   geom_blob_header_t header;
 
   uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
@@ -83,7 +88,34 @@ static GEOSGeometry *get_geos_geom(sqlite3_context *context, const geos_context_
 
   GEOSGeometry *g = geos_writer_getgeometry(&writer);
   geos_writer_destroy(&writer, g == NULL);
-  return g;
+
+  if (g == NULL) {
+    return NULL;
+  }
+
+  geos_geometry_t *result = sqlite3_malloc(sizeof(geos_geometry_t));
+  if (result == NULL) {
+    return NULL;
+  }
+
+  result->context = geos_context->geos_handle;
+  result->geometry = g;
+
+  return result;
+}
+
+static void free_geos_geom(void* data) {
+  if (data == NULL) {
+    return;
+  }
+
+  geos_geometry_t* geom = (geos_geometry_t*)data;
+  GEOSGeom_destroy_r(geom->context, geom->geometry);
+
+  geom->context = NULL;
+  geom->geometry = NULL;
+
+  sqlite3_free(data);
 }
 
 typedef struct {
@@ -173,8 +205,19 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
   error_init_fixed(&error, error_buffer, 256)
 #define GEOS_CONTEXT geos_context
 #define GEOS_HANDLE geos_context->geos_handle
-#define GEOS_GET_GEOM(name, args, i) GEOSGeometry *name = get_geos_geom( context, geos_context, args[i], &error )
-#define GEOS_FREE_GEOM(geom) GEOSGeom_destroy_r( geos_context->geos_handle, geom )
+
+#define GEOS_GET_GEOM(name, args, i) \
+  const geos_geometry_t *name = sqlite3_get_auxdata(context, i); \
+  int name##_set_auxdata = 0; \
+  if (name == NULL) { \
+    name = get_geos_geom( context, geos_context, args[i], &error ); \
+    name##_set_auxdata = 1;\
+  }
+#define GEOS_FREE_GEOM(name, i) \
+  if (name != NULL && name##_set_auxdata) { \
+    sqlite3_set_auxdata(context, i, (void*)name, free_geos_geom); \
+  }
+
 #define GEOS_GET_PREPARED_GEOM(name, args, i) \
   const geos_prepared_geometry_t *name = sqlite3_get_auxdata(context, i); \
   int name##_set_auxdata = 0; \
@@ -182,7 +225,6 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     name = get_geos_prepared_geom( context, geos_context, args[i], &error ); \
     name##_set_auxdata = 1;\
   }
-
 #define GEOS_FREE_PREPARED_GEOM(name, i) \
   if (name != NULL && name##_set_auxdata) { \
     sqlite3_set_auxdata(context, i, (void*)name, free_geos_prepared_geom); \
@@ -199,14 +241,14 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     }\
     return;\
   }\
-  char result = GEOS##name##_r(GEOS_HANDLE, g1);\
+  char result = GEOS##name##_r(GEOS_HANDLE, g1->geometry );\
   if (result == 2) {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   } else {\
     sqlite3_result_int(context, result);\
   }\
-  GEOS_FREE_GEOM( g1 );\
+  GEOS_FREE_GEOM( g1, 0 );\
 }
 
 #define GEOS_FUNC2(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
@@ -221,15 +263,15 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     }\
     return;\
   }\
-  char result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
+  char result = GEOS##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry);\
   if (result == 2) {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   } else {\
     sqlite3_result_int(context, result);\
   }\
-  GEOS_FREE_GEOM( g1 );\
-  GEOS_FREE_GEOM( g2 );\
+  GEOS_FREE_GEOM( g1, 0 );\
+  GEOS_FREE_GEOM( g2, 1 );\
 }
 
 #define GEOS_FUNC2_PREPARED(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
@@ -244,7 +286,7 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     }\
     return;\
   }\
-  char result = GEOSPrepared##name##_r(GEOS_HANDLE, g1->geometry, g2);\
+  char result = GEOSPrepared##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry);\
   if (result == 2) {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
@@ -252,7 +294,7 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     sqlite3_result_int(context, result);\
   }\
   GEOS_FREE_PREPARED_GEOM( g1, 0 );\
-  GEOS_FREE_GEOM( g2 );\
+  GEOS_FREE_GEOM( g2, 0 );\
 }
 
 #define GEOS_FUNC1_DBL(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
@@ -267,14 +309,14 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     return;\
   }\
   double val;\
-  char result = GEOS##name##_r(GEOS_HANDLE, g1, &val);\
+  char result = GEOS##name##_r(GEOS_HANDLE, g1->geometry, &val);\
   if (result == 1) {\
     sqlite3_result_double(context, val);\
   } else {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   }\
-  GEOS_FREE_GEOM( g1 );\
+  GEOS_FREE_GEOM( g1, 0 );\
 }
 
 #define GEOS_FUNC2_DBL(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
@@ -290,15 +332,15 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     return;\
   }\
   double val;\
-  char result = GEOS##name##_r(GEOS_HANDLE, g1, g2, &val);\
+  char result = GEOS##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry, &val);\
   if (result == 1) {\
     sqlite3_result_double(context, val);\
   } else {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   }\
-  GEOS_FREE_GEOM( g1 );\
-  GEOS_FREE_GEOM( g2 );\
+  GEOS_FREE_GEOM( g1, 0 );\
+  GEOS_FREE_GEOM( g2, 1 );\
 }
 
 #define GEOS_FUNC1_GEOM(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
@@ -312,15 +354,15 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     }\
     return;\
   }\
-  GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1);\
+  GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1->geometry);\
   if (result != NULL) {\
     set_geos_geom_result(context, GEOS_CONTEXT, result, &error);\
-    GEOS_FREE_GEOM( result );\
+    GEOSGeom_destroy_r( GEOS_HANDLE, result );\
   } else {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   }\
-  GEOS_FREE_GEOM( g1 );\
+  GEOS_FREE_GEOM( g1, 0 );\
 }
 
 #define GEOS_FUNC2_GEOM(name) static void ST_##name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {\
@@ -335,16 +377,16 @@ static int *set_geos_geom_result(sqlite3_context *context, const geos_context_t 
     }\
     return;\
   }\
-  GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1, g2);\
+  GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry);\
   if (result != NULL) {\
     set_geos_geom_result(context, GEOS_CONTEXT, result, &error);\
-    GEOS_FREE_GEOM( result );\
+    GEOSGeom_destroy_r( GEOS_HANDLE, result );\
   } else {\
     geom_geos_get_error(&error);\
     sqlite3_result_error(context, error_message(&error), -1);\
   }\
-  GEOS_FREE_GEOM( g1 );\
-  GEOS_FREE_GEOM( g2 );\
+  GEOS_FREE_GEOM( g1, 0 );\
+  GEOS_FREE_GEOM( g2, 1 );\
 }
 
 static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
@@ -361,15 +403,15 @@ static void ST_Relate(sqlite3_context *context, int nbArgs, sqlite3_value **args
     return;
   }
 
-  char result = GEOSRelatePattern_r(GEOS_HANDLE, g1, g2, (const char *)pattern);
+  char result = GEOSRelatePattern_r(GEOS_HANDLE, g1->geometry, g2->geometry, (const char *)pattern);
   if (result == 2) {
     geom_geos_get_error(&error);
     sqlite3_result_error(context, error_message(&error), -1);
   } else {
     sqlite3_result_int(context, result);
   }
-  GEOS_FREE_GEOM(g1);
-  GEOS_FREE_GEOM(g2);
+  GEOS_FREE_GEOM(g1, 0);
+  GEOS_FREE_GEOM(g2, 1);
 }
 
 GEOS_FUNC1(isSimple)
