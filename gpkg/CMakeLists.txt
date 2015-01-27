@@ -45,11 +45,37 @@ if( GPKG_GEOS )
   if ( GEOS_FOUND )
     message( WARNING "GEOS is licensed under LGPL 2.1" )
 
-    list( APPEND GPKG_SOURCE_FILES geos_context.c geos_geom_func.c geos_geom_io.c )
+    list(
+      APPEND GPKG_SOURCE_FILES
+      geos_context.c
+      geos_context.h
+      geos_geom_func.c
+      geos_geom_io.c
+      geos_geom_io.h
+    )
     include_directories( ${GEOS_INCLUDE_DIR} )
     set ( GPKG_HAVE_GEOM_FUNC "GEOS" )
     set ( GPKG_HAVE_GEOM_FUNC ${GPKG_HAVE_GEOM_FUNC} PARENT_SCOPE )
   endif()
+elseif( GPKG_BOOST_GEOMETRY )
+  file( GLOB_RECURSE BOOST_GEOMETRY_SOURCE "boost/boost/*" )
+  list( APPEND GPKG_SOURCE_FILES ${BOOST_GEOMETRY_SOURCE} )
+
+  list(
+    APPEND GPKG_SOURCE_FILES
+    boost_geom_func.cpp
+    boost_geom_io.cpp
+    boost_geom_io.hpp
+    boost_geometries.hpp
+  )
+  include_directories( "boost" )
+
+  set ( GPKG_HAVE_GEOM_FUNC "Boost.Geometry" )
+  set ( GPKG_HAVE_GEOM_FUNC ${GPKG_HAVE_GEOM_FUNC} PARENT_SCOPE )
+endif()
+
+if ( GPKG_HAVE_GEOM_FUNC )
+  list( APPEND GPKG_SOURCE_FILES "geom_func.h" )
 endif()
 
 #
@@ -96,6 +122,7 @@ set_target_properties(
 if( ${CMAKE_C_COMPILER_ID} MATCHES "GNU" OR ${CMAKE_C_COMPILER_ID} MATCHES "Clang" )
   add_definitions( -DGPKG_EXPORT=__attribute__\(\(visibility\("default"\)\)\) )
   set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -std=c99 -pedantic -Wall -Wno-unused-variable" )
+  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=c++11 -pedantic -Wall -Wno-unused-variable" )
 endif()
 
 if ( MSVC )

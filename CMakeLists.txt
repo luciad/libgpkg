@@ -27,6 +27,7 @@ set( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
 option( GPKG_TEST "Enable Testing?" OFF )
 option( GPKG_COVERAGE "Enable Code coverage?" OFF )
 option( GPKG_GEOS "Enable GEOS-based geometry functions?" OFF )
+option( GPKG_BOOST_GEOMETRY "Enable Boost.Geometry-based geometry functions?" OFF )
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
   set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mmacosx-version-min=10.5" )
