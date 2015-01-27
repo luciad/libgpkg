@@ -262,7 +262,7 @@ static void ST_AsText(sqlite3_context *context, int nbArgs, sqlite3_value **args
   FUNCTION_FREE_GEOM_ARG(geomblob);
 }
 
-static int geometry_is_assignable(geom_type_t expected, geom_type_t actual, error_t* error) {
+static int geometry_is_assignable(geom_type_t expected, geom_type_t actual, errorstream_t* error) {
   if (!geom_is_assignable(expected, actual)) {
     const char* expectedName = NULL;
     const char* actualName = NULL;
@@ -277,7 +277,7 @@ static int geometry_is_assignable(geom_type_t expected, geom_type_t actual, erro
   }
 }
 
-typedef int (*geometry_constructor_func)(sqlite3_context *context, void *user_data, geom_consumer_t *consumer, int nbArgs, sqlite3_value **args, error_t *error);
+typedef int (*geometry_constructor_func)(sqlite3_context *context, void *user_data, geom_consumer_t *consumer, int nbArgs, sqlite3_value **args, errorstream_t *error);
 
 static void geometry_constructor(sqlite3_context *context, const spatialdb_t *spatialdb, geometry_constructor_func constructor, void* user_data, geom_type_t requiredType, int nbArgs, sqlite3_value **args) {
   FUNCTION_START_STATIC(context, 256);
@@ -320,7 +320,7 @@ static void geometry_constructor(sqlite3_context *context, const spatialdb_t *sp
   FUNCTION_END(context);
 }
 
-static int geom_from_wkb(sqlite3_context *context, void *user_data, geom_consumer_t* consumer, int nbArgs, sqlite3_value **args, error_t *error) {
+static int geom_from_wkb(sqlite3_context *context, void *user_data, geom_consumer_t* consumer, int nbArgs, sqlite3_value **args, errorstream_t *error) {
   FUNCTION_STREAM_ARG(wkb);
   FUNCTION_START_NESTED(context, error);
   FUNCTION_GET_STREAM_ARG_UNSAFE(context, wkb, 0);
@@ -380,7 +380,7 @@ static void fromtext_release(fromtext_t *fromtext) {
   }
 }
 
-static int geom_from_wkt(sqlite3_context *context, void *user_data, geom_consumer_t* consumer, int nbArgs, sqlite3_value **args, error_t *error) {
+static int geom_from_wkt(sqlite3_context *context, void *user_data, geom_consumer_t* consumer, int nbArgs, sqlite3_value **args, errorstream_t *error) {
   FUNCTION_TEXT_ARG(wkt);
   FUNCTION_START_NESTED(context, error);
 
@@ -399,7 +399,7 @@ static void ST_GeomFromText(sqlite3_context *context, int nbArgs, sqlite3_value 
   geometry_constructor(context, fromtext->spatialdb, geom_from_wkt, fromtext->locale, GEOM_GEOMETRY, nbArgs, args);
 }
 
-static int point_from_coords(sqlite3_context *context, void *user_data, geom_consumer_t *consumer, int nbArgs, sqlite3_value **args, error_t *error) {
+static int point_from_coords(sqlite3_context *context, void *user_data, geom_consumer_t *consumer, int nbArgs, sqlite3_value **args, errorstream_t *error) {
   int result = SQLITE_OK;
 
   if (nbArgs < 2 || nbArgs > 4) {
@@ -724,7 +724,7 @@ static void GPKG_CreateSpatialIndex(sqlite3_context *context, int nbArgs, sqlite
 
 const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
   char message_buffer[256];
-  error_t error;
+  errorstream_t error;
   error_init_fixed(&error, message_buffer, 256);
 
   const spatialdb_t *schemas[] = {
@@ -836,7 +836,7 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
     }
   }
 
-  error_t error;
+  errorstream_t error;
   if (error_init(&error) != SQLITE_OK) {
     if (pzErrMsg) {
       *pzErrMsg = sqlite3_mprintf("Could not initialize error buffer");

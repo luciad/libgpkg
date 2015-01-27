@@ -91,7 +91,7 @@ size_t wkt_writer_length(wkt_writer_t *writer);
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, i18n_locale_t *locale, error_t *error);
+int wkt_read_geometry(char const *data, size_t length, geom_consumer_t const *consumer, i18n_locale_t *locale, errorstream_t *error);
 
 /** @} */
 

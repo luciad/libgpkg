@@ -93,7 +93,7 @@ size_t wkb_writer_length(wkb_writer_t *writer);
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_read_geometry(binstream_t *stream, wkb_dialect dialect, geom_consumer_t const *consumer, error_t *error);
+int wkb_read_geometry(binstream_t *stream, wkb_dialect dialect, geom_consumer_t const *consumer, errorstream_t *error);
 
 /**
  * Parses the header of a Well-Known Binary geometry from the given stream. The stream should be positioned at the start
@@ -104,7 +104,7 @@ int wkb_read_geometry(binstream_t *stream, wkb_dialect dialect, geom_consumer_t 
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_read_header(binstream_t *stream, wkb_dialect dialect, geom_header_t *header, error_t *error);
+int wkb_read_header(binstream_t *stream, wkb_dialect dialect, geom_header_t *header, errorstream_t *error);
 
 /**
  * Populates a geometry envelope based on the coordinates of a Well-Known Binary geometry from the given stream. The
@@ -115,9 +115,9 @@ int wkb_read_header(binstream_t *stream, wkb_dialect dialect, geom_header_t *hea
  * @param[out] error the error buffer to write to in case of I/O errors
  * @return SQLITE_OK on success, an error code otherwise
  */
-int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t *envelope, error_t *error);
+int wkb_fill_envelope(binstream_t *stream, wkb_dialect dialect, geom_envelope_t *envelope, errorstream_t *error);
 
-int wkb_fill_geom_header(uint32_t wkb_type, geom_header_t *header, error_t *error);
+int wkb_fill_geom_header(uint32_t wkb_type, geom_header_t *header, errorstream_t *error);
 
 /** @} */
 

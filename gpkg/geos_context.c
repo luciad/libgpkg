@@ -14,7 +14,7 @@ void geom_geos_clear_error() {
   }
 }
 
-void geom_geos_get_error(error_t *error) {
+void geom_geos_get_error(errorstream_t *error) {
   char *err = GPKG_TLS_GET(last_geos_error);
   if (err != NULL) {
     error_append(error, err);

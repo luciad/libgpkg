@@ -65,9 +65,10 @@ static void geos_context_release(geos_context_t *ctx) {
 typedef struct {
   GEOSGeometry* geometry;
   GEOSContextHandle_t context;
+  int srid;
 } geos_geometry_t;
 
-static geos_geometry_t *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
+static geos_geometry_t *get_geos_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, errorstream_t *error) {
   geom_blob_header_t header;
 
   uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
@@ -81,7 +82,7 @@ static geos_geometry_t *get_geos_geom(sqlite3_context *context, const geos_conte
   binstream_init(&stream, blob, blob_length);
 
   geos_writer_t writer;
-  geos_writer_init(&writer, geos_context->geos_handle);
+  geos_writer_init_srid(&writer, geos_context->geos_handle, header.srid);
 
   geos_context->spatialdb->read_blob_header(&stream, &header, error);
   geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
@@ -100,6 +101,7 @@ static geos_geometry_t *get_geos_geom(sqlite3_context *context, const geos_conte
 
   result->context = geos_context->geos_handle;
   result->geometry = g;
+  result->srid = header.srid;
 
   return result;
 }
@@ -121,9 +123,10 @@ static void free_geos_geom(void* data) {
 typedef struct {
   const GEOSPreparedGeometry* geometry;
   GEOSContextHandle_t context;
+  int srid;
 } geos_prepared_geometry_t;
 
-static geos_prepared_geometry_t *get_geos_prepared_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, error_t *error) {
+static geos_prepared_geometry_t *get_geos_prepared_geom(sqlite3_context *context, const geos_context_t *geos_context, sqlite3_value *value, errorstream_t *error) {
   geom_blob_header_t header;
 
   uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
@@ -137,7 +140,7 @@ static geos_prepared_geometry_t *get_geos_prepared_geom(sqlite3_context *context
   binstream_init(&stream, blob, blob_length);
 
   geos_writer_t writer;
-  geos_writer_init(&writer, geos_context->geos_handle);
+  geos_writer_init_srid(&writer, geos_context->geos_handle, header.srid);
 
   geos_context->spatialdb->read_blob_header(&stream, &header, error);
   geos_context->spatialdb->read_geometry(&stream, geos_writer_geom_consumer(&writer), error);
@@ -162,6 +165,7 @@ static geos_prepared_geometry_t *get_geos_prepared_geom(sqlite3_context *context
 
   result->context = geos_context->geos_handle;
   result->geometry = prepared_g;
+  result->srid = header.srid;
 
   return result;
 }
@@ -180,7 +184,7 @@ static void free_geos_prepared_geom(void* data) {
   sqlite3_free(data);
 }
 
-static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, error_t *error) {
+static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, errorstream_t *error) {
   int result = SQLITE_OK;
 
   if (geom == NULL) {
@@ -207,7 +211,7 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
 #define GEOS_START(context) \
   const geos_context_t *geos_context = (const geos_context_t *)sqlite3_user_data(context); \
   char error_buffer[256];\
-  error_t error;\
+  errorstream_t error;\
   error_init_fixed(&error, error_buffer, 256)
 #define GEOS_CONTEXT geos_context
 #define GEOS_HANDLE geos_context->geos_handle
@@ -293,6 +297,13 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
     }\
     return;\
   }\
+  int srid1 = g1->srid;\
+  int srid2 = g2->srid;\
+  if (srid1 != srid2 ) {\
+    error_append(&error, "Cannot apply %s when SRIDs differ: %d != %d", #name, srid1, srid2);\
+    sqlite3_result_error(context, error_message(&error), -1);\
+    return;\
+  }\
   char result = GEOS##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry);\
   if (result == 2) {\
     geom_geos_get_error(&error);\
@@ -314,6 +325,13 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
     } else {\
       sqlite3_result_null(context);\
     }\
+    return;\
+  }\
+  int srid1 = g1->srid;\
+  int srid2 = g2->srid;\
+  if (srid1 != srid2 ) {\
+    error_append(&error, "Cannot apply %s when SRIDs differ: %d != %d", #name, srid1, srid2);\
+    sqlite3_result_error(context, error_message(&error), -1);\
     return;\
   }\
   char result = GEOSPrepared##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry);\
@@ -359,6 +377,13 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
     } else {\
       sqlite3_result_null(context);\
     }\
+    return;\
+  }\
+  int srid1 = g1->srid;\
+  int srid2 = g2->srid;\
+  if (srid1 != srid2 ) {\
+    error_append(&error, "Cannot apply %s when SRIDs differ: %d != %d", #name, srid1, srid2);\
+    sqlite3_result_error(context, error_message(&error), -1);\
     return;\
   }\
   double val;\
@@ -428,6 +453,13 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
     } else {\
       sqlite3_result_null(context);\
     }\
+    return;\
+  }\
+  int srid1 = g1->srid;\
+  int srid2 = g2->srid;\
+  if (srid1 != srid2 ) {\
+    error_append(&error, "Cannot apply %s when SRIDs differ: %d != %d", #name, srid1, srid2);\
+    sqlite3_result_error(context, error_message(&error), -1);\
     return;\
   }\
   GEOSGeometry *result = GEOS##name##_r(GEOS_HANDLE, g1->geometry, g2->geometry);\
@@ -558,7 +590,7 @@ static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value
     sql_create_function(db, STR(prefix##_##name), prefix##_##name, nbArgs, SQL_DETERMINISTIC, ctx, (void(*)(void*))geos_context_release, error);\
   } while (0)
 
-void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, error_t *error) {
+void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *error) {
   geos_context_t *ctx = geos_context_init(spatialdb);
   if (ctx == NULL) {
     error_append(error, "Error allocating GEOS context");

@@ -341,9 +341,9 @@ int sql_check_column_exists(sqlite3 *db, const char *db_name, const char *table_
  * @return SQLITE_OK if the table was checked successfully\n
  *         A SQLite error code otherwise
  */
-int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, error_t *error);
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, errorstream_t *error);
 
-int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error);
+int sql_check_integrity(sqlite3 *db, const char *db_name, errorstream_t *error);
 
 /**
  * Initializes a table based on the given table specification. If the table already exists, then this function is
@@ -357,7 +357,7 @@ int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error);
  * @return SQLITE_OK if the table was initialized successfully\n
  *         A SQLite error code otherwise
  */
-int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error);
+int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, errorstream_t *error);
 
 int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql);
 
@@ -365,7 +365,7 @@ typedef void(sql_function)(sqlite3_context *, int, sqlite3_value **);
 
 #define SQL_DETERMINISTIC 1
 
-int sql_create_function(sqlite3 *db, const char *name, sql_function *function, int args, int flags, void *user_data, void (*destroy)(void *), error_t *error);
+int sql_create_function(sqlite3 *db, const char *name, sql_function *function, int args, int flags, void *user_data, void (*destroy)(void *), errorstream_t *error);
 
 /** @} */
 

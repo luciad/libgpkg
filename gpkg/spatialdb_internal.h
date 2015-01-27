@@ -25,8 +25,8 @@
 
 #define FUNCTION_START(context)                                                                                        \
     int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
-    error_t _error;                                                                                                    \
-    error_t* FUNCTION_ERROR = &_error;                                                                                 \
+    errorstream_t _error;                                                                                                    \
+    errorstream_t* FUNCTION_ERROR = &_error;                                                                                 \
     if (error_init(FUNCTION_ERROR) != SQLITE_OK) {                                                                     \
         sqlite3_result_error(context, "Could not init error buffer", -1);                                              \
         goto exit;                                                                                                     \
@@ -36,8 +36,8 @@
 #define FUNCTION_START_STATIC(context, error_buf_size)                                                                 \
     int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
     char error_buffer[error_buf_size];                                                                                 \
-    error_t _error;                                                                                                    \
-    error_t* FUNCTION_ERROR = &_error;                                                                                 \
+    errorstream_t _error;                                                                                                    \
+    errorstream_t* FUNCTION_ERROR = &_error;                                                                                 \
     if (error_init_fixed(FUNCTION_ERROR, error_buffer, error_buf_size) != SQLITE_OK) {                                 \
         sqlite3_result_error(context, "Could not init error buffer", -1);                                              \
         goto exit;                                                                                                     \
@@ -46,7 +46,7 @@
 
 #define FUNCTION_START_NESTED(context, error)                                                                          \
     int FUNCTION_RESULT = SQLITE_OK;                                                                                   \
-    error_t* FUNCTION_ERROR = error;                                                                                   \
+    errorstream_t* FUNCTION_ERROR = error;                                                                                   \
     sqlite3 *FUNCTION_DB_HANDLE = sqlite3_context_db_handle(context)
 
 #define FUNCTION_END(context)                                                                                          \

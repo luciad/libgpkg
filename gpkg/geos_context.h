@@ -8,7 +8,7 @@ void geom_geos_clear_error();
 
 void geom_geos_print_error();
 
-void geom_geos_get_error(error_t *error);
+void geom_geos_get_error(errorstream_t *error);
 
 GEOSContextHandle_t geom_geos_init();
 

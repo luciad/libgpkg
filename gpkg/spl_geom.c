@@ -33,7 +33,7 @@
     }
 #define CHECK_ENV(spb, error) CHECK_ENV_COMP(spb, x, error) CHECK_ENV_COMP(spb, y, error) CHECK_ENV_COMP(spb, z, error) CHECK_ENV_COMP(spb, m, error)
 
-int spb_read_header(binstream_t *stream, geom_blob_header_t *spb, error_t *error) {
+int spb_read_header(binstream_t *stream, geom_blob_header_t *spb, errorstream_t *error) {
   uint8_t start;
   if (binstream_read_u8(stream, &start) != SQLITE_OK) {
     return SQLITE_IOERR;
@@ -87,7 +87,7 @@ int spb_read_header(binstream_t *stream, geom_blob_header_t *spb, error_t *error
   return SQLITE_OK;
 }
 
-int spb_write_header(binstream_t *stream, geom_blob_header_t *spb, error_t *error) {
+int spb_write_header(binstream_t *stream, geom_blob_header_t *spb, errorstream_t *error) {
   CHECK_ENV(spb, error)
 
   if (binstream_write_u8(stream, 0x00)) {
@@ -119,7 +119,7 @@ int spb_write_header(binstream_t *stream, geom_blob_header_t *spb, error_t *erro
   return SQLITE_OK;
 }
 
-static int spb_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
+static int spb_begin_geometry(const geom_consumer_t *consumer, const geom_header_t *header, errorstream_t *error) {
   int result = SQLITE_OK;
 
   geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
@@ -140,7 +140,7 @@ exit:
   return result;
 }
 
-static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, error_t *error) {
+static int spb_coordinates(const geom_consumer_t *consumer, const geom_header_t *header, size_t point_count, const double *coords, int skip_coords, errorstream_t *error) {
   int result = SQLITE_OK;
 
   if (point_count <= 0) {
@@ -174,7 +174,7 @@ exit:
   return result;
 }
 
-static int spb_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header, error_t *error) {
+static int spb_end_geometry(const geom_consumer_t *consumer, const geom_header_t *header, errorstream_t *error) {
   geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
   wkb_writer_t *wkb = &writer->wkb_writer;
 
@@ -182,7 +182,7 @@ static int spb_end_geometry(const geom_consumer_t *consumer, const geom_header_t
   return wkb_consumer->end_geometry(wkb_consumer, header, error);
 }
 
-static int spb_end(const geom_consumer_t *consumer, error_t *error) {
+static int spb_end(const geom_consumer_t *consumer, errorstream_t *error) {
   int result = SQLITE_OK;
 
   geom_blob_writer_t *writer = (geom_blob_writer_t *) consumer;
