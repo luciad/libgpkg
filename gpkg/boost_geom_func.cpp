@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <error.h>
 #include "boost_geom_io.hpp"
+#include "boost_geom_wrapper.hpp"
 
 extern "C" {
-
+#include "error.h"
 #include "geom_func.h"
 #include "sql.h"
+}
 
 typedef struct {
   gpkg::GeometryPtr geometry;
@@ -29,7 +30,7 @@ typedef struct {
 static boostgeom_geometry_t *get_boost_geom(sqlite3_context *context, const spatialdb_t *spatialdb, sqlite3_value *value, errorstream_t *error) {
   geom_blob_header_t header;
 
-  uint8_t *blob = (uint8_t *)sqlite3_value_blob(value);
+  uint8_t *blob = (uint8_t *) sqlite3_value_blob(value);
   size_t blob_length = (size_t) sqlite3_value_bytes(value);
 
   if (blob == NULL) {
@@ -61,12 +62,12 @@ static boostgeom_geometry_t *get_boost_geom(sqlite3_context *context, const spat
   }
 }
 
-static void free_boost_geom(void* data) {
+static void free_boost_geom(void *data) {
   if (data == NULL) {
     return;
   }
 
-  boostgeom_geometry_t* geom = (boostgeom_geometry_t*)data;
+  boostgeom_geometry_t *geom = (boostgeom_geometry_t *) data;
   if (geom != NULL) {
     gpkg::delete_geometry(geom->geometry);
     delete geom;
@@ -115,23 +116,50 @@ static int set_boost_geom_result(sqlite3_context *context, const spatialdb_t *sp
     sqlite3_set_auxdata(context, i, (void*)name, free_boost_geom); \
   }
 
-static void GPKG_BoostRoundtrip(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-  BOOSTGEOM_START(context);
-  BOOSTGEOM_GET_GEOM( g1, args, 0 );
-
-  if (g1 == NULL) {
-    if (error_count(&error) > 0) {
-      sqlite3_result_error(context, error_message(&error), -1);
-    } else {
-      sqlite3_result_null(context);
-    }
-    return;
+#define BOOSTGEOM_GEOM__INT(sql_name, boost_name)                                                                      \
+  static void ST_##sql_name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {                              \
+    BOOSTGEOM_START(context);                                                                                          \
+    BOOSTGEOM_GET_GEOM(g1, args, 0);                                                                                   \
+                                                                                                                       \
+    if (g1 == NULL) {                                                                                                  \
+      if (error_count(&error) > 0) {                                                                                   \
+        sqlite3_result_error(context, error_message(&error), -1);                                                      \
+      } else {                                                                                                         \
+        sqlite3_result_null(context);                                                                                  \
+      }                                                                                                                \
+      return;                                                                                                          \
+    }                                                                                                                  \
+                                                                                                                       \
+    int result = gpkg::boost_name(g1->geometry);                                                                       \
+    sqlite3_result_int(context, result);                                                                               \
+                                                                                                                       \
+    BOOSTGEOM_FREE_GEOM(g1, 0);                                                                                        \
   }
 
-  set_boost_geom_result(context, spatialdb, g1, &error);
+#define BOOSTGEOM_GEOM__DOUBLE(sql_name, boost_name)                                                                   \
+  static void ST_##sql_name(sqlite3_context *context, int nbArgs, sqlite3_value **args) {                              \
+    BOOSTGEOM_START(context);                                                                                          \
+    BOOSTGEOM_GET_GEOM(g1, args, 0);                                                                                   \
+                                                                                                                       \
+    if (g1 == NULL) {                                                                                                  \
+      if (error_count(&error) > 0) {                                                                                   \
+        sqlite3_result_error(context, error_message(&error), -1);                                                      \
+      } else {                                                                                                         \
+        sqlite3_result_null(context);                                                                                  \
+      }                                                                                                                \
+      return;                                                                                                          \
+    }                                                                                                                  \
+                                                                                                                       \
+    double result = gpkg::boost_name(g1->geometry);                                                                    \
+    sqlite3_result_double(context, result);                                                                            \
+                                                                                                                       \
+    BOOSTGEOM_FREE_GEOM(g1, 0);                                                                                        \
+  }
 
-  BOOSTGEOM_FREE_GEOM( g1, 0 );
-}
+BOOSTGEOM_GEOM__INT(IsValid, is_valid)
+BOOSTGEOM_GEOM__INT(IsSimple, is_simple)
+
+BOOSTGEOM_GEOM__DOUBLE(Area, area)
 
 static void GPKG_BoostGeometryVersion(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
   int boost_major = BOOST_VERSION / 100000;
@@ -154,8 +182,12 @@ static void GPKG_BoostGeometryVersion(sqlite3_context *context, int nbArgs, sqli
     sql_create_function(db, STR(prefix##_##name), prefix##_##name, nbArgs, SQL_DETERMINISTIC, (void*)ctx, NULL, error);\
   } while (0)
 
+extern "C" {
 void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *error) {
   BOOSTGEOM_FUNCTION(db, GPKG, BoostGeometryVersion, 0, spatialdb, error);
-  BOOSTGEOM_FUNCTION(db, GPKG, BoostRoundtrip, 1, spatialdb, error);
+  BOOSTGEOM_FUNCTION(db, ST, IsValid, 1, spatialdb, error);
+  BOOSTGEOM_FUNCTION(db, ST, IsSimple, 1, spatialdb, error);
+
+  BOOSTGEOM_FUNCTION(db, ST, Area, 1, spatialdb, error);
 }
 }

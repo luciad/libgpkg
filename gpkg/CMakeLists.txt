@@ -66,6 +66,8 @@ elseif( GPKG_BOOST_GEOMETRY )
     boost_geom_func.cpp
     boost_geom_io.cpp
     boost_geom_io.hpp
+    boost_geom_wrapper.cpp
+    boost_geom_wrapper.hpp
     boost_geometries.hpp
   )
   include_directories( "boost" )
