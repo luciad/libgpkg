@@ -210,7 +210,7 @@ static const table_info_t *const gpkg_tables[] = {
   NULL
 };
 
-static int init(sqlite3 *db, const char *db_name, error_t *error) {
+static int init(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = gpkg_tables;
 
@@ -242,14 +242,14 @@ static int init(sqlite3 *db, const char *db_name, error_t *error) {
  */
 static int gpkg_contents_geometry_table_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   error_append(
-    (error_t *)data,
+    (errorstream_t *)data,
     "gpkg_contents: table '%s' has data_type 'features' but no rows exist in gpkg_geometry_columns for this table",
     sqlite3_column_text(stmt, 0)
   );
   return SQLITE_OK;
 }
 
-static int gpkg_contents_geometry_table_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_contents_geometry_table_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = sql_exec_stmt(
                  db, gpkg_contents_geometry_table_check_row, NULL, error,
                  "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='features' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_geometry_columns)",
@@ -269,14 +269,14 @@ static int gpkg_contents_geometry_table_check(sqlite3 *db, const char *db_name, 
  */
 static int gpkg_contents_tilemetadata_table_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   error_append(
-    (error_t *)data,
+    (errorstream_t *)data,
     "gpkg_contents: table '%s' has data_type 'tiles' but no rows exist in gpkg_tile_matrix_set for this table",
     sqlite3_column_text(stmt, 0)
   );
   return SQLITE_OK;
 }
 
-static int gpkg_contents_tilemetadata_table_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_contents_tilemetadata_table_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = sql_exec_stmt(
                  db, gpkg_contents_tilemetadata_table_check_row, NULL, error,
                  "SELECT table_name FROM \"%w\".gpkg_contents WHERE data_type='tiles' AND table_name NOT IN (SELECT table_name FROM \"%w\".gpkg_tile_matrix_set)",
@@ -296,7 +296,7 @@ static int gpkg_contents_tilemetadata_table_check(sqlite3 *db, const char *db_na
 typedef struct {
   const char *db_name;
   const char *source_table;
-  error_t *error;
+  errorstream_t *error;
 } column_check_data_t;
 
 static int gpkg_table_column_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
@@ -335,7 +335,7 @@ exit:
   return result;
 }
 
-static int gpkg_table_column_check(sqlite3 *db, const char *db_name, const char *table_name, const char *table_column, const char *column_column, error_t *error) {
+static int gpkg_table_column_check(sqlite3 *db, const char *db_name, const char *table_name, const char *table_column, const char *column_column, errorstream_t *error) {
   int result = SQLITE_OK;
   column_check_data_t c;
   c.db_name = db_name;
@@ -355,35 +355,35 @@ static int gpkg_table_column_check(sqlite3 *db, const char *db_name, const char 
   return result;
 }
 
-static int gpkg_contents_columns_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_contents_columns_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_contents", "table_name", NULL, error);
 }
 
-static int gpkg_extensions_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_extensions_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_extensions", "table_name", "column_name", error);
 }
 
-static int gpkg_geometry_columns_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_geometry_columns_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_geometry_columns", "table_name", "column_name", error);
 }
 
-static int gpkg_tile_matrix_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_tile_matrix_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_tile_matrix", "table_name", NULL, error);
 }
 
-static int gpkg_tile_matrix_set_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_tile_matrix_set_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_tile_matrix_set", "table_name", NULL, error);
 }
 
-static int gpkg_data_columns_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_data_columns_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_data_columns", "table_name", "column_name", error);
 }
 
-static int gpkg_metadata_reference_table_column_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int gpkg_metadata_reference_table_column_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return gpkg_table_column_check(db, db_name, "gpkg_metadata_reference", "table_name", "column_name", error);
 }
 
-typedef int(*check_func)(sqlite3 *db, const char *db_name, error_t *error);
+typedef int(*check_func)(sqlite3 *db, const char *db_name, errorstream_t *error);
 
 static check_func checks[] = {
   gpkg_contents_columns_table_column_check,
@@ -398,7 +398,7 @@ static check_func checks[] = {
   NULL
 };
 
-static int check(sqlite3 *db, const char *db_name, int flags, error_t *error) {
+static int check(sqlite3 *db, const char *db_name, int flags, errorstream_t *error) {
   int result = SQLITE_OK;
 
   if (result == SQLITE_OK) {
@@ -457,11 +457,11 @@ static int check(sqlite3 *db, const char *db_name, int flags, error_t *error) {
   return result;
 }
 
-static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, error_t *error) {
+static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error) {
   return gpb_write_header(stream, header, error);
 }
 
-static int read_blob_header(binstream_t *stream, geom_blob_header_t *header, error_t *error) {
+static int read_blob_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error) {
   return gpb_read_header(stream, header, error);
 }
 
@@ -469,7 +469,7 @@ static int gpkg_writer_init(geom_blob_writer_t *writer) {
   return gpb_writer_init(writer, -1);
 }
 
-static int add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
+static int add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, errorstream_t *error) {
   int result;
 
   const char *normalized_geom_type;
@@ -535,7 +535,7 @@ static int add_geometry_column(sqlite3 *db, const char *db_name, const char *tab
   return SQLITE_OK;
 }
 
-static int create_tiles_table(sqlite3 *db, const char *db_name, const char *table_name, error_t *error) {
+static int create_tiles_table(sqlite3 *db, const char *db_name, const char *table_name, errorstream_t *error) {
   int result = SQLITE_OK;
 
   // Check if the target table exists
@@ -566,7 +566,7 @@ static int create_tiles_table(sqlite3 *db, const char *db_name, const char *tabl
   return SQLITE_OK;
 }
 
-static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *geometry_column_name, const char *id_column_name, error_t *error) {
+static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *geometry_column_name, const char *id_column_name, errorstream_t *error) {
   int result = SQLITE_OK;
   char *index_table_name = NULL;
   int exists = 0;
@@ -775,15 +775,15 @@ exit:
   return result;
 }
 
-static int fill_envelope(binstream_t *stream, geom_envelope_t *envelope, error_t *error) {
+static int fill_envelope(binstream_t *stream, geom_envelope_t *envelope, errorstream_t *error) {
   return wkb_fill_envelope(stream, WKB_ISO, envelope, error);
 }
 
-static int read_geometry_header(binstream_t *stream, geom_header_t *header, error_t *error) {
+static int read_geometry_header(binstream_t *stream, geom_header_t *header, errorstream_t *error) {
   return wkb_read_header(stream, WKB_ISO, header, error);
 }
 
-static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, error_t *error) {
+static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, errorstream_t *error) {
   return wkb_read_geometry(stream, WKB_ISO, consumer, error);
 }
 

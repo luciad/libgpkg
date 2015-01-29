@@ -54,6 +54,8 @@ typedef struct {
   /** @private */
   geom_blob_header_t header;
   /** @private */
+  geom_type_t geom_type;
+  /** @private */
   wkb_writer_t wkb_writer;
 } geom_blob_writer_t;
 

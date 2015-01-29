@@ -41,9 +41,11 @@ typedef struct {
   geos_data_t childData[GEOM_MAX_DEPTH];
   /** @private */
   int offset;
+  /** @private */
+  int srid;
 } geos_writer_t;
 
-int geos_writer_init(geos_writer_t *writer, GEOSContextHandle_t context);
+int geos_writer_init_srid(geos_writer_t *writer, GEOSContextHandle_t context, int srid);
 
 void geos_writer_destroy(geos_writer_t *writer, int free_data);
 
@@ -51,6 +53,6 @@ geom_consumer_t *geos_writer_geom_consumer(geos_writer_t *writer);
 
 GEOSGeometry *geos_writer_getgeometry(geos_writer_t *writer);
 
-int geos_read_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, error_t *error);
+int geos_read_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, errorstream_t *error);
 
 #endif

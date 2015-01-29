@@ -28,20 +28,6 @@
  */
 
 /**
- * A Spatialite Binary writer. spb_writer_t instances can be used to generate a Spatialite Binary blob based on
- * any geometry source. Use spb_writer_geom_consumer() to obtain a geom_consumer_t pointer that can be passed to
- * geomtery sources.
- */
-typedef struct {
-  /** @private */
-  geom_consumer_t geom_consumer;
-  /** @private */
-  geom_blob_header_t header;
-  /** @private */
-  wkb_writer_t wkb_writer;
-} spb_writer_t;
-
-/**
  * Initializes a Spatialite Binary writer.
  * @param writer the writer to initialize
  * @param srid the SRID that should be used
@@ -65,7 +51,7 @@ void spb_writer_destroy(geom_blob_writer_t *writer, int free_data);
  * @return SQLITE_OK if the header was successfully read\n
  *         SQLITE_IOERR if an I/O error occurred while reading the header
  */
-int spb_read_header(binstream_t *stream, geom_blob_header_t *header, error_t *error);
+int spb_read_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error);
 
 /**
  * Writes a Spatialite Binary header to the given stream. When this method return SQLITE_OK, the stream is guaranteed
@@ -77,7 +63,7 @@ int spb_read_header(binstream_t *stream, geom_blob_header_t *header, error_t *er
  * @return SQLITE_OK if the header was successfully written\n
  *         SQLITE_IOERR if an I/O error occurred while writing the header
  */
-int spb_write_header(binstream_t *stream, geom_blob_header_t *header, error_t *error);
+int spb_write_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error);
 
 /** @} */
 

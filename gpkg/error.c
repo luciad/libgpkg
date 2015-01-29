@@ -4,7 +4,7 @@
 #include "sqlite.h"
 #include "error.h"
 
-int error_init(error_t *error) {
+int error_init(errorstream_t *error) {
   int result = strbuf_init(&error->message, 256);
   if (result != SQLITE_OK) {
     return result;
@@ -14,7 +14,7 @@ int error_init(error_t *error) {
 }
 
 
-int error_init_fixed(error_t *error, char *buffer, size_t length) {
+int error_init_fixed(errorstream_t *error, char *buffer, size_t length) {
   int result = strbuf_init_fixed(&error->message, buffer, length);
   if (result != SQLITE_OK) {
     return result;
@@ -23,12 +23,12 @@ int error_init_fixed(error_t *error, char *buffer, size_t length) {
   return SQLITE_OK;
 }
 
-int error_reset(error_t *error) {
+int error_reset(errorstream_t *error) {
   error->error_count = 0;
   return strbuf_reset(&error->message);
 }
 
-void error_destroy(error_t *error) {
+void error_destroy(errorstream_t *error) {
   if (error == NULL) {
     return;
   }
@@ -36,7 +36,7 @@ void error_destroy(error_t *error) {
   strbuf_destroy(&error->message);
 }
 
-int error_append(error_t *error, const char *msg, ...) {
+int error_append(errorstream_t *error, const char *msg, ...) {
   error->error_count++;
 
   int result = SQLITE_OK;
@@ -55,10 +55,10 @@ int error_append(error_t *error, const char *msg, ...) {
   return result;
 }
 
-size_t error_count(error_t *error) {
+size_t error_count(errorstream_t *error) {
   return error->error_count;
 }
 
-char *error_message(error_t *error) {
+char *error_message(errorstream_t *error) {
   return strbuf_data_pointer(&error->message);
 }

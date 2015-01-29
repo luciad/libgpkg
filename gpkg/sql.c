@@ -293,7 +293,7 @@ static int sql_count_columns(const table_info_t *table_info) {
 }
 
 typedef struct {
-  error_t *error;
+  errorstream_t *error;
   int *cols_found;
   int nColumns;
   const table_info_t *table_info;
@@ -302,7 +302,7 @@ typedef struct {
 
 static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   check_cols_data *check = (check_cols_data *)data;
-  error_t *error = check->error;
+  errorstream_t *error = check->error;
   int *found = check->cols_found;
   int nColumns = check->nColumns;
   const table_info_t *table_info = check->table_info;
@@ -401,7 +401,7 @@ static int sql_check_cols_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   return SQLITE_OK;
 }
 
-static int sql_check_table_schema(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, error_t *error) {
+static int sql_check_table_schema(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, errorstream_t *error) {
   int nColumns = sql_count_columns(table_info);
   int *found = (int *)sqlite3_malloc(nColumns * sizeof(int));
   if (found == NULL) {
@@ -427,7 +427,7 @@ static int sql_check_table_schema(sqlite3 *db, const char *db_name, const table_
   return result;
 }
 
-static int sql_format_missing_row(const char *db_name, const table_info_t *table_info, const value_t *row, error_t *error) {
+static int sql_format_missing_row(const char *db_name, const table_info_t *table_info, const value_t *row, errorstream_t *error) {
   int result;
   strbuf_t errmsg;
 
@@ -483,7 +483,7 @@ exit:
   return result;
 }
 
-static int sql_check_data(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
+static int sql_check_data(sqlite3 *db, const char *db_name, const table_info_t *table_info, errorstream_t *error) {
   if (table_info->nRows <= 0) {
     return SQLITE_OK;
   }
@@ -598,7 +598,7 @@ exit:
   return result;
 }
 
-static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
+static int sql_insert_data(sqlite3 *db, const char *db_name, const table_info_t *table_info, errorstream_t *error) {
   if (table_info->nRows <= 0) {
     return SQLITE_OK;
   }
@@ -688,7 +688,7 @@ static void appendTableConstraint(const table_info_t *table_info, strbuf_t *sql,
   strbuf_append(sql, ")");
 }
 
-static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
+static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, errorstream_t *error) {
   int result;
   strbuf_t sql;
   result = strbuf_init(&sql, 4096);
@@ -778,7 +778,7 @@ static int sql_create_table(sqlite3 *db, const char *db_name, const table_info_t
 
 #define SQL_CREATE 1
 
-static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int flags, error_t *error) {
+static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int flags, errorstream_t *error) {
   if (error == NULL) {
     return SQLITE_MISUSE;
   }
@@ -812,11 +812,11 @@ static int sql_init_check_table(sqlite3 *db, const char *db_name, const table_in
   return result;
 }
 
-int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, error_t *error) {
+int sql_check_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, int check_flags, errorstream_t *error) {
   return sql_init_check_table(db, db_name, table_info, check_flags & ~SQL_CREATE, error);
 }
 
-int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, error_t *error) {
+int sql_init_table(sqlite3 *db, const char *db_name, const table_info_t *table_info, errorstream_t *error) {
   return sql_init_check_table(db, db_name, table_info, SQL_CREATE | SQL_MUST_EXIST, error);
 }
 
@@ -839,12 +839,12 @@ int sql_init_stmt(sqlite3_stmt **stmt, sqlite3 *db, char *sql) {
 static int sql_integrity_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
   const char *row = (const char *)sqlite3_column_text(stmt, 0);
   if (sqlite3_strnicmp(row, "ok", 3) != 0) {
-    error_append((error_t *)data, "integrity: %s", row);
+    error_append((errorstream_t *)data, "integrity: %s", row);
   }
   return SQLITE_OK;
 }
 
-static int sql_integrity_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int sql_integrity_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   return sql_exec_stmt(db, sql_integrity_check_row, NULL, error, "PRAGMA integrity_check");
 }
 
@@ -878,7 +878,7 @@ static int sql_foreign_key_info_row(sqlite3 *db, sqlite3_stmt *stmt, void *data)
   }
 }
 
-static int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, error_t *error) {
+static int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *table_name, int index, foreign_key_info_t *info, errorstream_t *error) {
   sql_foreign_key_info_data data;
   memset(&data, 0, sizeof(sql_foreign_key_info_data));
   data.info = info;
@@ -899,7 +899,7 @@ static int sql_foreign_key_info(sqlite3 *db, const char *db_name, const char *ta
 
 typedef struct {
   const char *db_name;
-  error_t *error;
+  errorstream_t *error;
 } foreign_key_check_data;
 
 static int sql_foreign_key_check_row(sqlite3 *db, sqlite3_stmt *stmt, void *data) {
@@ -938,7 +938,7 @@ exit:
   return result;
 }
 
-static int sql_foreign_key_check(sqlite3 *db, const char *db_name, error_t *error) {
+static int sql_foreign_key_check(sqlite3 *db, const char *db_name, errorstream_t *error) {
   foreign_key_check_data data = {
     db_name,
     error
@@ -946,7 +946,7 @@ static int sql_foreign_key_check(sqlite3 *db, const char *db_name, error_t *erro
   return sql_exec_stmt(db, sql_foreign_key_check_row, NULL, &data, "PRAGMA foreign_key_check");
 }
 
-typedef int(*check_func)(sqlite3 *db, const char *db_name, error_t *error);
+typedef int(*check_func)(sqlite3 *db, const char *db_name, errorstream_t *error);
 
 static check_func checks[] = {
   sql_integrity_check,
@@ -954,7 +954,7 @@ static check_func checks[] = {
   NULL
 };
 
-int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
+int sql_check_integrity(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = SQLITE_OK;
 
   check_func *current_func = checks;
@@ -969,7 +969,7 @@ int sql_check_integrity(sqlite3 *db, const char *db_name, error_t *error) {
   return result;
 }
 
-int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context *, int, sqlite3_value **), int args, int flags, void *user_data, void (*destroy)(void *), error_t *error) {
+int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_context *, int, sqlite3_value **), int args, int flags, void *user_data, void (*destroy)(void *), errorstream_t *error) {
   int function_flags = SQLITE_UTF8;
 
 #if SQLITE_VERSION_NUMBER >= 3008003

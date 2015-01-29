@@ -146,7 +146,7 @@ static const table_info_t *const spl4_tables[] = {
   NULL
 };
 
-static int spl2_init(sqlite3 *db, const char *db_name, error_t *error) {
+static int spl2_init(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = spl2_tables;
 
@@ -165,7 +165,7 @@ static int spl2_init(sqlite3 *db, const char *db_name, error_t *error) {
   }
 }
 
-static int spl2_check(sqlite3 *db, const char *db_name, int check_flags, error_t *error) {
+static int spl2_check(sqlite3 *db, const char *db_name, int check_flags, errorstream_t *error) {
   int result = SQLITE_OK;
 
   const table_info_t *const *table = spl2_tables;
@@ -180,7 +180,7 @@ static int spl2_check(sqlite3 *db, const char *db_name, int check_flags, error_t
   return result;
 }
 
-static int spl2_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
+static int spl2_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, errorstream_t *error) {
   int result;
 
   const char *normalized_geom_type;
@@ -267,7 +267,7 @@ static int spl2_add_geometry_column(sqlite3 *db, const char *db_name, const char
   return SQLITE_OK;
 }
 
-static int spl3_init(sqlite3 *db, const char *db_name, error_t *error) {
+static int spl3_init(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = spl3_tables;
 
@@ -286,7 +286,7 @@ static int spl3_init(sqlite3 *db, const char *db_name, error_t *error) {
   }
 }
 
-static int spl3_check(sqlite3 *db, const char *db_name, int check_flags, error_t *error) {
+static int spl3_check(sqlite3 *db, const char *db_name, int check_flags, errorstream_t *error) {
   int result = SQLITE_OK;
 
   const table_info_t *const *table = spl3_tables;
@@ -301,7 +301,7 @@ static int spl3_check(sqlite3 *db, const char *db_name, int check_flags, error_t
   return result;
 }
 
-static int spl4_init(sqlite3 *db, const char *db_name, error_t *error) {
+static int spl4_init(sqlite3 *db, const char *db_name, errorstream_t *error) {
   int result = SQLITE_OK;
   const table_info_t *const *table = spl4_tables;
 
@@ -320,7 +320,7 @@ static int spl4_init(sqlite3 *db, const char *db_name, error_t *error) {
   }
 }
 
-static int spl4_check(sqlite3 *db, const char *db_name, int check_flags, error_t *error) {
+static int spl4_check(sqlite3 *db, const char *db_name, int check_flags, errorstream_t *error) {
   int result = SQLITE_OK;
 
   const table_info_t *const *table = spl4_tables;
@@ -335,11 +335,11 @@ static int spl4_check(sqlite3 *db, const char *db_name, int check_flags, error_t
   return result;
 }
 
-static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, error_t *error) {
+static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error) {
   return spb_write_header(stream, header, error);
 }
 
-static int read_blob_header(binstream_t *stream, geom_blob_header_t *header, error_t *error) {
+static int read_blob_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error) {
   return spb_read_header(stream, header, error);
 }
 
@@ -347,7 +347,7 @@ static int spl3_writer_init(geom_blob_writer_t *writer) {
   return spb_writer_init(writer, -1);
 }
 
-static int spl3_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
+static int spl3_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, errorstream_t *error) {
   int result;
 
   const char *normalized_geom_type;
@@ -438,7 +438,7 @@ static int spl4_writer_init(geom_blob_writer_t *writer) {
   return spb_writer_init(writer, 0);
 }
 
-static int spl4_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, error_t *error) {
+static int spl4_add_geometry_column(sqlite3 *db, const char *db_name, const char *table_name, const char *column_name, const char *geom_type, int srs_id, int z, int m, errorstream_t *error) {
   int result;
   geom_type_t geom_type_enum;
 
@@ -596,7 +596,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
     FUNCTION_GET_INT_ARG(expected_geometry_type_int, 1);
     FUNCTION_GET_INT_ARG(expected_srid, 2);
     FUNCTION_GET_WKB_ARG_UNSAFE(context, spatialdb, wkb, 0);
-    wkb_fill_geom_header((uint32_t)expected_geometry_type_int, &expected, &error);
+    wkb_fill_geom_header((uint32_t)expected_geometry_type_int, &expected, FUNCTION_ERROR);
   } else {
     FUNCTION_GET_TEXT_ARG(context, expected_geometry_type_text, 1);
     FUNCTION_GET_INT_ARG(expected_srid, 2);
@@ -605,7 +605,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
 
     FUNCTION_RESULT = geom_type_from_string(expected_geometry_type_text, &expected.geom_type);
     if (FUNCTION_RESULT != SQLITE_OK) {
-      error_append(&error, "Invalid geometry type %s", expected_geometry_type_text);
+      error_append(FUNCTION_ERROR, "Invalid geometry type %s", expected_geometry_type_text);
       goto exit;
     }
 
@@ -622,7 +622,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
       expected.coord_size = 4;
       expected.coord_type = GEOM_XYZM;
     } else {
-      error_append(&error, "Unsupported geometry dimension: %s", expected_dimension_text);
+      error_append(FUNCTION_ERROR, "Unsupported geometry dimension: %s", expected_dimension_text);
       goto exit;
     }
   }
@@ -632,12 +632,12 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
     geom_type_name(expected.geom_type, &expected_name);
     const char *actual_name;
     geom_type_name(wkb.geom_type, &actual_name);
-    error_append(&error, "Geometry of type %s can not be written to column of type %s", actual_name, expected_name);
+    error_append(FUNCTION_ERROR, "Geometry of type %s can not be written to column of type %s", actual_name, expected_name);
     goto exit;
   }
 
   if (FUNCTION_WKB_ARG_GEOM(wkb).srid != expected_srid) {
-    error_append(&error, "Geometry of with srid %d can not be written to column with srid %d", FUNCTION_WKB_ARG_GEOM(wkb).srid, expected_srid);
+    error_append(FUNCTION_ERROR, "Geometry of with srid %d can not be written to column with srid %d", FUNCTION_WKB_ARG_GEOM(wkb).srid, expected_srid);
     goto exit;
   }
 
@@ -646,7 +646,7 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
     geom_coord_type_name(expected.coord_type, &expected_coord_type);
     const char *actual_coord_type;
     geom_coord_type_name(wkb.coord_type, &actual_coord_type);
-    error_append(&error, "%s geometry can not be written to %s column", actual_coord_type, expected_coord_type);
+    error_append(FUNCTION_ERROR, "%s geometry can not be written to %s column", actual_coord_type, expected_coord_type);
     goto exit;
   }
 
@@ -660,19 +660,19 @@ static void spl_geometry_constraints(sqlite3_context *context, int nbArgs, sqlit
   FUNCTION_FREE_TEXT_ARG(expected_dimension_text);
 }
 
-static int fill_envelope(binstream_t *stream, geom_envelope_t *envelope, error_t *error) {
+static int fill_envelope(binstream_t *stream, geom_envelope_t *envelope, errorstream_t *error) {
   return wkb_fill_envelope(stream, WKB_SPATIALITE, envelope, error);
 }
 
-static int read_geometry_header(binstream_t *stream, geom_header_t *header, error_t *error) {
+static int read_geometry_header(binstream_t *stream, geom_header_t *header, errorstream_t *error) {
   return wkb_read_header(stream, WKB_SPATIALITE, header, error);
 }
 
-static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, error_t *error) {
+static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, errorstream_t *error) {
   return wkb_read_geometry(stream, WKB_SPATIALITE, consumer, error);
 }
 
-static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *geometry_column_name, const char *id_column_name, error_t *error) {
+static int create_spatial_index(sqlite3 *db, const char *db_name, const char *table_name, const char *geometry_column_name, const char *id_column_name, errorstream_t *error) {
   int result = SQLITE_OK;
   char *index_table_name = NULL;
   int exists = 0;
@@ -867,7 +867,7 @@ static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value 
   FUNCTION_FREE_GEOM_ARG(geom);
 }
 
-static void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, error_t *error) {
+static void spatialite_init(sqlite3 *db, const spatialdb_t *spatialDb, errorstream_t *error) {
   sql_create_function(db, "GeometryConstraints", spl_geometry_constraints, 3, SQL_DETERMINISTIC, (void *)spatialDb, NULL, error);
   sql_create_function(db, "GeometryConstraints", spl_geometry_constraints, 4, SQL_DETERMINISTIC, (void *)spatialDb, NULL, error);
   sql_create_function(db, "RTreeAlign", spl_rtree_align, 3, 0, (void *)spatialDb, NULL, error);
