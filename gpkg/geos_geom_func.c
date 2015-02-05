@@ -635,11 +635,6 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *er
 
   GEOS_FUNCTION(db, ST, Buffer, 2, ctx, error);
 
-  GEOS_FUNCTION(db, ST, NumPoints, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, PointN, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, StartPoint, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, EndPoint, 1, ctx, error);
-
   GEOS_FUNCTION(db, ST, Centroid, 1, ctx, error);
 
   GEOS_FUNCTION(db, ST, NumPoints, 1, ctx, error);
