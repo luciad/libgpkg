@@ -15,7 +15,6 @@
  */
 #include <stdint.h>
 #include <sqlite3.h>
-#include <glob.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <error.h>
