@@ -5,8 +5,6 @@
 # a custom sqlite ruby binding (see sqlite.rb) to ensure that the tests are run using the sqlite3 binary from
 # '../sqlite'.
 #
-find_package(Ruby REQUIRED)
-
 get_target_property( sqlite_location sqlite_shared LOCATION )
 get_target_property( gpkgext_location gpkg_ext LOCATION )
 
@@ -21,7 +19,7 @@ endif()
 # Ensure the required gems are available
 #
 execute_process(
-  COMMAND ${RUBY_EXECUTABLE} -S bundle install --gemfile=${CMAKE_CURRENT_BINARY_DIR}/Gemfile --path=${CMAKE_CURRENT_BINARY_DIR}/gems
+  COMMAND ruby -S bundle install --gemfile=${CMAKE_CURRENT_BINARY_DIR}/Gemfile --path=${CMAKE_CURRENT_BINARY_DIR}/gems
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 
@@ -37,7 +35,7 @@ foreach(entry_point IN LISTS entry_points)
     add_test(
       NAME ${test_name}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      COMMAND ${RUBY_EXECUTABLE} -S bundle exec rspec ${CMAKE_CURRENT_SOURCE_DIR}/${test_script}
+      COMMAND ruby -S bundle exec rspec ${CMAKE_CURRENT_SOURCE_DIR}/${test_script}
     )
     set_property(
       TEST ${test_name}
