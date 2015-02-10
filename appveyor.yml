@@ -16,7 +16,7 @@ install:
 before_build:
   - cd C:\projects\libgpkg
   - 'call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat"'
-  - cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE:STRING=Release -DGPKG_GEOS:BOOL=off -DGPKG_TEST:BOOL=on -DGPKG_COVERAGE:BOOL=on
+  - cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE:STRING=Release -DGPKG_TEST:BOOL=on
 
 build_script:
   - cd C:\projects\libgpkg
