@@ -16,6 +16,7 @@ A free GeoPackage viewer on Android, based on LuciadMobile, is available at [dem
 
 # Status
 [![Build Status](https://travis-ci.org/luciad/libgpkg.png?branch=master)](https://travis-ci.org/luciad/libgpkg)
+[![Build status](https://ci.appveyor.com/api/projects/status/u1762ibn8arpcypm?svg=true)](https://ci.appveyor.com/project/luciad/libgpkg)
 [![Coverage Status](https://coveralls.io/repos/luciad/libgpkg/badge.png?branch=master)](https://coveralls.io/r/luciad/libgpkg?branch=master)
 
 # License
