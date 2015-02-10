@@ -894,7 +894,7 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
 
     fromtext_release(fromtext);
   } else {
-    error_append(&error, "Could not create fromtext function context");
+    error_append(error, "Could not create fromtext function context");
   }
 
   SPATIALDB_FUNCTION(db, GPKG, IsAssignable, 2, SQL_DETERMINISTIC, spatialdb, &error);
