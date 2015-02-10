@@ -1,0 +1,25 @@
+version: 1.0.{build}
+
+clone_folder: C:\projects\libgpkg
+
+platform: x64
+
+install:
+  - choco install doxygen.portable
+  # get a recent version of cmake
+  - choco install cmake
+  # switch to a 64-bit ruby
+  - SET PATH=C:\Ruby21-x64\bin;%PATH%
+  - gem sources -r https://rubygems.org/
+  - gem install bundler --no-ri --no-rdoc --source http://rubygems.org/
+
+before_build:
+  - cd C:\projects\libgpkg
+  - 'call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat"'
+  - cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE:STRING=Release -DGPKG_GEOS:BOOL=off -DGPKG_TEST:BOOL=on -DGPKG_COVERAGE:BOOL=on
+
+build_script:
+  - cd C:\projects\libgpkg
+  - nmake
+  - ctest --output-on-failure
+
