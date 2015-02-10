@@ -858,7 +858,7 @@ static void spl_rtree_align(sqlite3_context *context, int nbArgs, sqlite3_value 
   }
 
   if (FUNCTION_RESULT != SQLITE_OK) {
-    error_append(&FUNCTION_ERROR, sqlite3_errmsg(sqlite3_context_db_handle(context)));
+    error_append(FUNCTION_ERROR, sqlite3_errmsg(sqlite3_context_db_handle(context)));
   }
 
   FUNCTION_END(context);
