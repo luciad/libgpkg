@@ -51,24 +51,8 @@ Spatialite database.
 The auto-detect mode will attempt to derive the mode that should be used based on the contents of the sqlite database.
 If the database type cannot be determined, GeoPackage will be used.
 
-## Standard Functions
-- ST\_MinX, ST\_MaxX, ST\_MinY, ST\_MaxY, ST\_MinZ, ST\_MaxZ, ST\_MinM, ST\_MaxM.
-- ST\_SRID
-- ST\_IsValid
-- ST\_IsMeasured
-- ST\_Is3d
-- ST\_CoordDim
-- ST\_GeometryType
-- ST\_AsBinary, ST\_GeomFromWKB, ST\_WKBToSQL
-- ST\_AsText, ST\_GeomFromText, ST\_WKBFromText, ST\_WKTToSQL
-
-## Non-Standard Functions
-
-- InitSpatialMetadata([database_name text])
-- CheckSpatialMetadata([database_name text])
-- AddGeometryColumn([database_name text], table_name text, column_name text, geometry_type text, srid integer, [z integer, m integer])
-- CreateTilesTable([database_name  text], table_name text)
-- CreateSpatialIndex([database_name text], table_name text, geometry_column text, id_column text)
+## Supported SQL Functions
+The [SQL function reference](https://bitbucket.org/luciad/libgpkg/wiki/SQLFunctionReference) page on the wiki contains an up to data list of the SQL functions that are supported by libgpkg.
 
 # Compilation
 
@@ -79,6 +63,8 @@ If the database type cannot be determined, GeoPackage will be used.
 - The build scripts will generate a number of binaries
     - shell/gpkg: a modified version of the SQLite 3 command-line shell that autoloads the GeoPackage extension. This is a standalone binary that has been statically linked with SQLite 3 and the GeoPackage extension.
     - gpkg/libgpkg.so: a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
+
+More [detailed compilation instructions per platform](https://bitbucket.org/luciad/libgpkg/wiki/CompilationInstructions) can be found on the wiki.
 
 # Getting Help
 
