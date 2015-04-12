@@ -763,7 +763,7 @@ static int create_spatial_index(sqlite3 *db, const char *db_name, const char *ta
   result = sql_exec(
              db,
              "INSERT OR REPLACE INTO \"%w\".\"gpkg_extensions\" (table_name, column_name, extension_name, definition, scope) VALUES (\"%w\", \"%w\", \"%w\", \"%w\", \"%w\")",
-             db_name, table_name, geometry_column_name, "gpkg_rtree_index", "GeoPackage 1.0 Specification Annex M", "write-only"
+             db_name, table_name, geometry_column_name, "gpkg_rtree_index", "GeoPackage 1.0 Specification Annex L", "write-only"
            );
   if (result != SQLITE_OK) {
     error_append(error, "Could not register rtree usage in gpkg_extensions: %s", sqlite3_errmsg(db));
