@@ -17,7 +17,7 @@
 #include <sqlite3.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <error.h>
+#include "error.h"
 #include "atomic_ops.h"
 #include "binstream.h"
 #include "blobio.h"
@@ -137,27 +137,6 @@ static void ST_Is3d(sqlite3_context *context, int nbArgs, sqlite3_value **args) 
 
   FUNCTION_END(context);
   FUNCTION_FREE_WKB_ARG(wkb);
-}
-
-static void ST_IsValid(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-  spatialdb_t *spatialdb;
-  FUNCTION_GEOM_ARG(geomblob);
-
-  FUNCTION_START_STATIC(context, 256);
-  spatialdb = (spatialdb_t *)sqlite3_user_data(context);
-  FUNCTION_GET_GEOM_ARG_UNSAFE(context, spatialdb, geomblob, 0);
-
-  geom_consumer_t consumer;
-  geom_consumer_init(&consumer, NULL, NULL, NULL, NULL, NULL);
-  if (spatialdb->read_geometry(&FUNCTION_GEOM_ARG_STREAM(geomblob), &consumer, NULL) != SQLITE_OK) {
-    sqlite3_result_int(context, 0);
-    goto exit;
-  }
-
-  sqlite3_result_int(context, 1);
-
-  FUNCTION_END(context);
-  FUNCTION_FREE_GEOM_ARG(geomblob);
 }
 
 static void ST_CoordDim(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
@@ -864,7 +843,6 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   SPATIALDB_FUNCTION(db, ST, Is3d, 1, SQL_DETERMINISTIC, spatialdb, &error);
   SPATIALDB_FUNCTION(db, ST, IsEmpty, 1, SQL_DETERMINISTIC, spatialdb, &error);
   SPATIALDB_FUNCTION(db, ST, IsMeasured, 1, SQL_DETERMINISTIC, spatialdb, &error);
-  SPATIALDB_FUNCTION(db, ST, IsValid, 1, SQL_DETERMINISTIC, spatialdb, &error);
   SPATIALDB_FUNCTION(db, ST, CoordDim, 1, SQL_DETERMINISTIC, spatialdb, &error);
   SPATIALDB_FUNCTION(db, ST, GeometryType, 1, SQL_DETERMINISTIC, spatialdb, &error);
   SPATIALDB_FUNCTION(db, ST, AsBinary, 1, SQL_DETERMINISTIC, spatialdb, &error);
@@ -914,7 +892,7 @@ int spatialdb_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routine
   SPATIALDB_FUNCTION(db, GPKG, SpatialDBType, 0, 0, spatialdb, &error);
 
 
-#ifdef GPKG_HAVE_GEOM_FUNC
+#ifdef GPKG_GEOM_FUNC
   geom_func_init(db, spatialdb, &error);
 #endif
 

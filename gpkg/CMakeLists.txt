@@ -41,23 +41,35 @@ include_directories( "${PROJECT_SOURCE_DIR}/sqlite" )
 # Geometry functions library
 #
 if( GPKG_GEOS )
-  find_package( GEOS )
-  if ( GEOS_FOUND )
-    message( WARNING "GEOS is licensed under LGPL 2.1" )
+  message( WARNING "GEOS is licensed under LGPL 2.1" )
+
+  list(
+    APPEND GPKG_SOURCE_FILES
+    geos.h
+    geos_context.c
+    geos_context.h
+    geos_geom_func.c
+    geos_geom_io.c
+    geos_geom_io.h
+  )
+
+  if ( GPKG_GEOS_DL )
+    set ( GPKG_GEOM_FUNC "GPKG_GEOS_DL" )
 
     list(
       APPEND GPKG_SOURCE_FILES
-      geos_context.c
-      geos_context.h
-      geos_geom_func.c
-      geos_geom_io.c
-      geos_geom_io.h
+      dynlib.h
     )
+  else()
+    find_package( GEOS REQUIRED )
     include_directories( ${GEOS_INCLUDE_DIR} )
-    set ( GPKG_HAVE_GEOM_FUNC "GEOS" )
-    set ( GPKG_HAVE_GEOM_FUNC ${GPKG_HAVE_GEOM_FUNC} PARENT_SCOPE )
+    set ( GPKG_GEOM_FUNC "GPKG_GEOS" )
   endif()
+
+  set ( GPKG_GEOM_FUNC ${GPKG_GEOM_FUNC} PARENT_SCOPE )
 elseif( GPKG_BOOST_GEOMETRY )
+  message( WARNING "Boost.Geometry support is experimental and unfinished" )
+
   file( GLOB_RECURSE BOOST_GEOMETRY_SOURCE "boost/boost/*" )
   list( APPEND GPKG_SOURCE_FILES ${BOOST_GEOMETRY_SOURCE} )
 
@@ -72,11 +84,11 @@ elseif( GPKG_BOOST_GEOMETRY )
   )
   include_directories( "boost" )
 
-  set ( GPKG_HAVE_GEOM_FUNC "Boost.Geometry" )
-  set ( GPKG_HAVE_GEOM_FUNC ${GPKG_HAVE_GEOM_FUNC} PARENT_SCOPE )
+  set ( GPKG_GEOM_FUNC "Boost.Geometry" )
+  set ( GPKG_GEOM_FUNC ${GPKG_GEOM_FUNC} PARENT_SCOPE )
 endif()
 
-if ( GPKG_HAVE_GEOM_FUNC )
+if ( GPKG_GEOM_FUNC )
   list( APPEND GPKG_SOURCE_FILES "geom_func.h" )
 endif()
 

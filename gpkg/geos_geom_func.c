@@ -20,20 +20,31 @@
 #include "geom_func.h"
 #include "spatialdb_internal.h"
 #include "sql.h"
+#include "geos.h"
 
 typedef struct {
   volatile long ref_count;
-  GEOSContextHandle_t geos_handle;
+  geos_handle_t *geos_handle;
   const spatialdb_t *spatialdb;
 } geos_context_t;
 
+#if GPKG_GEOM_FUNC == GPKG_GEOS
 static geos_context_t *geos_context_init(const spatialdb_t *spatialdb) {
+#else
+static geos_context_t *geos_context_init(spatialdb_t *spatialdb, char const *geos_lib, errorstream_t *error) {
+#endif
   geos_context_t *ctx = sqlite3_malloc(sizeof(geos_context_t));
+
   if (ctx == NULL) {
     return NULL;
   }
 
-  GEOSContextHandle_t geos_handle = geom_geos_init();
+#if GPKG_GEOM_FUNC == GPKG_GEOS
+  geos_handle_t *geos_handle = geom_geos_init(error);
+#else
+  geos_handle_t *geos_handle = geom_geos_init(geos_lib, error);
+#endif
+
   if (geos_handle == NULL) {
     sqlite3_free(ctx);
     return NULL;
@@ -64,7 +75,7 @@ static void geos_context_release(geos_context_t *ctx) {
 
 typedef struct {
   GEOSGeometry* geometry;
-  GEOSContextHandle_t context;
+  geos_handle_t *context;
   int srid;
 } geos_geometry_t;
 
@@ -122,7 +133,7 @@ static void free_geos_geom(void* data) {
 
 typedef struct {
   const GEOSPreparedGeometry* geometry;
-  GEOSContextHandle_t context;
+  geos_handle_t *context;
   int srid;
 } geos_prepared_geometry_t;
 
@@ -184,7 +195,7 @@ static void free_geos_prepared_geom(void* data) {
   sqlite3_free(data);
 }
 
-static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, GEOSGeometry *geom, errorstream_t *error) {
+static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *geos_context, const GEOSGeometry *geom, errorstream_t *error) {
   int result = SQLITE_OK;
 
   if (geom == NULL) {
@@ -273,7 +284,7 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
     }\
     return;\
   }\
-  GEOSGeometry *result = GEOS##geos_name##_r(GEOS_HANDLE, g1->geometry, n);\
+  const GEOSGeometry *result = GEOS##geos_name##_r(GEOS_HANDLE, g1->geometry, n);\
   if (result != NULL) {\
     set_geos_geom_result(context, GEOS_CONTEXT, result, &error);\
   } else {\
@@ -433,7 +444,7 @@ static int set_geos_geom_result(sqlite3_context *context, const geos_context_t *
     }\
     return;\
   }\
-  GEOSGeometry *result = GEOS##geos_name##_r(GEOS_HANDLE, g1->geometry);\
+  const GEOSGeometry *result = GEOS##geos_name##_r(GEOS_HANDLE, g1->geometry);\
   if (result != NULL) {\
     set_geos_geom_result(context, GEOS_CONTEXT, result, &error);\
   } else {\
@@ -570,56 +581,67 @@ GEOS_FUNC_GEOM_GEOM__GEOM(SymDifference)
 GEOS_FUNC_GEOM_GEOM__GEOM(Intersection)
 GEOS_FUNC_GEOM_GEOM__GEOM(Union)
 
-#if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3)
+#if GPKG_GEOM_FUNC == GPKG_GEOS_DL || (GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3))
 GEOS_FUNC_GEOM__INTEGER_(IsClosed, isClosed)
 GEOS_FUNC_PREPGEOM_GEOM__INTEGER(Covers)
 GEOS_FUNC_PREPGEOM_GEOM__INTEGER(CoveredBy)
 #endif
 
 static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
-  sqlite3_result_text(context, GEOSversion(), -1, SQLITE_TRANSIENT);
+  const geos_context_t *geos_context = (const geos_context_t *)sqlite3_user_data(context);
+  sqlite3_result_text(context, GEOSversion(geos_context->geos_handle), -1, SQLITE_TRANSIENT);
 }
 
 #define STR(x) #x
 
-#define GEOS_FUNCTION(db, prefix, name, nbArgs, ctx, error)                                                            \
+#if GPKG_GEOM_FUNC == GPKG_GEOS_DL
+#define GEOS_FUNC_AVAILABLE(ctx, name) (ctx->geos_handle->api.name != NULL)
+#else
+#define GEOS_FUNC_AVAILABLE(ctx, name) 1
+#endif
+
+#define GEOS_FUNCTION4(db, name, funcName, geosName, nbArgs, ctx, error)                                               \
   do {                                                                                                                 \
-    geos_context_acquire(ctx);                                                                                         \
-    sql_create_function(db, STR(name), prefix##_##name, nbArgs, SQL_DETERMINISTIC, ctx, (void(*)(void*))geos_context_release, error);     \
-    geos_context_acquire(ctx);                                                                                         \
-    sql_create_function(db, STR(prefix##_##name), prefix##_##name, nbArgs, SQL_DETERMINISTIC, ctx, (void(*)(void*))geos_context_release, error);\
-  } while (0)
+    if (GEOS_FUNC_AVAILABLE(ctx,geosName)) {                                                                           \
+      geos_context_acquire(ctx);                                                                                       \
+      sql_create_function(db, name, funcName, nbArgs, SQL_DETERMINISTIC, ctx, (void(*)(void*))geos_context_release, error);     \
+    }                                                                                                                  \
+} while (0)
 
-void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *error) {
-  geos_context_t *ctx = geos_context_init(spatialdb);
-  if (ctx == NULL) {
-    error_append(error, "Error allocating GEOS context");
-    return;
-  }
+#define GEOS_FUNCTION3(db, prefix, name, geosName, nbArgs, ctx, error)                                                 \
+  GEOS_FUNCTION4(db, STR(name), prefix##_##name, geosName, nbArgs, ctx, error);                                        \
+  GEOS_FUNCTION4(db, STR(prefix##name), prefix##_##name, geosName, nbArgs, ctx, error);
 
+#define GEOS_FUNCTION(db, prefix, name, nbArgs, ctx, error) GEOS_FUNCTION2(db, prefix, name, name, nbArgs, ctx, error)
+#define GEOS_FUNCTION2(db, prefix, name, geosname, nbArgs, ctx, error) GEOS_FUNCTION3(db, prefix, name, GEOS##geosname##_r, nbArgs, ctx, error)
+#define GEOS_FUNCTION_PREP(db, prefix, name, nbArgs, ctx, error) GEOS_FUNCTION2(db, prefix, name, Prepared##name, nbArgs, ctx, error)
+
+static void geom_func_register(sqlite3 *db, errorstream_t *error, geos_context_t *ctx) {
+  char const *geos_version = GEOSversion(ctx->geos_handle);
   int geos_major;
   int geos_minor;
-  int geos_version_result = sscanf(GEOSversion(), "%d.%d", &geos_major, &geos_minor);
+  int geos_version_result = sscanf(geos_version, "%d.%d", &geos_major, &geos_minor);
   if (geos_version_result != 2) {
-    error_append(error, "Could not parse GEOS version number (%s)", GEOSversion());
+    error_append(error, "Could not parse GEOS version number (%s)", geos_version);
   }
 
   GEOS_FUNCTION(db, ST, Area, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, Length, 1, ctx, error);
+  GEOS_FUNCTION4(db, "ST_Length", ST_Length, GEOSLength_r, 1, ctx, error);
+  GEOS_FUNCTION4(db, "GLength", ST_Length, GEOSLength_r, 1, ctx, error);
 
-  GEOS_FUNCTION(db, ST, IsSimple, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, IsRing, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, IsValid, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, IsSimple, isSimple, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, IsRing, isRing, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, IsValid, isValid, 1, ctx, error);
 
-  GEOS_FUNCTION(db, ST, Disjoint, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Intersects, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Touches, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Crosses, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Within, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Contains, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Overlaps, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Disjoint, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Intersects, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Touches, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Crosses, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Within, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Contains, 2, ctx, error);
+  GEOS_FUNCTION_PREP(db, ST, Overlaps, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Equals, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Relate, 3, ctx, error);
+  GEOS_FUNCTION2(db, ST, Relate, RelatePattern, 3, ctx, error);
 
   GEOS_FUNCTION(db, ST, Distance, 2, ctx, error);
   GEOS_FUNCTION(db, ST, HausdorffDistance, 2, ctx, error);
@@ -635,29 +657,71 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *er
 
   GEOS_FUNCTION(db, ST, Buffer, 2, ctx, error);
 
-  GEOS_FUNCTION(db, ST, Centroid, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, Centroid, GetCentroid, 1, ctx, error);
 
-  GEOS_FUNCTION(db, ST, NumPoints, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, PointN, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, StartPoint, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, EndPoint, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, NumPoints, GeomGetNumPoints, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, PointN, GeomGetPointN, 2, ctx, error);
+  GEOS_FUNCTION2(db, ST, StartPoint, GeomGetStartPoint, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, EndPoint, GeomGetEndPoint, 1, ctx, error);
 
-  GEOS_FUNCTION(db, ST, NumInteriorRings, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, InteriorRingN, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, ExteriorRing, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, NumInteriorRings, GetNumInteriorRings, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, InteriorRingN, GetInteriorRingN, 2, ctx, error);
+  GEOS_FUNCTION2(db, ST, ExteriorRing, GetExteriorRing, 1, ctx, error);
 
-  GEOS_FUNCTION(db, ST, NumGeometries, 1, ctx, error);
-  GEOS_FUNCTION(db, ST, GeometryN, 2, ctx, error);
+  GEOS_FUNCTION2(db, ST, NumGeometries, GetNumGeometries, 1, ctx, error);
+  GEOS_FUNCTION2(db, ST, GeometryN, GetGeometryN, 2, ctx, error);
 
-#if GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3)
+#if GPKG_GEOM_FUNC == GPKG_GEOS_DL || (GEOS_VERSION_MAJOR > 3 || (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR >= 3))
   if (geos_major > 3 || (geos_major == 3 && geos_minor >= 3)) {
-    GEOS_FUNCTION(db, ST, IsClosed, 1, ctx, error);
-    GEOS_FUNCTION(db, ST, Covers, 2, ctx, error);
-    GEOS_FUNCTION(db, ST, CoveredBy, 2, ctx, error);
+    GEOS_FUNCTION2(db, ST, IsClosed, isClosed, 1, ctx, error);
+    GEOS_FUNCTION_PREP(db, ST, Covers, 2, ctx, error);
+    GEOS_FUNCTION_PREP(db, ST, CoveredBy, 2, ctx, error);
   }
 #endif
 
-  GEOS_FUNCTION(db, GPKG, GEOSVersion, 0, ctx, error);
+  GEOS_FUNCTION3(db, GPKG, GEOSVersion, GEOSversion, 0, ctx, error);
+}
+
+#if GPKG_GEOM_FUNC == GPKG_GEOS_DL
+
+static void GPKG_LoadGEOS(sqlite3_context *context, int nbArgs, sqlite3_value **args) {
+  geos_context_t *ctx = NULL;
+  spatialdb_t *spatialdb;
+  FUNCTION_TEXT_ARG(lib_path);
+  FUNCTION_START(context);
+
+  spatialdb = (spatialdb_t *)sqlite3_user_data(context);
+  if (sqlite3_value_type(args[0]) != SQLITE_NULL) {
+    FUNCTION_GET_TEXT_ARG_UNSAFE(lib_path, 0);
+  }
+
+  ctx = geos_context_init(spatialdb, lib_path, FUNCTION_ERROR);
+
+  if (ctx != NULL) {
+    geom_func_register(FUNCTION_DB_HANDLE, FUNCTION_ERROR, ctx);
+  }
+
+  FUNCTION_END(context);
+  FUNCTION_FREE_TEXT_ARG(lib_path);
+  if (ctx != NULL) {
+    geos_context_release(ctx);
+  }
+}
+
+void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *error) {
+  sql_create_function(db, "GPKG_LoadGEOS", GPKG_LoadGEOS, 1, 0, (void *)spatialdb, NULL, error);
+  sql_create_function(db, "LoadGEOS", GPKG_LoadGEOS, 1, 0, (void *)spatialdb, NULL, error);
+}
+#else
+void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *error) {
+  geos_context_t *ctx = geos_context_init(spatialdb);
+  if (ctx == NULL) {
+    error_append(error, "Error allocating GEOS context");
+    return;
+  }
+
+  geom_func_register(db, error, ctx);
 
   geos_context_release(ctx);
 }
+#endif

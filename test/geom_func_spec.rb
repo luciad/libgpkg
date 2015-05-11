@@ -14,7 +14,7 @@
 
 require_relative 'gpkg'
 
-if ENV['GPKG_HAVE_GEOM_FUNC']
+if ENV['GPKG_GEOM_FUNC']
   describe 'ST_Area' do
     it 'should return NULL when passed NULL' do
       expect('SELECT ST_Area(NULL)').to have_result nil

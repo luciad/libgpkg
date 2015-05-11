@@ -1,8 +1,8 @@
 #ifndef GPKG_GEOS_GEOM_IO_H
 #define GPKG_GEOS_GEOM_IO_H
 
-#include <geos_c.h>
 #include <stdio.h>
+#include "geos.h"
 #include "geomio.h"
 #include "spatialdb_internal.h"
 #include "tls.h"
@@ -34,7 +34,7 @@ typedef struct {
   /** @private */
   geom_consumer_t geom_consumer;
   /** @private */
-  GEOSContextHandle_t context;
+  geos_handle_t *context;
   /** @private */
   GEOSGeometry *geometry;
   /** @private */
@@ -45,7 +45,7 @@ typedef struct {
   int srid;
 } geos_writer_t;
 
-int geos_writer_init_srid(geos_writer_t *writer, GEOSContextHandle_t context, int srid);
+int geos_writer_init_srid(geos_writer_t *writer, geos_handle_t *context, int srid);
 
 void geos_writer_destroy(geos_writer_t *writer, int free_data);
 
@@ -53,6 +53,6 @@ geom_consumer_t *geos_writer_geom_consumer(geos_writer_t *writer);
 
 GEOSGeometry *geos_writer_getgeometry(geos_writer_t *writer);
 
-int geos_read_geometry(GEOSContextHandle_t geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, errorstream_t *error);
+int geos_read_geometry(geos_handle_t *geos, const GEOSGeometry *geom, geom_consumer_t const *consumer, errorstream_t *error);
 
 #endif

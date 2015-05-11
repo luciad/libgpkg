@@ -4,7 +4,7 @@
 #cmakedefine TLS_USE_DECLSPEC_THREAD
 #cmakedefine TLS_USE_PTHREAD
 
-#cmakedefine GPKG_HAVE_GEOM_FUNC
+#cmakedefine GPKG_GEOM_FUNC @GPKG_GEOM_FUNC@
 
 #cmakedefine HAVE_LOCALE_H
 #cmakedefine HAVE_XLOCALE_H

@@ -10,6 +10,7 @@ project( libgpkg )
 # Required CMake modules
 #
 include( CheckIncludeFile )
+include( CMakeDependentOption )
 include( CheckFunctionExists )
 
 # Load version info from version.txt
@@ -27,6 +28,7 @@ set( gpkg_INTERFACE_VERSION ${gpkg_VERSION_MAJOR} )
 option( GPKG_TEST "Enable Testing?" OFF )
 option( GPKG_COVERAGE "Enable Code coverage?" OFF )
 option( GPKG_GEOS "Enable GEOS-based geometry functions?" OFF )
+cmake_dependent_option( GPKG_GEOS_DL "Allow GEOS to be loaded at runtime instead of linking?" OFF "GPKG_GEOS" OFF)
 option( GPKG_BOOST_GEOMETRY "Enable Boost.Geometry-based geometry functions?" OFF )
 
 if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
