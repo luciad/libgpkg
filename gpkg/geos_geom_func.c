@@ -29,7 +29,7 @@ typedef struct {
 } geos_context_t;
 
 #if GPKG_GEOM_FUNC == GPKG_GEOS
-static geos_context_t *geos_context_init(const spatialdb_t *spatialdb) {
+static geos_context_t *geos_context_init(const spatialdb_t *spatialdb, errorstream_t *error) {
 #else
 static geos_context_t *geos_context_init(spatialdb_t *spatialdb, char const *geos_lib, errorstream_t *error) {
 #endif
@@ -714,7 +714,7 @@ void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *er
 }
 #else
 void geom_func_init(sqlite3 *db, const spatialdb_t *spatialdb, errorstream_t *error) {
-  geos_context_t *ctx = geos_context_init(spatialdb);
+  geos_context_t *ctx = geos_context_init(spatialdb, error);
   if (ctx == NULL) {
     error_append(error, "Error allocating GEOS context");
     return;
