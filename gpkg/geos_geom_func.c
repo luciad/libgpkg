@@ -653,7 +653,8 @@ static void geom_func_register(sqlite3 *db, errorstream_t *error, geos_context_t
   GEOS_FUNCTION(db, ST, Difference, 2, ctx, error);
   GEOS_FUNCTION(db, ST, SymDifference, 2, ctx, error);
   GEOS_FUNCTION(db, ST, Intersection, 2, ctx, error);
-  GEOS_FUNCTION(db, ST, Union, 2, ctx, error);
+  GEOS_FUNCTION4(db, "ST_Union", ST_Union, GEOSUnion_r, 2, ctx, error);
+  GEOS_FUNCTION4(db, "GUnion", ST_Union, GEOSUnion_r, 2, ctx, error);
 
   GEOS_FUNCTION(db, ST, Buffer, 2, ctx, error);
 
