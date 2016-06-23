@@ -37,6 +37,31 @@ module GeoPackage
       end
       sql
     end
+
+    def to_sentence(words)
+      return " #{words.inspect}" unless words
+      words = Array(words).map { |w| to_word(w) }
+      case words.length
+        when 0
+          ""
+        when 1
+          " #{words[0]}"
+        when 2
+          " #{words[0]} and #{words[1]}"
+        else
+          " #{words[0...-1].join(', ')}, and #{words[-1]}"
+      end
+    end
+
+    def to_word(item)
+      is_matcher_with_description?(item) ? item.description : item.inspect
+    end
+
+    private
+
+    def is_matcher_with_description?(object)
+      RSpec::Matchers.is_a_matcher?(object) && object.respond_to?(:description)
+    end
   end
 
   module Helpers
@@ -63,7 +88,6 @@ module GeoPackage
     end
 
     class HaveResult
-      include RSpec::Matchers::Pretty
       include GeoPackage::Pretty
 
       def initialize(db, expected)
@@ -109,7 +133,6 @@ module GeoPackage
     end
 
     class RaiseSQLError
-      include RSpec::Matchers::Pretty
       include GeoPackage::Pretty
 
       def initialize(db)
