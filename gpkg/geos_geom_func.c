@@ -610,7 +610,7 @@ static void GPKG_GEOSVersion(sqlite3_context *context, int nbArgs, sqlite3_value
 
 #define GEOS_FUNCTION3(db, prefix, name, geosName, nbArgs, ctx, error)                                                 \
   GEOS_FUNCTION4(db, STR(name), prefix##_##name, geosName, nbArgs, ctx, error);                                        \
-  GEOS_FUNCTION4(db, STR(prefix##name), prefix##_##name, geosName, nbArgs, ctx, error);
+  GEOS_FUNCTION4(db, STR(prefix##_##name), prefix##_##name, geosName, nbArgs, ctx, error);
 
 #define GEOS_FUNCTION(db, prefix, name, nbArgs, ctx, error) GEOS_FUNCTION2(db, prefix, name, name, nbArgs, ctx, error)
 #define GEOS_FUNCTION2(db, prefix, name, geosname, nbArgs, ctx, error) GEOS_FUNCTION3(db, prefix, name, GEOS##geosname##_r, nbArgs, ctx, error)
