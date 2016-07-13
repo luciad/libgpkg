@@ -24,7 +24,7 @@ libgpkg is distributed under the [Apache Software License](https://www.apache.or
 
 # Installation
 
-- Windows: download binaries from the [Downloads](libgpkg/downloads) page or compile from source.
+- Windows: download binaries from the [Downloads](https://bitbucket.org/luciad/libgpkg/downloads) page or compile from source.
 - Linux: compile from source.
 - MacOSX: install via homebrew using `brew tap homebrew/science` and then `brew install libgpkg` or compile from source.
 
@@ -62,7 +62,7 @@ The [SQL function reference](https://bitbucket.org/luciad/libgpkg/wiki/SQLFuncti
 - Build the project using the generated build scripts.
 - The build scripts will generate a number of binaries
     - shell/gpkg: a modified version of the SQLite 3 command-line shell that autoloads the GeoPackage extension. This is a standalone binary that has been statically linked with SQLite 3 and the GeoPackage extension.
-    - gpkg/libgpkg.so: a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
+    - gpkg/libgpkg.so (or gpkg.dll on Windows): a dynamically loadable SQLite 3 extension that provides the GeoPackage functionality. This extension library can be used with any SQLite 3 that supports extension loading.
 
 More [detailed compilation instructions per platform](https://bitbucket.org/luciad/libgpkg/wiki/CompilationInstructions) can be found on the wiki.
 
