@@ -154,9 +154,9 @@ static column_info_t gpkg_data_column_constraints_columns[] = {
   {"constraint_type", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
   {"value", "TEXT", N, SQL_UNIQUE(1), NULL},
   {"min", "NUMERIC", N, 0, NULL},
-  {"minIsInclusive", "BOOLEAN", N, 0, NULL},
+  {"min_is_inclusive", "BOOLEAN", N, 0, NULL},
   {"max", "NUMERIC", N, 0, NULL},
-  {"maxIsInclusive", "BOOLEAN", N, 0, NULL},
+  {"max_is_inclusive", "BOOLEAN", N, 0, NULL},
   {"description", "TEXT", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
