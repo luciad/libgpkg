@@ -4107,7 +4107,10 @@ static const char zOptions[] =
   "   -csv                 set output mode to 'csv'\n"
   "   -echo                print commands before execution\n"
   "   -init FILENAME       read/process named file\n"
-  "   -gpkg                use the GeoPackage database schema\n"
+  "   -gpkg                use the latest GeoPackage database schema\n"
+  "   -gpkg10              use the GeoPackage 1.0 database schema\n"
+  "   -gpkg11              use the GeoPackage 1.1 database schema\n"
+  "   -gpkg12              use the GeoPackage 1.2 database schema\n"
   "   -[no]header          turn headers on or off\n"
 #if defined(SQLITE_ENABLE_MEMSYS3) || defined(SQLITE_ENABLE_MEMSYS5)
   "   -heap SIZE           Size of heap for memsys3 or memsys5\n"
@@ -4346,6 +4349,12 @@ int main(int argc, char **argv){
       }
     }else if( strcmp(z,"-gpkg")==0 ){
       data.gpkgEntryPoint = sqlite3_gpkg_init;
+    }else if( strcmp(z,"-gpkg10")==0 ){
+      data.gpkgEntryPoint = sqlite3_gpkg_1_0_init;
+    }else if( strcmp(z,"-gpkg11")==0 ){
+      data.gpkgEntryPoint = sqlite3_gpkg_1_1_init;
+    }else if( strcmp(z,"-gpkg12")==0 ){
+      data.gpkgEntryPoint = sqlite3_gpkg_1_2_init;
     }else if( strcmp(z,"-spl3")==0 ){
       data.gpkgEntryPoint = sqlite3_gpkg_spl3_init;
     }else if( strcmp(z,"-spl4")==0 ){

@@ -100,7 +100,17 @@ typedef struct spatialdb {
 /**
  * Returns the GeoPackage spatial database schema.
  */
-const spatialdb_t *spatialdb_geopackage_schema();
+const spatialdb_t *spatialdb_geopackage10_schema();
+
+/**
+ * Returns the GeoPackage spatial database schema.
+ */
+const spatialdb_t *spatialdb_geopackage11_schema();
+
+/**
+ * Returns the GeoPackage spatial database schema.
+ */
+const spatialdb_t *spatialdb_geopackage12_schema();
 
 /**
  * Returns the Spatialite 2.x spatial database schema.
