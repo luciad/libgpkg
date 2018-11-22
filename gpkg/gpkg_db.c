@@ -149,7 +149,7 @@ static table_info_t gpkg_data_columns = {
   NULL, 0
 };
 
-static column_info_t gpkg_data_column_constraints_columns[] = {
+static column_info_t gpkg_data_column_constraints_columns_10[] = {
   {"constraint_name", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
   {"constraint_type", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
   {"value", "TEXT", N, SQL_UNIQUE(1), NULL},
@@ -160,10 +160,27 @@ static column_info_t gpkg_data_column_constraints_columns[] = {
   {"description", "TEXT", N, 0, NULL},
   {NULL, NULL, N, 0, NULL}
 };
-static table_info_t gpkg_data_column_constraints = {
+static table_info_t gpkg_data_column_constraints_10 = {
   "gpkg_data_column_constraints",
-  gpkg_data_column_constraints_columns,
+  gpkg_data_column_constraints_columns_10,
   NULL, 0
+};
+
+static column_info_t gpkg_data_column_constraints_columns_11[] = {
+        {"constraint_name", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+        {"constraint_type", "TEXT", N, SQL_NOT_NULL | SQL_UNIQUE(1), NULL},
+        {"value", "TEXT", N, SQL_UNIQUE(1), NULL},
+        {"min", "NUMERIC", N, 0, NULL},
+        {"min_is_inclusive", "BOOLEAN", N, 0, NULL},
+        {"max", "NUMERIC", N, 0, NULL},
+        {"max_is_inclusive", "BOOLEAN", N, 0, NULL},
+        {"description", "TEXT", N, 0, NULL},
+        {NULL, NULL, N, 0, NULL}
+};
+static table_info_t gpkg_data_column_constraints_11 = {
+        "gpkg_data_column_constraints",
+        gpkg_data_column_constraints_columns_11,
+        NULL, 0
 };
 
 static column_info_t gpkg_metadata_columns[] = {
@@ -196,32 +213,136 @@ static table_info_t gpkg_metadata_reference = {
   NULL, 0
 };
 
-static const table_info_t *const gpkg_tables[] = {
-  &gpkg_contents,
-  &gpkg_extensions,
-  &gpkg_spatial_ref_sys,
-  &gpkg_data_columns,
-  &gpkg_data_column_constraints,
-  &gpkg_metadata,
-  &gpkg_metadata_reference,
-  &gpkg_geometry_columns,
-  &gpkg_tile_matrix_set,
-  &gpkg_tile_matrix,
+typedef struct {
+    const table_info_t *info;
+    const int check_flags;
+    const char *alt_check_flags_sql;
+    const int alt_check_flags;
+} gpkg_table_info_t;
+
+static gpkg_table_info_t gpkg_contents_info = {
+        &gpkg_contents,
+        SQL_MUST_EXIST,
+        NULL,
+        SQL_MUST_EXIST
+};
+static gpkg_table_info_t gpkg_extensions_info = {
+        &gpkg_extensions,
+        0,
+        NULL,
+        0
+};
+static gpkg_table_info_t gpkg_spatial_ref_sys_info = {
+        &gpkg_spatial_ref_sys,
+        SQL_MUST_EXIST,
+        NULL,
+        SQL_MUST_EXIST
+};
+static gpkg_table_info_t gpkg_data_columns_info = {
+        &gpkg_data_columns,
+        0,
+        NULL,
+        0
+};
+static gpkg_table_info_t gpkg_data_column_constraints_info_10 = {
+        &gpkg_data_column_constraints_10,
+        0,
+        NULL,
+        0
+};
+static gpkg_table_info_t gpkg_data_column_constraints_info_11 = {
+        &gpkg_data_column_constraints_11,
+        0,
+        NULL,
+        0
+};
+static gpkg_table_info_t gpkg_metadata_info = {
+        &gpkg_metadata,
+        0,
+        NULL,
+        0
+};
+static gpkg_table_info_t gpkg_metadata_reference_info = {
+        &gpkg_metadata_reference,
+        0,
+        NULL,
+        0
+};
+static gpkg_table_info_t gpkg_geometry_columns_info = {
+        &gpkg_geometry_columns,
+        0,
+        "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'features'",
+        SQL_MUST_EXIST
+};
+static gpkg_table_info_t gpkg_tile_matrix_set_info = {
+        &gpkg_tile_matrix_set,
+        0,
+        "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'tiles'",
+        SQL_MUST_EXIST
+};
+static gpkg_table_info_t gpkg_tile_matrix_info = {
+        &gpkg_tile_matrix,
+        0,
+        "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'tiles'",
+        SQL_MUST_EXIST
+};
+
+static const int GPKG10_APPLICATION_ID = 0x47503130;
+
+static const gpkg_table_info_t * const gpkg10_tables[] = {
+  &gpkg_contents_info,
+  &gpkg_extensions_info,
+  &gpkg_spatial_ref_sys_info,
+  &gpkg_data_columns_info,
+  &gpkg_data_column_constraints_info_10,
+  &gpkg_metadata_info,
+  &gpkg_metadata_reference_info,
+  &gpkg_geometry_columns_info,
+  &gpkg_tile_matrix_set_info,
+  &gpkg_tile_matrix_info,
   NULL
 };
 
-static int init(sqlite3 *db, const char *db_name, errorstream_t *error) {
-  int result = SQLITE_OK;
-  const table_info_t *const *table = gpkg_tables;
+static const int GPKG11_APPLICATION_ID = 0x47503131;
 
-  result = sql_exec(db, "PRAGMA application_id = %d", 0x47503130);
-  if (result != SQLITE_OK) {
-    error_append(error, "Could not set application_id");
-  }
+static const gpkg_table_info_t * const gpkg11_tables[] = {
+  &gpkg_contents_info,
+  &gpkg_extensions_info,
+  &gpkg_spatial_ref_sys_info,
+  &gpkg_data_columns_info,
+  &gpkg_data_column_constraints_info_11,
+  &gpkg_metadata_info,
+  &gpkg_metadata_reference_info,
+  &gpkg_geometry_columns_info,
+  &gpkg_tile_matrix_set_info,
+  &gpkg_tile_matrix_info,
+  NULL
+};
+
+static const int GPKG12_APPLICATION_ID = 0x47504B47;
+static const int GPKG12_USER_VERSION = 0x000027D8;
+
+static const gpkg_table_info_t * const gpkg12_tables[] = {
+  &gpkg_contents_info,
+  &gpkg_extensions_info,
+  &gpkg_spatial_ref_sys_info,
+  &gpkg_data_columns_info,
+  &gpkg_data_column_constraints_info_11,
+  &gpkg_metadata_info,
+  &gpkg_metadata_reference_info,
+  &gpkg_geometry_columns_info,
+  &gpkg_tile_matrix_set_info,
+  &gpkg_tile_matrix_info,
+  NULL
+};
+
+static int create_tables(sqlite3 *db, const char *db_name, const gpkg_table_info_t *const *tables, errorstream_t *error) {
+  int result = SQLITE_OK;
+  const gpkg_table_info_t *const *table = tables;
 
   if (result == SQLITE_OK) {
     while (*table != NULL) {
-      result = sql_init_table(db, db_name, *table, error);
+      result = sql_init_table(db, db_name, (*table)->info, error);
       if (result != SQLITE_OK) {
         break;
       }
@@ -229,11 +350,58 @@ static int init(sqlite3 *db, const char *db_name, errorstream_t *error) {
     }
   }
 
-  if (result == SQLITE_OK && error_count(error) > 0) {
-    result = SQLITE_ERROR;
-  }
-
   return result;
+}
+
+static int init10(sqlite3 *db, const char *db_name, errorstream_t *error) {
+    int result = SQLITE_OK;
+
+    result = sql_set_application_id(db, db_name, GPKG10_APPLICATION_ID, error);
+
+    if (result == SQLITE_OK) {
+        result = create_tables(db, db_name, gpkg10_tables, error);
+    }
+
+    if (result == SQLITE_OK && error_count(error) > 0) {
+        result = SQLITE_ERROR;
+    }
+
+    return result;
+}
+
+static int init11(sqlite3 *db, const char *db_name, errorstream_t *error) {
+    int result = SQLITE_OK;
+
+    result = sql_set_application_id(db, db_name, GPKG11_APPLICATION_ID, error);
+
+    if (result == SQLITE_OK) {
+        result = create_tables(db, db_name, gpkg11_tables, error);
+    }
+
+    if (result == SQLITE_OK && error_count(error) > 0) {
+        result = SQLITE_ERROR;
+    }
+
+    return result;
+}
+
+static int init12(sqlite3 *db, const char *db_name, errorstream_t *error) {
+    int result = SQLITE_OK;
+
+    result = sql_set_application_id(db, db_name, GPKG12_APPLICATION_ID, error);
+    if (result == SQLITE_OK) {
+        result = sql_set_user_version(db, db_name, GPKG12_USER_VERSION, error);
+    }
+
+    if (result == SQLITE_OK) {
+        result = create_tables(db, db_name, gpkg12_tables, error);
+    }
+
+    if (result == SQLITE_OK && error_count(error) > 0) {
+        result = SQLITE_ERROR;
+    }
+
+    return result;
 }
 
 /*
@@ -398,44 +566,27 @@ static check_func checks[] = {
   NULL
 };
 
-static int check(sqlite3 *db, const char *db_name, int flags, errorstream_t *error) {
+static int check(sqlite3 *db, const char *db_name, int flags, const gpkg_table_info_t *const *tables, check_func *checks, errorstream_t *error) {
   int result = SQLITE_OK;
 
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_contents, SQL_MUST_EXIST | flags, error);
-  }
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_spatial_ref_sys, SQL_MUST_EXIST | flags, error);
-  }
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_extensions, flags, error);
-  }
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_data_columns, flags, error);
-  }
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_data_column_constraints, flags, error);
-  }
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_metadata, flags, error);
-  }
-  if (result == SQLITE_OK) {
-    result = sql_check_table(db, db_name, &gpkg_metadata_reference, flags, error);
-  }
-  if (result == SQLITE_OK) {
-    int features = 0;
-    result = sql_exec_for_int(db, &features, "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'features'", db_name);
-    if (result == SQLITE_OK) {
-      result = sql_check_table(db, db_name, &gpkg_geometry_columns, flags | (features > 0 ? SQL_MUST_EXIST : 0), error);
+  const gpkg_table_info_t *const *table = tables;
+
+  while (*table != NULL) {
+    const gpkg_table_info_t *table_info = *table;
+    int check_flags = table_info->check_flags;
+    if (table_info->alt_check_flags_sql != NULL) {
+        int sql_result = 0;
+        result = sql_exec_for_int(db, &sql_result, (char *) table_info->alt_check_flags_sql, db_name);
+        if (result == SQLITE_OK && sql_result > 0) {
+            check_flags = table_info->alt_check_flags;
+        }
     }
-  }
-  if (result == SQLITE_OK) {
-    int tiles = 0;
-    result = sql_exec_for_int(db, &tiles, "SELECT count(*) FROM \"%w\".gpkg_contents WHERE data_type LIKE 'tiles'", db_name);
-    if (result == SQLITE_OK) {
-      result = sql_check_table(db, db_name, &gpkg_tile_matrix_set, flags | (tiles > 0 ? SQL_MUST_EXIST : 0), error);
-      result = sql_check_table(db, db_name, &gpkg_tile_matrix, flags | (tiles > 0 ? SQL_MUST_EXIST : 0), error);
+
+    result = sql_check_table(db, db_name, table_info->info, check_flags | flags, error);
+    if (result != SQLITE_OK) {
+      break;
     }
+    table++; 
   }
 
   if ((flags & SQL_CHECK_ALL_DATA) != 0) {
@@ -455,6 +606,75 @@ static int check(sqlite3 *db, const char *db_name, int flags, errorstream_t *err
   }
 
   return result;
+}
+
+static int check_application_id(sqlite3 *db, const char *db_name, int expected, errorstream_t *error) {
+    int application_id = 0;
+    int result = sql_get_application_id(db, db_name, &application_id, error);
+    if (result == SQLITE_OK && application_id != expected) {
+        error_append(error, "Incorrect application_id: expected 0x%x, actual 0x%x", expected, application_id);
+    }
+    return result;
+}
+
+static int check_user_version(sqlite3 *db, const char *db_name, int expected, errorstream_t *error) {
+    int application_id = 0;
+    int result = sql_get_user_version(db, db_name, &application_id, error);
+    if (result == SQLITE_OK && application_id != expected) {
+        error_append(error, "Incorrect user_version: expected 0x%x, actual 0x%x", expected, application_id);
+    }
+    return result;
+}
+
+static int check10(sqlite3 *db, const char *db_name, int flags, errorstream_t *error) {
+    int result = SQLITE_OK;
+
+    result = check_application_id(db, db_name, GPKG10_APPLICATION_ID, error);
+
+    if (result == SQLITE_OK) {
+        result = check(db, db_name, flags, gpkg10_tables, checks, error);
+    }
+
+    if (result == SQLITE_OK && error_count(error) > 0) {
+        result = SQLITE_ERROR;
+    }
+
+    return result;
+}
+
+static int check11(sqlite3 *db, const char *db_name, int flags, errorstream_t *error) {
+    int result = SQLITE_OK;
+
+    result = check_application_id(db, db_name, GPKG11_APPLICATION_ID, error);
+
+    if (result == SQLITE_OK) {
+        result = check(db, db_name, flags, gpkg11_tables, checks, error);
+    }
+
+    if (result == SQLITE_OK && error_count(error) > 0) {
+        result = SQLITE_ERROR;
+    }
+
+    return result;
+}
+
+static int check12(sqlite3 *db, const char *db_name, int flags, errorstream_t *error) {
+    int result = SQLITE_OK;
+
+    result = check_application_id(db, db_name, GPKG12_APPLICATION_ID, error);
+    if (result == SQLITE_OK) {
+        result = check_user_version(db, db_name, GPKG12_USER_VERSION, error);
+    }
+
+    if (result == SQLITE_OK) {
+        result = check(db, db_name, flags, gpkg12_tables, checks, error);
+    }
+
+    if (result == SQLITE_OK && error_count(error) > 0) {
+        result = SQLITE_ERROR;
+    }
+
+    return result;
 }
 
 static int write_blob_header(binstream_t *stream, geom_blob_header_t *header, errorstream_t *error) {
@@ -787,11 +1007,11 @@ static int read_geometry(binstream_t *stream, geom_consumer_t const *consumer, e
   return wkb_read_geometry(stream, WKB_ISO, consumer, error);
 }
 
-static const spatialdb_t GEOPACKAGE = {
-  "GeoPackage",
+static const spatialdb_t GEOPACKAGE_10 = {
+  "GeoPackage 1.0",
   NULL,
-  init,
-  check,
+  init10,
+  check10,
   write_blob_header,
   read_blob_header,
   gpkg_writer_init,
@@ -805,6 +1025,50 @@ static const spatialdb_t GEOPACKAGE = {
   read_geometry
 };
 
-const spatialdb_t *spatialdb_geopackage_schema() {
-  return &GEOPACKAGE;
+const spatialdb_t *spatialdb_geopackage10_schema() {
+  return &GEOPACKAGE_10;
+}
+
+static const spatialdb_t GEOPACKAGE_11 = {
+        "GeoPackage 1.1",
+        NULL,
+        init11,
+        check11,
+        write_blob_header,
+        read_blob_header,
+        gpkg_writer_init,
+        gpb_writer_init,
+        gpb_writer_destroy,
+        add_geometry_column,
+        create_tiles_table,
+        create_spatial_index,
+        fill_envelope,
+        read_geometry_header,
+        read_geometry
+};
+
+const spatialdb_t *spatialdb_geopackage11_schema() {
+    return &GEOPACKAGE_11;
+}
+
+static const spatialdb_t GEOPACKAGE_12 = {
+        "GeoPackage 1.2",
+        NULL,
+        init12,
+        check12,
+        write_blob_header,
+        read_blob_header,
+        gpkg_writer_init,
+        gpb_writer_init,
+        gpb_writer_destroy,
+        add_geometry_column,
+        create_tiles_table,
+        create_spatial_index,
+        fill_envelope,
+        read_geometry_header,
+        read_geometry
+};
+
+const spatialdb_t *spatialdb_geopackage12_schema() {
+    return &GEOPACKAGE_12;
 }

@@ -37,6 +37,10 @@ that SQLite provides.
 libgpkg exposes a number of SQLite extension entry points:
 
 - sqlite3_gpkg_init: geopackage mode
+- sqlite3_gpkg_1_0_init: geopackage 1.0 mode
+- sqlite3_gpkg_1_1_init: geopacakge 1.1 mode
+- sqlite3_gpkg_1_2_init: geopackage 1.2 mode
+- sqlite3_gpkg_spl2_init: spatialite 2.x mode
 - sqlite3_gpkg_spl2_init: spatialite 2.x mode
 - sqlite3_gpkg_spl3_init: spatialite 3.x mode
 - sqlite3_gpkg_spl4_init: spatialite 4.x mode

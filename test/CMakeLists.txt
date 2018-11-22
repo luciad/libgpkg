@@ -26,7 +26,7 @@ execute_process(
 #
 # Generate a cmake test for each (libgpkg entry point, spec file) combination.
 #
-set(entry_points gpkg gpkg_spl3 gpkg_spl4)
+set(entry_points gpkg_1_0 gpkg_1_1 gpkg_1_2 gpkg_spl3 gpkg_spl4)
 
 file(GLOB test_scripts RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *_spec.rb)
 foreach(entry_point IN LISTS entry_points)

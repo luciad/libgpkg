@@ -706,7 +706,9 @@ const spatialdb_t *spatialdb_detect_schema(sqlite3 *db) {
   error_init_fixed(&error, message_buffer, 256);
 
   const spatialdb_t *schemas[] = {
-    spatialdb_geopackage_schema(),
+    spatialdb_geopackage12_schema(),
+    spatialdb_geopackage11_schema(),
+    spatialdb_geopackage10_schema(),
     spatialdb_spatialite4_schema(),
     spatialdb_spatialite3_schema(),
     spatialdb_spatialite2_schema(),

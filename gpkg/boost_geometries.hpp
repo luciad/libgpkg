@@ -2,6 +2,7 @@
 #define GPKG_BOOST_GEOMETRIES_HPP
 
 #include <boost/geometry/geometry.hpp>
+#include <boost/variant/recursive_variant.hpp>
 #include <vector>
 
 extern "C" {

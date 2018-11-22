@@ -367,6 +367,14 @@ typedef void(sql_function)(sqlite3_context *, int, sqlite3_value **);
 
 int sql_create_function(sqlite3 *db, const char *name, sql_function *function, int args, int flags, void *user_data, void (*destroy)(void *), errorstream_t *error);
 
+int sql_set_application_id(sqlite3 *db, const char *db_name, int application_id, errorstream_t *error);
+
+int sql_get_application_id(sqlite3 *db, const char *db_name, int *application_id, errorstream_t *error);
+
+int sql_set_user_version(sqlite3 *db, const char *db_name, int user_version, errorstream_t *error);
+
+int sql_get_user_version(sqlite3 *db, const char *db_name, int *user_version, errorstream_t *error);
+
 /** @} */
 
 #endif

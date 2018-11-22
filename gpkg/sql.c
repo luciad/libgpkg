@@ -987,3 +987,35 @@ int sql_create_function(sqlite3 *db, const char *name, void (*function)(sqlite3_
 
   return result;
 }
+
+int sql_get_application_id(sqlite3 *db, const char *db_name, int *out, errorstream_t *error) {
+  int result = sql_exec_for_int(db, out, "PRAGMA %w.application_id", db_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not get application_id: %s", sqlite3_errmsg(db));
+  }
+  return result;
+}
+
+int sql_set_application_id(sqlite3 *db, const char *db_name, int application_id, errorstream_t *error) {
+  int result = sql_exec(db, "PRAGMA %w.application_id = %d", db_name, application_id);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not set application_id: %s", sqlite3_errmsg(db));
+  }
+  return result;
+}
+
+int sql_get_user_version(sqlite3 *db, const char *db_name, int *out, errorstream_t *error) {
+  int result = sql_exec_for_int(db, out, "PRAGMA %w.user_version", db_name);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not get user_version: %s", sqlite3_errmsg(db));
+  }
+  return result;
+}
+
+int sql_set_user_version(sqlite3 *db, const char *db_name, int user_version, errorstream_t *error) {
+  int result = sql_exec(db, "PRAGMA %w.user_version = %d", db_name, user_version);
+  if (result != SQLITE_OK) {
+    error_append(error, "Could not set user_version: %s", sqlite3_errmsg(db));
+  }
+  return result;
+}

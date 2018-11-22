@@ -167,14 +167,16 @@ module SQLite3
               nil
           end
         end
-        if block_given?
-          yield row
-        else
-          all_rows << row
-        end
+        all_rows << row
       end
 
       sqlite3_finalize(stmt)
+
+      if block_given?
+        for row in all_rows do
+          yield row
+        end
+      end
 
       if res != SQLite3::DONE
         raise SQLite3Error.new(sqlite3_errmsg(@db).strip)
@@ -250,3 +252,4 @@ module SQLite3
 
   class SQLite3Error < RuntimeError; end
 end
+

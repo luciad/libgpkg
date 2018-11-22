@@ -51,6 +51,21 @@ GPKG_EXPORT const char *GPKG_CALL gpkg_libversion();
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
 
 /**
+ * Entry point for the libgpkg SQLite extension that forces usage of the GeoPackage 1.0 database schema.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_1_0_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
+ * Entry point for the libgpkg SQLite extension that forces usage of the GeoPackage 1.1 database schema.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_1_1_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
+ * Entry point for the libgpkg SQLite extension that forces usage of the GeoPackage 1.2 database schema.
+ */
+GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_1_2_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
+
+/**
  * Entry point for the libgpkg SQLite extension that attempts to autodetect the schema to use.
  */
 GPKG_EXPORT int GPKG_CALL sqlite3_gpkg_auto_init(sqlite3 *db, const char **pzErrMsg, const sqlite3_api_routines *pThunk);
